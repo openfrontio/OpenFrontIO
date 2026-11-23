@@ -107,7 +107,10 @@ function nation(id: string, fields: object = {}) {
 
 const CONTINENT = rect(20, 30, 160, 100);
 
-/** Painted land with a mountain range, two nations with land and a city. */
+/**
+ * Painted land with a mountain range, two allied nations with land, a city
+ * and a port.
+ */
 const BUILD: Edit[] = [
   {
     type: "set_terrain",
@@ -144,6 +147,7 @@ const BUILD: Edit[] = [
       level: 1,
     },
   },
+  { type: "add_alliance", nations: ["WESTNAT1", "EASTNAT1"] },
 ];
 
 interface Live {
@@ -258,6 +262,14 @@ function gameState(runner: GameRunner) {
         level: u.level(),
       }))
       .sort((a, b) => a.tile - b.tile),
+    // Each once, though both allies have it: requestor first.
+    alliances: [
+      ...new Set(
+        game.nations().flatMap((n) => game.player(n.playerInfo.id).alliances()),
+      ),
+    ]
+      .map((a): [string, string] => [a.requestor().id(), a.recipient().id()])
+      .sort((x, y) => (x.join() < y.join() ? -1 : 1)),
   };
 }
 
@@ -269,6 +281,7 @@ function documentState(doc: ScenarioDocument): ReturnType<typeof gameState> {
     ),
     nations: [...doc.nations].sort((a, b) => a.id.localeCompare(b.id)),
     structures: doc.structures,
+    alliances: doc.alliances,
   };
 }
 
@@ -294,7 +307,14 @@ test("an exported bundle loads and restores to the document, and plays", async (
 
   const runner = await restore(gzipped);
   expect(live.doc.structures).toHaveLength(2);
+  expect(live.doc.alliances).toEqual([["EASTNAT1", "WESTNAT1"]]);
   expect(gameState(runner)).toEqual(documentState(live.doc));
+  // Made at the start, for the settings' alliance duration.
+  const alliance = runner.game
+    .player("EASTNAT1")
+    .allianceWith(runner.game.player("WESTNAT1"))!;
+  expect(alliance.createdAt()).toBe(0);
+  expect(alliance.expiresAt()).toBe(runner.game.config().allianceDuration());
   // The snapshot keeps the document's settings and the exporting build.
   expect(runner.game.config().gameConfig().donateGold).toBe(true);
   expect(runner.game.inSpawnPhase()).toBe(false);
@@ -305,6 +325,9 @@ test("an exported bundle loads and restores to the document, and plays", async (
   }
   expect(runner.game.player("WESTNAT1").isAlive()).toBe(true);
   expect(runner.game.player("EASTNAT1").isAlive()).toBe(true);
+  expect(
+    runner.game.player("WESTNAT1").isAlliedWith(runner.game.player("EASTNAT1")),
+  ).toBe(true);
 }, 30_000);
 
 test("exporting leaves the live editor as it was, and edits made meanwhile out", async () => {

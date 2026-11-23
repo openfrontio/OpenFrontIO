@@ -2857,6 +2857,8 @@
   },
   "scenario_editor": {
     "add_nation": "Add nation",
+    "allies": "Allies at the start",
+    "allies_hint": "Allied when the game starts. The alliance lasts as long as one made in play, and can be renewed or broken.",
     "brush_size": "Brush radius: {value}",
     "brush_size_keys": "[ and ] change the radius",
     "create_blank": "Create blank",

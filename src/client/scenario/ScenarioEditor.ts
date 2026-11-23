@@ -63,6 +63,8 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  allianceIndex,
+  alliancesAllowed,
   IMPASSABLE,
   isScenarioSize,
   land,
@@ -1811,12 +1813,47 @@ export class ScenarioEditor extends LitElement {
           />
           ${translateText("scenario_editor.playable")}
         </label>
+        ${this.renderAllies(n)}
         <button
           class="rounded bg-red-700 px-2 py-1 hover:bg-red-600"
           @click=${() => this.applyEdit({ type: "remove_nation", id: n.id })}
         >
           ${translateText("scenario_editor.remove_nation")}
         </button>
+      </div>
+    `;
+  }
+
+  /** The nations `n` is allied with from the start, as one checkbox each. */
+  private renderAllies(n: ScenarioNation) {
+    const doc = this.doc!;
+    const others = doc.nations.filter((other) => other.id !== n.id);
+    if (others.length === 0 || !alliancesAllowed(doc.config)) return nothing;
+    return html`
+      <div
+        class="flex flex-col gap-1"
+        title=${translateText("scenario_editor.allies_hint")}
+      >
+        ${translateText("scenario_editor.allies")}
+        <ul class="flex max-h-40 flex-col gap-1 overflow-y-auto">
+          ${others.map((other) => {
+            const allied = allianceIndex(doc, n.id, other.id) !== -1;
+            return html`<li>
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  .checked=${live(allied)}
+                  @change=${() =>
+                    this.applyEdit({
+                      type: allied ? "remove_alliance" : "add_alliance",
+                      nations: [n.id, other.id],
+                    })}
+                />
+                <span class="truncate">${other.name}</span>
+              </label>
+            </li>`;
+          })}
+        </ul>
       </div>
     `;
   }

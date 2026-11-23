@@ -504,18 +504,7 @@ export class GameImpl implements Game {
       );
     }
 
-    // Create and register the new alliance
-    const alliance = new AllianceImpl(
-      this,
-      requestor as PlayerImpl,
-      recipient as PlayerImpl,
-      this._ticks,
-      this.nextAllianceID++,
-    );
-    (alliance.requestor() as PlayerImpl)._alliances.push(alliance);
-    (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
-    this.stats().allianceFormed(requestor);
-    this.stats().allianceFormed(recipient);
+    this.createAlliance(requestor, recipient);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -525,6 +514,34 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: true,
     });
+  }
+
+  createAlliance(requestor: Player, recipient: Player): MutableAlliance {
+    if (requestor === recipient || requestor.isAlliedWith(recipient)) {
+      throw new Error(
+        `cannot ally ${requestor.name()} with ${recipient.name()}`,
+      );
+    }
+    const alliance = new AllianceImpl(
+      this,
+      requestor as PlayerImpl,
+      recipient as PlayerImpl,
+      this._ticks,
+      this.nextAllianceID++,
+    );
+    (requestor as PlayerImpl)._alliances.push(alliance);
+    (recipient as PlayerImpl)._alliances.push(alliance);
+    this.stats().allianceFormed(requestor);
+    this.stats().allianceFormed(recipient);
+    return alliance;
+  }
+
+  /**
+   * Scenario editor: takes back an alliance createAlliance made, with no
+   * update or stat, as if it had never been made.
+   */
+  removeAlliance(alliance: Alliance): void {
+    this.detachAlliance(alliance);
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
@@ -967,11 +984,12 @@ export class GameImpl implements Game {
   }
 
   /**
-   * Scenario editor: deletes the nation's structures, frees its land and
-   * forgets its id. Its small id stays taken, so what is left is a dead
+   * Scenario editor: deletes the nation's structures and alliances, frees
+   * its land and forgets its id. Its small id stays taken, so what is left is a dead
    * player that no longer appears under its id or among the nations.
    */
   removeNation(nation: Player): void {
+    for (const alliance of nation.alliances()) this.detachAlliance(alliance);
     for (const unit of [...nation.units()]) unit.delete(false);
     for (const tile of [...nation.tiles()]) this.relinquish(tile);
     this._players.delete(nation.id());

@@ -13,7 +13,9 @@ import {
 } from "@openfront/engine-api/EditorCommands";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import {
+  addAlliance,
   addStructure,
+  allianceIndex,
   checkTile,
   isAuthoredTerrain,
   isOwnable,
@@ -34,7 +36,7 @@ import { type SendCommand, sendTerrain } from "./ScenarioReplay";
 export type Edit =
   /** At `index` in the nation list, or at its end. */
   | { type: "add_nation"; nation: ScenarioNation; index?: number }
-  /** Takes its land and structures with it. */
+  /** Takes its land, structures and alliances with it. */
   | { type: "remove_nation"; id: string }
   /** Changes only the fields given. */
   | {
@@ -49,6 +51,9 @@ export type Edit =
   | { type: "set_owner"; tiles: number[]; owner: string | null }
   | { type: "place_structure"; structure: ScenarioStructure }
   | { type: "remove_structure"; tile: number }
+  /** Two nations allied from the start, by id, in either order. */
+  | { type: "add_alliance"; nations: [string, string] }
+  | { type: "remove_alliance"; nations: [string, string] }
   /** `terrain[i]` for `tiles[i]`; the last value given for a tile wins. */
   | {
       type: "set_terrain";
@@ -181,6 +186,9 @@ export class DocumentEditor {
         }
         const structures = doc.structures.filter((s) => s.nation === edit.id);
         doc.structures = doc.structures.filter((s) => s.nation !== edit.id);
+        // The engine's remove_nation ends its alliances too.
+        const alliances = doc.alliances.filter((p) => p.includes(edit.id));
+        doc.alliances = doc.alliances.filter((p) => !p.includes(edit.id));
         const [nation] = doc.nations.splice(index, 1);
         this.send({ type: "remove_nation", id: edit.id });
         return [
@@ -191,6 +199,10 @@ export class DocumentEditor {
           ...structures.map((structure): Edit => ({
             type: "place_structure",
             structure,
+          })),
+          ...alliances.map((nations): Edit => ({
+            type: "add_alliance",
+            nations,
           })),
         ];
       }
@@ -236,6 +248,20 @@ export class DocumentEditor {
         const { type: unit, ...rest } = structure;
         this.send({ type: "place_structure", unit, ...rest });
         return [{ type: "remove_structure", tile: structure.tile }];
+      }
+      case "add_alliance": {
+        const nations = addAlliance(doc, ...edit.nations);
+        this.send({ type: "add_alliance", nations });
+        return [{ type: "remove_alliance", nations }];
+      }
+      case "remove_alliance": {
+        const i = allianceIndex(doc, ...edit.nations);
+        if (i === -1) {
+          throw new Error(`${edit.nations.join(" and ")} are not allies`);
+        }
+        const [nations] = doc.alliances.splice(i, 1);
+        this.send({ type: "remove_alliance", nations });
+        return [{ type: "add_alliance", nations }];
       }
       case "remove_structure": {
         checkTile(doc, edit.tile);

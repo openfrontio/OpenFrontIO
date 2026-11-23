@@ -51,8 +51,11 @@ interface Editor {
   water: TileRef;
 }
 
-async function editor(): Promise<Editor> {
+async function editor(
+  config: Partial<GameStartInfo["config"]> = {},
+): Promise<Editor> {
   const start = editorStart();
+  start.config = { ...start.config, ...config };
   const sent: GameUpdateViewData[] = [];
   const runner = await createGameRunner(
     start,
@@ -109,6 +112,12 @@ const ADD_FRANCE: EditorCommand = {
   id: "FRANCE01",
   name: "France",
   flag: "fr",
+};
+const ADD_SPAIN: EditorCommand = {
+  type: "add_nation",
+  id: "SPAIN001",
+  name: "Spain",
+  flag: "es",
 };
 
 describe("editor commands", () => {
@@ -401,6 +410,83 @@ describe("editor commands", () => {
     expect(france.gold()).toBe(added.gold());
   });
 
+  test("add_alliance allies two nations from now, and remove_alliance takes it back", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    e.apply(ADD_SPAIN);
+    const france = game.player("FRANCE01");
+    const spain = game.player("SPAIN001");
+
+    const added = e.apply({
+      type: "add_alliance",
+      nations: ["SPAIN001", "FRANCE01"],
+    });
+    const alliance = france.allianceWith(spain)!;
+    expect(alliance).not.toBeNull();
+    expect(spain.allianceWith(france)).toBe(alliance);
+    // As an accepted request makes one: the first is the requestor, and it
+    // runs for the config's alliance duration.
+    expect(alliance.requestor()).toBe(spain);
+    expect(alliance.createdAt()).toBe(0);
+    expect(alliance.expiresAt()).toBe(game.config().allianceDuration());
+    expect(playerUpdates(added)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "FRANCE01", allies: [spain.smallID()] }),
+        expect.objectContaining({ id: "SPAIN001", allies: [france.smallID()] }),
+      ]),
+    );
+
+    const removed = e.apply({
+      type: "remove_alliance",
+      nations: ["FRANCE01", "SPAIN001"],
+    });
+    expect(france.isAlliedWith(spain)).toBe(false);
+    expect(france.alliances()).toEqual([]);
+    expect(spain.alliances()).toEqual([]);
+    // Taken back, not ended: nobody broke it and nothing expired.
+    expect(france.expiredAlliances()).toEqual([]);
+    expect(france.isTraitor()).toBe(false);
+    expect(playerUpdates(removed)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "FRANCE01", allies: [] }),
+        expect.objectContaining({ id: "SPAIN001", allies: [] }),
+      ]),
+    );
+    expect(game.ticks()).toBe(0);
+  });
+
+  test("remove_nation ends its alliances, and a nation brought back has none", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    e.apply(ADD_SPAIN);
+    e.apply({ type: "add_alliance", nations: ["FRANCE01", "SPAIN001"] });
+    const france = game.player("FRANCE01");
+    const spain = game.player("SPAIN001");
+    e.apply({ type: "remove_nation", id: "FRANCE01" });
+    expect(spain.alliances()).toEqual([]);
+    expect(france.alliances()).toEqual([]);
+    e.apply(ADD_FRANCE);
+    expect(france.isAlliedWith(spain)).toBe(false);
+    // And it can be allied again.
+    e.apply({ type: "add_alliance", nations: ["FRANCE01", "SPAIN001"] });
+    expect(france.isAlliedWith(spain)).toBe(true);
+  });
+
+  test("add_alliance refuses when the config disables alliances", async () => {
+    const e = await editor({ customAllianceDuration: 0 });
+    e.apply(ADD_FRANCE);
+    e.apply(ADD_SPAIN);
+    expect(() =>
+      e.runner.applyEditorCommand({
+        type: "add_alliance",
+        nations: ["FRANCE01", "SPAIN001"],
+      }),
+    ).toThrow(/alliances are disabled/);
+    expect(e.runner.game.player("FRANCE01").alliances()).toEqual([]);
+  });
+
   describe("rejects bad commands and changes nothing", () => {
     async function rejects(
       setup: EditorCommand[],
@@ -518,6 +604,30 @@ describe("editor commands", () => {
           level: 2,
         },
         /has no levels/,
+      );
+    });
+
+    test("an alliance with nobody, with itself, twice, or none to remove", async () => {
+      const both = [ADD_FRANCE, ADD_SPAIN];
+      const ally: EditorCommand = {
+        type: "add_alliance",
+        nations: ["FRANCE01", "SPAIN001"],
+      };
+      await rejects(
+        [ADD_FRANCE],
+        { type: "add_alliance", nations: ["FRANCE01", "NOBODY01"] },
+        /no nation/,
+      );
+      await rejects(
+        both,
+        { type: "add_alliance", nations: ["FRANCE01", "FRANCE01"] },
+        /can't ally with itself/,
+      );
+      await rejects([...both, ally], ally, /already allies/);
+      await rejects(
+        both,
+        { type: "remove_alliance", nations: ["FRANCE01", "SPAIN001"] },
+        /are not allies/,
       );
     });
 

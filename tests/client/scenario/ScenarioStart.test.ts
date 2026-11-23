@@ -94,7 +94,10 @@ async function engine(start: GameStartInfo, files: MapFiles) {
 
 let bundle: Promise<Uint8Array> | undefined;
 
-/** Land with three nations on it, two of them playable; exported once. */
+/**
+ * Land with three nations on it, two of them playable, West and the AI one
+ * allied; exported once.
+ */
 function scenarioBundle(): Promise<Uint8Array> {
   bundle ??= (async () => {
     const doc = newScenarioDocument("Test", W, H);
@@ -125,6 +128,7 @@ function scenarioBundle(): Promise<Uint8Array> {
       tiles: rect(40, 10, 20, 20),
       owner: "MIDNAT01",
     });
+    editor.apply({ type: "add_alliance", nations: ["WESTNAT1", "MIDNAT01"] });
     editor.commit();
     return exportScenario(doc, async (c) => runner.applyEditorCommand(c), {
       scenario: SCENARIO,
@@ -214,6 +218,10 @@ test("each assigned nation goes to its player, and every run reaches the same st
     }
     // The AI runs only the nation nobody took.
     expect(game.nations().map((n) => n.playerInfo.id)).toEqual(["MIDNAT01"]);
+    // Alice starts allied with the nation West was allied with.
+    const mid = game.player("MIDNAT01");
+    expect(game.playerByClientID(ALICE)!.isAlliedWith(mid)).toBe(true);
+    expect(game.playerByClientID(BOB)!.isAlliedWith(mid)).toBe(false);
 
     play(runner, 30);
     runs.push(runner.snapshot(COMMIT));

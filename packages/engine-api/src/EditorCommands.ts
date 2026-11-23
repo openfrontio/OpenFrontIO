@@ -64,6 +64,22 @@ export const RemoveStructureCommandSchema = z.object({
   tile: Tile,
 });
 
+/**
+ * Makes two nations allies from the start, as an accepted request would at
+ * tick 0: the alliance runs for the config's alliance duration and can be
+ * renewed or broken like any other. The first nation is the requestor.
+ */
+export const AddAllianceCommandSchema = z.object({
+  type: z.literal("add_alliance"),
+  nations: z.tuple([ID, ID]),
+});
+
+/** Takes back an alliance `add_alliance` made, as if it had never been. */
+export const RemoveAllianceCommandSchema = z.object({
+  type: z.literal("remove_alliance"),
+  nations: z.tuple([ID, ID]),
+});
+
 // What the author decides for a tile: 0 for water, 0x80 | elevation (0-30)
 // for land, 0x9f for impassable. These are the bits of the terrain byte the
 // map generator takes from the image; the engine derives the rest.
@@ -134,6 +150,8 @@ export const EditorCommandSchema = z.discriminatedUnion("type", [
   SetOwnerCommandSchema,
   PlaceStructureCommandSchema,
   RemoveStructureCommandSchema,
+  AddAllianceCommandSchema,
+  RemoveAllianceCommandSchema,
   SetTerrainCommandSchema,
   EndTerrainEditCommandSchema,
   ExportTerrainCommandSchema,
