@@ -47,7 +47,8 @@ export type SaveCardResult =
   // 401: the session is gone; logOut() has already run.
   | { ok: false; error: "logged_out" }
   | { ok: false; error: "failed" }
-  // Not sent: `stillWanted` said no once the bearer token was in hand.
+  // Not sent: `stillWanted` said no once the bearer token was in hand (or
+  // answered 401 once it no longer was wanted).
   | { ok: false; error: "cancelled" };
 
 // PUT /users/@me/card: the whole loadout (idempotent). On success it
@@ -75,6 +76,10 @@ export async function saveCardLoadout(
       body: JSON.stringify(loadout),
     });
     if (response.status === 401) {
+      // A 401 for a token that is no longer the session's (signed out and
+      // back in, or into another account, while the PUT was out) says
+      // nothing about the session now, so it mustn't end it.
+      if (!stillWanted()) return { ok: false, error: "cancelled" };
       await logOut();
       return { ok: false, error: "logged_out" };
     }

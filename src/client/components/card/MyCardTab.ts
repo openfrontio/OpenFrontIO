@@ -164,8 +164,7 @@ export class MyCardTab extends LitElement {
 
   private items(slot: Exclude<Slot, "flag">): CardItem[] {
     const section = this.cosmetics?.[SECTION[slot].key] as
-      | Record<string, CardItem>
-      | undefined;
+      Record<string, CardItem> | undefined;
     return Object.values(section ?? {}).filter((item) =>
       isOfferedCardItem(SECTION[slot].type, item),
     );
@@ -213,7 +212,12 @@ export class MyCardTab extends LitElement {
       // A run dropped at sign-out or an account change. Even back in the
       // same account, a newer run or the next /users/@me owns the card now:
       // what this one stored is neither taken nor handed up.
-      if (this.initialRun === run) this.initialRun = null;
+      // Reset then goes to what the server confirmed, never to the dropped
+      // loadout.
+      if (this.initialRun === run) {
+        this.initialRun = null;
+        if (sameAccount) this.initial = this.saved;
+      }
       // Nothing newer in flight here: show the last confirmed loadout
       // rather than the dropped clicks.
       if (sameAccount && this.following === null) this.loadout = this.saved;
@@ -387,8 +391,7 @@ export class MyCardTab extends LitElement {
   private renderGetCard(): TemplateResult | typeof nothing {
     if (this.ownsCard) return nothing;
     const card = Object.values(this.cosmetics?.playerCards ?? {})[0] as
-      | CardItem
-      | undefined;
+      CardItem | undefined;
     return html`<div
       data-my-card-get-card
       class="flex flex-col items-center justify-between gap-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-4 sm:flex-row"

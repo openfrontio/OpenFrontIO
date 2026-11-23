@@ -14,6 +14,8 @@ const fetchPlayerByIdMock = vi.hoisted(() =>
   vi.fn(async (): Promise<unknown> => null),
 );
 const reducedMotion = vi.hoisted(() => ({ value: false }));
+// The account the session's token belongs to (Auth.currentPublicId).
+const session = vi.hoisted(() => ({ publicId: "me" as string | null }));
 
 // Mocks as in AccountModalPrestige.test.ts, plus the progression reads.
 vi.mock("../../src/client/Api", () => ({
@@ -46,6 +48,7 @@ vi.mock("../../src/client/Auth", () => ({
   reauthAfterPortalChange: vi.fn(async () => false),
   sendMagicLink: vi.fn(async () => true),
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
+  currentPublicId: () => session.publicId,
 }));
 
 vi.mock("../../src/client/Utils", () => ({
@@ -242,6 +245,7 @@ describe("AccountModal — Progression tab", () => {
     vi.clearAllMocks();
     resetCardSavesForTests();
     reducedMotion.value = false;
+    session.publicId = "me";
     me = userMe(OWN_PROGRESS);
     getUserMeMock.mockImplementation(async () => me);
     fetchPublicPlayerProgressMock.mockResolvedValue(PUBLIC);
@@ -316,8 +320,7 @@ describe("AccountModal — Progression tab", () => {
     modal.open({ tab: "card" });
     const myCard = () =>
       modal.querySelector("my-card-tab") as
-        | (HTMLElement & { userMe: UserMeResponse | null })
-        | null;
+        (HTMLElement & { userMe: UserMeResponse | null }) | null;
     await settle(() => expect(myCard()).not.toBeNull());
     const saved = {
       ...me,
@@ -742,6 +745,7 @@ describe("AccountModal — Progression tab", () => {
 
       // A signs out; B signs in.
       signedIn = "B";
+      session.publicId = "b";
       document.dispatchEvent(new CustomEvent("session-cleared"));
       const b = {
         ...me,
@@ -1182,8 +1186,7 @@ describe("AccountModal — Progression tab", () => {
       const header = () => modal.querySelector("[data-account-card-header]");
       await settle(() => {
         const card = header()?.querySelector("player-card") as
-          | (HTMLElement & { view: { badge: { level: number } | null } })
-          | null;
+          (HTMLElement & { view: { badge: { level: number } | null } }) | null;
         expect(card?.view.badge?.level).toBe(49);
         expect(header()?.textContent).toContain("progression.level");
         expect(
