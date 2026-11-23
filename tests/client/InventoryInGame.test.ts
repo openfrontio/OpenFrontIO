@@ -781,6 +781,42 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
     });
 
+    it("Equip now leaves focus on the bought item's tile after the re-sort", async () => {
+      vi.mocked(purchaseCosmetic).mockImplementation(async () => {
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: makeUser([...OWNED, "crown:sale_crown"]),
+          }),
+        );
+        return undefined;
+      });
+      vi.mocked(purchaseReloading).mockReturnValue(true);
+      await open("crowns");
+      await setFilter(modal, "all");
+      const main = tile(modal, "crown:sale_crown").querySelector<HTMLElement>(
+        "[data-tile-main]",
+      )!;
+      main.focus();
+      main.click();
+      await settle(modal);
+      await modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!.onPurchaseHard!();
+      await settle(modal);
+      modal
+        .querySelector<HTMLButtonElement>(
+          "inventory-buy-dialog [data-buy-equip-now]",
+        )!
+        .click();
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBe("sale_crown");
+      const focused = document.activeElement!.closest<InventoryItemTile>(
+        "inventory-item-tile",
+      );
+      expect(focused).not.toBeNull();
+      expect(focused!.resolved.key).toBe("crown:sale_crown");
+    });
+
     it("offers Equip now after the purchase reloaded the page", async () => {
       rememberPendingEquip("in-game-test-player", "crown:sale_crown");
       await open("crowns", makeUser([...OWNED, "crown:sale_crown"]));
