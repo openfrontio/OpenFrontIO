@@ -208,6 +208,12 @@ describe("@me card fields", () => {
     expect(parsed.player.tauntsMuted).toBe(true);
   });
 
+  // Fail closed: a malformed mute flag reads as muted, never as unmuted.
+  it("a malformed tauntsMuted reads as muted", () => {
+    const parsed = UserMeResponseSchema.parse(userMe({ tauntsMuted: "no" }));
+    expect(parsed.player.tauntsMuted).toBe(true);
+  });
+
   // The exact shape infra's GET /users/@me sends (lib/card/PlayerCardLoadout
   // cardForMe): empty slots are null, not absent.
   it("parses the API's card with null slots", () => {

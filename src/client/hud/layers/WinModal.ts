@@ -21,7 +21,6 @@ import {
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
-import { saveTauntsMuted } from "../../CardLoadoutApi";
 import {
   buildPlayerCardView,
   type PlayerCardView,
@@ -171,13 +170,6 @@ export class WinModal extends LitElement implements Controller {
   // Whether the viewer owns the card: "Edit my card" under a winner card.
   @state()
   private canEditCard = false;
-  // "Mute taunts": from /users/@me for a signed-in player (saved there when
-  // changed); for a guest, just for this screen.
-  @state()
-  private tauntsMuted = false;
-  private tauntsMutedRead = false;
-  @state()
-  private endCardTerritoryColor: string | null = null;
   // "Get {name}'s look": what the killer's card offers this viewer.
   @state()
   private loadout: LoadoutItem[] = [];
@@ -270,15 +262,7 @@ export class WinModal extends LitElement implements Controller {
             .clan=${this.endCardClan}
             .nemesis=${this.nemesis}
             .canEdit=${this.canEditCard}
-            .tauntsMuted=${this.tauntsMuted}
-            .showKey=${
-              this.endCardMode === "none"
-                ? null
-                : `${this.game?.gameID() ?? ""}:${this.endCardMode}`
-            }
-            .territoryColor=${this.endCardTerritoryColor}
             @edit-card=${this.onEditCard}
-            @toggle-taunts=${this.onToggleTaunts}
           ></end-card-section>
           <game-xp-panel
             .view=${this.xpView}
@@ -863,11 +847,7 @@ export class WinModal extends LitElement implements Controller {
       return;
     }
     this.endCardView = view;
-    this.endCardTerritoryColor =
-      this.game.playerByClientID(card.clientID)?.territoryColor().toHex() ??
-      null;
     this.endCardMode = card.kind;
-    void this.readTauntsMuted();
     if (card.kind === "eliminatedBy") {
       void this.loadLoadout(view);
       const publicId = this.game.playerCardOf(card.clientID).card?.publicId;
@@ -892,18 +872,6 @@ export class WinModal extends LitElement implements Controller {
       me === false ? [] : (me.player.flares ?? []),
     );
   }
-
-  private async readTauntsMuted(): Promise<void> {
-    if (this.tauntsMutedRead) return;
-    this.tauntsMutedRead = true;
-    const me = await getUserMe();
-    if (me !== false) this.tauntsMuted = me.player.tauntsMuted ?? false;
-  }
-
-  private onToggleTaunts = (): void => {
-    this.tauntsMuted = !this.tauntsMuted;
-    void saveTauntsMuted(this.tauntsMuted);
-  };
 
   // The finished game is left for the Account page's My Card tab.
   private onEditCard = (): void => {

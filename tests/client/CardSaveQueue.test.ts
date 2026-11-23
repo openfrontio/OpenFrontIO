@@ -176,6 +176,30 @@ describe("CardSaveQueue", () => {
     expect(guard!()).toBe(false);
   });
 
+  // As saveCardLoadout does: asks the guard once it holds a token, and
+  // sends nothing when it says no.
+  const guarded = () =>
+    save.mockImplementationOnce(
+      async (_body: CardLoadoutBody, stillWanted: () => boolean) =>
+        stillWanted()
+          ? { ok: true, loadout: _body }
+          : { ok: false, error: "cancelled" },
+    );
+
+  it("no session once the token is read (a failing refresh) ends failed, to retry", async () => {
+    guarded();
+    auth.publicId = null;
+    const run = requestCardSave("a", loadout("a"));
+    expect((await run).result).toEqual({ ok: false, error: "failed" });
+  });
+
+  it("the token now another account's ends cancelled", async () => {
+    guarded();
+    auth.publicId = "b";
+    const run = requestCardSave("a", loadout("a"));
+    expect((await run).result).toEqual({ ok: false, error: "cancelled" });
+  });
+
   it("a cancelled run whose next PUT fails reports cancelled", async () => {
     // Its first PUT was stored, then the run was dropped: the failure of
     // the PUT after it must not hand that superseded loadout back.

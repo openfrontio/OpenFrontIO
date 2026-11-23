@@ -18,25 +18,4 @@ describe("cardItemName", () => {
       }),
     ).toBe("Neon Grid");
   });
-
-  it("a taunt with no translation reads as words", () => {
-    expect(
-      cardItemName("taunt", {
-        ...base,
-        name: "crown_drop",
-        tauntKind: "icon",
-        preset: "crown_drop",
-      }),
-    ).toBe("Crown Drop");
-  });
-
-  it("a title is its own text", () => {
-    expect(
-      cardItemName("cardTitle", {
-        ...base,
-        name: "warmonger",
-        text: "Warmonger",
-      }),
-    ).toBe("Warmonger");
-  });
 });

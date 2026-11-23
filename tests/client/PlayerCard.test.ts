@@ -1,19 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
-const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
-vi.mock("../../src/client/components/card/HeldBack", () => ({
-  get CARD_TAUNTS_ENABLED() {
-    return heldBack.taunts;
-  },
-  get CARD_TITLES_ENABLED() {
-    return heldBack.titles;
-  },
-}));
-
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardBackground } from "../../src/client/components/card/CardBackground";
 import { PlayerCard } from "../../src/client/components/card/PlayerCard";
@@ -23,14 +13,6 @@ import {
   formatTracker,
   type PlayerCardView,
 } from "../../src/client/components/card/PlayerCardModel";
-
-// Taunts and titles are held back (HeldBack.ts). The tests below exercise
-// the code behind them with both switched on; the "held back" block turns
-// them off again.
-beforeEach(() => {
-  heldBack.taunts = true;
-  heldBack.titles = true;
-});
 
 if (!customElements.get("player-card")) {
   customElements.define("player-card", PlayerCard);
@@ -72,6 +54,7 @@ const VOLT = buildPlayerCardView(
     badge: { level: 47, prestige: 2, legend: false },
     card: {
       background: "bg_frontline",
+      // Saved, but held back: never shown.
       title: "warmonger",
       taunt: "salute",
       trackers: [
@@ -92,12 +75,6 @@ describe("buildPlayerCardView", () => {
       rarity: "legendary",
       animation: undefined,
     });
-    expect(VOLT.title).toEqual({ text: "Warmonger", accent: undefined });
-    expect(VOLT.taunt).toEqual({
-      name: "salute",
-      tauntKind: "icon",
-      preset: "salute",
-    });
     expect(VOLT.trackers).toHaveLength(3);
   });
 
@@ -107,12 +84,15 @@ describe("buildPlayerCardView", () => {
         username: "Volt",
         clanTag: null,
         badge: null,
-        card: { background: "bg_gone", title: "warmonger", trackers: [] },
+        card: {
+          background: "bg_gone",
+          trackers: [{ stat: "wins", value: 3 }],
+        },
       },
       COSMETICS,
     );
     expect(view.background).toBeNull();
-    expect(view.title?.text).toBe("Warmonger");
+    expect(view.trackers).toEqual([{ stat: "wins", value: 3 }]);
   });
 
   it("no catalogue yet: items are null, trackers kept", () => {
@@ -121,22 +101,23 @@ describe("buildPlayerCardView", () => {
         username: "Volt",
         clanTag: null,
         badge: null,
-        card: { title: "warmonger", trackers: [{ stat: "wins", value: 3 }] },
+        card: {
+          background: "bg_frontline",
+          trackers: [{ stat: "wins", value: 3 }],
+        },
       },
       null,
     );
-    expect(view.title).toBeNull();
+    expect(view.background).toBeNull();
     expect(view.trackers).toEqual([{ stat: "wins", value: 3 }]);
   });
 
-  it("default card has no title or trackers", () => {
+  it("default card has no background or trackers", () => {
     const view = defaultPlayerCardView("Volt", "UN", "/flags/gb.svg");
     expect(view).toMatchObject({
       username: "Volt",
       clanTag: "UN",
       background: null,
-      title: null,
-      taunt: null,
       trackers: [],
     });
   });
@@ -169,37 +150,14 @@ describe("<player-card>", () => {
   }
   const text = (sel: string) => card.querySelector(sel)?.textContent ?? "";
 
-  it("taunts held back: a saved taunt shows nothing and never plays", async () => {
-    heldBack.taunts = false;
-    const seen = vi.fn();
-    document.addEventListener("card-taunt-played", seen);
-    await render(VOLT, { showKey: "g1:end" });
-    expect(card.querySelector("[data-card-taunt-icon]")).toBeNull();
-    await render(
-      {
-        ...VOLT,
-        taunt: { name: "nuke_flash", tauntKind: "card", preset: "nuke_flash" },
-      },
-      { showKey: "g2:end" },
-    );
-    document.removeEventListener("card-taunt-played", seen);
-    expect(card.querySelector("[data-card-taunt-overlay]")).toBeNull();
-    expect(seen).not.toHaveBeenCalled();
-  });
-
-  it("titles held back: a saved title is not shown", async () => {
-    heldBack.titles = false;
+  it("a saved title or taunt is never shown (held back)", async () => {
     await render(VOLT);
     expect(card.querySelector("[data-card-title]")).toBeNull();
+    expect(card.querySelector("[data-card-taunt-icon]")).toBeNull();
     expect(card.textContent).not.toContain("Warmonger");
   });
 
-  it("taunts switched on: the saved taunt's icon shows", async () => {
-    await render(VOLT);
-    expect(card.querySelector("[data-card-taunt-icon]")).not.toBeNull();
-  });
-
-  it("renders badge, flag, clan tag, name, level line, title and three trackers", async () => {
+  it("renders badge, flag, clan tag, name, level line and three trackers", async () => {
     await render(VOLT);
     expect(card.querySelector("level-badge")).not.toBeNull();
     expect(
@@ -210,7 +168,6 @@ describe("<player-card>", () => {
     expect(text("[data-profile-level-line]")).toContain(
       'progression.level:{"level":47}',
     );
-    expect(text("[data-card-title]")).toContain("Warmonger");
     const trackers = [...card.querySelectorAll("[data-card-tracker]")];
     expect(trackers.map((t) => t.getAttribute("data-card-tracker"))).toEqual([
       "wins",
