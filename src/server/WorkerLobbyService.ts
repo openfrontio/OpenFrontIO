@@ -1,11 +1,13 @@
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { boostWouldMoveLobby } from "@openfront/shared/LobbyBoost";
 import {
   ClientPlatform,
   ClientPlatformSchema,
   PublicGameInfo,
   PublicGames,
   PublicLobbyMessage,
+  ScheduledPublicGameType,
 } from "@openfront/shared/WireSchemas";
 import { encodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import http from "http";
@@ -196,6 +198,10 @@ export class WorkerLobbyService {
           gameConfig: info.gameConfig,
           publicGameType: info.publicGameType!,
           createdAt: game.createdAt,
+          // A player paid to boost the lobby: queuedAt puts it right behind
+          // the counting-down lobby of its type, like a host-paid one.
+          queuedAt: game.boostedAtTime?.(),
+          boosted: game.boostedAtTime?.() !== undefined ? true : undefined,
         } satisfies InternalGameInfo;
       });
     // Subscriber-listed private lobbies. creatorID (a hash of the creator's
@@ -268,6 +274,19 @@ export class WorkerLobbyService {
         (g) =>
           g.id !== excludeGameID && g.hashedCreatorID() === hashedCreatorID,
       );
+  }
+
+  // Whether a boost would move this lobby up its queue, going by the last
+  // master broadcast (see boostWouldMoveLobby).
+  public boostWouldMove(
+    gameID: string,
+    type: ScheduledPublicGameType,
+  ): boolean {
+    return boostWouldMoveLobby(
+      this.lastPublicGames?.games[type] ?? [],
+      gameID,
+      (l) => l.queuedAt !== undefined,
+    );
   }
 
   // Cluster-wide count of listed hosted lobbies: the master broadcast plus

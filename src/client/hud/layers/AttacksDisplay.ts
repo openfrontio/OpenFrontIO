@@ -53,7 +53,30 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this;
   }
 
-  init() {}
+  private initGeneration = 0;
+
+  init(): () => void {
+    const gen = ++this.initGeneration;
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
+  }
+
+  dispose(): void {
+    this.initGeneration++;
+    this.incomingBoatIDs.clear();
+    this.spriteDataURLCache.clear();
+    this.incomingAttacks = [];
+    this.outgoingAttacks = [];
+    this.outgoingLandAttacks = [];
+    this.outgoingBoats = [];
+    this.incomingBoats = [];
+    this.active = false;
+    this._isVisible = false;
+    this.requestUpdate();
+  }
 
   tick() {
     this.active = true;

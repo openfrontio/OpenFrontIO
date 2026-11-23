@@ -16,9 +16,9 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
+  exitGame,
   getGamesPlayed,
   getTranslatedPlayerTeamLabel,
-  homeHref,
   isInIframe,
   translateText,
   TUTORIAL_VIDEO_URL,
@@ -1398,7 +1398,7 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleExit() {
     this.hide();
-    window.location.href = homeHref();
+    exitGame();
   }
 
   private _handleRequeue() {

@@ -9,6 +9,22 @@ function makePlayer(team: string | null, tiles: number) {
   return { team: () => team, numTilesOwned: () => tiles };
 }
 
+function makeTeamGame(
+  players: ReturnType<typeof makePlayer>[],
+  inSpawnPhase = false,
+): GameView {
+  return {
+    config: () => ({
+      gameConfig: () => ({
+        gameType: GameType.Public,
+        gameMode: GameMode.Team,
+      }),
+    }),
+    inSpawnPhase: () => inSpawnPhase,
+    players: () => players,
+  } as unknown as GameView;
+}
+
 describe("SpawnTimer team ratios", () => {
   let timer: SpawnTimer;
   let eventBus: EventBus;
@@ -24,24 +40,16 @@ describe("SpawnTimer team ratios", () => {
   });
 
   afterEach(() => {
+    timer.dispose();
     timer.remove();
   });
 
   it("splits the bar by team tile ownership after the spawn phase", async () => {
-    timer.game = {
-      config: () => ({
-        gameConfig: () => ({
-          gameType: GameType.Public,
-          gameMode: GameMode.Team,
-        }),
-      }),
-      inSpawnPhase: () => false,
-      players: () => [
-        makePlayer("Red", 30),
-        makePlayer("Blue", 10),
-        makePlayer(null, 999), // teamless players are ignored
-      ],
-    } as unknown as GameView;
+    timer.game = makeTeamGame([
+      makePlayer("Red", 30),
+      makePlayer("Blue", 10),
+      makePlayer(null, 999), // teamless players are ignored
+    ]);
 
     timer.init();
     timer.tick();
@@ -56,23 +64,90 @@ describe("SpawnTimer team ratios", () => {
     expect(visibility.map((v) => v.visible)).toEqual([true]);
   });
 
-  it("renders nothing when no team owns tiles yet", async () => {
-    timer.game = {
-      config: () => ({
-        gameConfig: () => ({
-          gameType: GameType.Public,
-          gameMode: GameMode.Team,
-        }),
-      }),
-      inSpawnPhase: () => false,
-      players: () => [makePlayer("Red", 0), makePlayer("Blue", 0)],
-    } as unknown as GameView;
+  it("renders nothing and emits initial false when no team owns tiles yet", async () => {
+    timer.game = makeTeamGame([makePlayer("Red", 0), makePlayer("Blue", 0)]);
 
     timer.init();
+    timer.tick();
     timer.tick();
     await timer.updateComplete;
 
     expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(0);
+    expect(visibility.map((v) => v.visible)).toEqual([false]);
+  });
+
+  it("re-emits SpawnBarVisibleEvent(true) on first tick after dispose and re-init", async () => {
+    timer.game = makeTeamGame([makePlayer("Red", 10), makePlayer("Blue", 10)]);
+
+    timer.init();
+    timer.tick();
+    await timer.updateComplete;
+    expect(visibility.map((v) => v.visible)).toEqual([true]);
+    expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(2);
+
+    timer.dispose();
+    await timer.updateComplete;
+    expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(0);
+    expect(visibility.map((v) => v.visible)).toEqual([true]);
+
+    timer.init();
+    timer.tick();
+    timer.tick();
+    await timer.updateComplete;
+    expect(visibility.map((v) => v.visible)).toEqual([true, true]);
+    expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(2);
+  });
+
+  it("emits SpawnBarVisibleEvent(false) on first tick in Singleplayer spawn phase", async () => {
+    timer.game = makeTeamGame([makePlayer("Red", 10), makePlayer("Blue", 10)]);
+    timer.init();
+    timer.tick();
+    await timer.updateComplete;
+    expect(visibility.map((v) => v.visible)).toEqual([true]);
+
+    timer.dispose();
+    timer.game = {
+      config: () => ({
+        gameConfig: () => ({
+          gameType: GameType.Singleplayer,
+          gameMode: GameMode.FFA,
+        }),
+      }),
+      inSpawnPhase: () => true,
+    } as unknown as GameView;
+
+    timer.init();
+    timer.tick();
+    timer.tick();
+    await timer.updateComplete;
+
+    expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(0);
+    expect(visibility.map((v) => v.visible)).toEqual([true, false]);
+  });
+
+  it("ignores ticks when inactive and respects generation-scoped disposer", async () => {
+    timer.game = makeTeamGame([makePlayer("Red", 10), makePlayer("Blue", 10)]);
+
+    timer.tick();
     expect(visibility).toHaveLength(0);
+
+    const disposeFirst = timer.init();
+    timer.tick();
+    expect(visibility.map((v) => v.visible)).toEqual([true]);
+
+    timer.dispose();
+    const disposeSecond = timer.init();
+    disposeFirst();
+
+    timer.tick();
+    await timer.updateComplete;
+    expect(visibility.map((v) => v.visible)).toEqual([true, true]);
+    expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(2);
+
+    disposeSecond();
+    timer.tick();
+    await timer.updateComplete;
+    expect(visibility.map((v) => v.visible)).toEqual([true, true]);
+    expect(timer.querySelectorAll('div[style*="--width"]')).toHaveLength(0);
   });
 });

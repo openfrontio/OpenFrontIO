@@ -171,6 +171,8 @@ const BADGE = "rounded bg-black/70";
 /** A player's listed lobby, so it can't pass for a scheduled public game. */
 const CUSTOM_PILL =
   "rounded bg-orange-500 px-2 py-1 text-xs font-bold tracking-widest text-white";
+const BOOSTED_PILL =
+  "rounded bg-green-600 px-2 py-1 text-xs font-bold tracking-widest text-white";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -250,6 +252,15 @@ export function lobbyCard({
             custom
               ? html`<span class=${CUSTOM_PILL}
                   >${translateText("public_lobby.custom")}</span
+                >`
+              : nothing
+          }
+          ${
+            lobby.boosted
+              ? html`<span
+                  class=${BOOSTED_PILL}
+                  title=${translateText("public_lobby.boosted_tooltip")}
+                  >${translateText("public_lobby.boosted")}</span
                 >`
               : nothing
           }

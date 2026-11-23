@@ -1,9 +1,9 @@
+import { currentPublicId } from "./Auth";
 import {
   type CardLoadoutBody,
   type SaveCardResult,
   saveCardLoadout,
 } from "./CardLoadoutApi";
-import { currentPublicId } from "./Auth";
 
 // Card saves, shared by every editor (a My Card tab, and one made after
 // the player left it and came back). Each PUT replaces the whole loadout,
