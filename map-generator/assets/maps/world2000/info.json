@@ -370,7 +370,7 @@
     {
       "id": "w2kland",
       "placement": "land",
-      "alpha": 0.60,
+      "alpha": 0.6,
       "nukeable": true
     },
     {
