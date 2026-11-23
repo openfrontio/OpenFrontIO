@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
+  cosmeticsCacheIsStale,
   fetchCosmetics,
   getCachedCosmetics,
   purchaseCosmetic,
@@ -17,6 +18,7 @@ import type { StoreModal } from "../../src/client/Store";
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(),
+  cosmeticsCacheIsStale: vi.fn(() => false),
   getCachedCosmetics: vi.fn(() => null),
   purchaseCosmetic: vi.fn(),
   refreshStaleCosmetics: vi.fn(() => false),
@@ -107,6 +109,44 @@ async function settle(modal: StoreModal) {
   await modal.updateComplete;
 }
 
+/**
+ * A window width for matchMedia, which jsdom lacks. Returns a resize that
+ * fires the change listeners of the queries it flips.
+ */
+function fakeWidth(px: number): ((next: number) => void) & {
+  listeners: () => number;
+} {
+  let width = px;
+  const lists: { query: string; listeners: Set<() => void> }[] = [];
+  const matches = (query: string) =>
+    width >= Number(/min-width: (\d+)rem/.exec(query)![1]) * 16;
+  window.matchMedia = ((query: string) => {
+    const list = { query, listeners: new Set<() => void>() };
+    lists.push(list);
+    return {
+      get matches() {
+        return matches(query);
+      },
+      addEventListener: (_: string, fn: () => void) => list.listeners.add(fn),
+      removeEventListener: (_: string, fn: () => void) =>
+        list.listeners.delete(fn),
+    } as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
+  const resize = (next: number) => {
+    const before = lists.map((list) => matches(list.query));
+    width = next;
+    lists.forEach((list, i) => {
+      if (matches(list.query) !== before[i]) {
+        for (const fn of list.listeners) fn();
+      }
+    });
+  };
+  return Object.assign(resize, {
+    listeners: () =>
+      lists.reduce((total, list) => total + list.listeners.size, 0),
+  });
+}
+
 const cardKeys = (root: ParentNode) =>
   [...root.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
     (c) => c.resolved.key,
@@ -124,6 +164,8 @@ describe("store Featured tab", () => {
     vi.mocked(getCachedCosmetics).mockReturnValue(null);
     vi.mocked(refreshStaleCosmetics).mockReset();
     vi.mocked(refreshStaleCosmetics).mockReturnValue(false);
+    vi.mocked(cosmeticsCacheIsStale).mockReset();
+    vi.mocked(cosmeticsCacheIsStale).mockReturnValue(false);
     vi.mocked(resolveCosmetics).mockReset();
     vi.mocked(resolveCosmetics).mockImplementation(
       (_cosmetics, _userMe, affiliateCode) =>
@@ -140,6 +182,7 @@ describe("store Featured tab", () => {
   });
 
   afterEach(() => {
+    delete (window as { matchMedia?: unknown }).matchMedia;
     store?.remove();
     store = undefined;
     vi.useRealTimers();
@@ -422,7 +465,7 @@ describe("store Featured tab", () => {
       expect(tabHero.querySelector("[data-featured-deal-at]")).toBeNull();
     });
 
-    it("shows at most four cards a row, the 3rd from sm and the 4th from xl", async () => {
+    it("shows at most four cards a row", async () => {
       resolvedCatalog = ["a", "b", "c", "d", "e"].map((name, i) =>
         skin(name, { newUntil: days(i + 2) }),
       );
@@ -437,15 +480,56 @@ describe("store Featured tab", () => {
         "pattern:c",
         "pattern:b",
       ]);
-      expect(cards[0].className).not.toContain("hidden");
-      expect(cards[1].className).not.toContain("hidden");
-      expect(cards[2].className).toContain("hidden");
-      expect(cards[2].className).toContain("sm:block");
-      expect(cards[3].className).toContain("xl:block");
+      for (const card of cards) expect(card.className).not.toContain("hidden");
       const seeAll = row.querySelector("[data-featured-see-all]")!;
       expect(seeAll.getAttribute("aria-describedby")).toBe(
         row.querySelector("h3")!.id,
       );
+    });
+
+    it("holds 2 cards a row on phones, 3 from sm and 4 from xl, as the width changes", async () => {
+      const resize = fakeWidth(375);
+      resolvedCatalog = ["a", "b", "c", "d", "e"].map((name, i) =>
+        skin(name, { newUntil: days(i + 2) }),
+      );
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      const row = () => modal.querySelector('[data-featured-section="new"]')!;
+      expect(cardKeys(row())).toEqual(["pattern:e", "pattern:d"]);
+      resize(700);
+      await modal.updateComplete;
+      expect(cardKeys(row())).toHaveLength(3);
+      resize(1400);
+      await modal.updateComplete;
+      expect(cardKeys(row())).toHaveLength(4);
+      // Removed, it stops listening; put back, it listens once again.
+      expect(resize.listeners()).toBe(2);
+      modal.remove();
+      expect(resize.listeners()).toBe(0);
+      document.body.appendChild(modal);
+      expect(resize.listeners()).toBe(2);
+    });
+
+    it("on a phone, lists a 3rd new item on sale under On sale", async () => {
+      fakeWidth(375);
+      const sale = regularPromotion(hour());
+      const third = skin("third", { ...discounted(sale), newUntil: days(3) });
+      resolvedCatalog = [
+        skin("a", { newUntil: days(5) }),
+        skin("b", { newUntil: days(4) }),
+        third,
+      ];
+      vi.mocked(fetchCosmetics).mockResolvedValue(catalog([sale]));
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      expect(
+        cardKeys(modal.querySelector('[data-featured-section="new"]')!),
+      ).toEqual(["pattern:a", "pattern:b"]);
+      expect(
+        cardKeys(modal.querySelector('[data-featured-section="sale"]')!),
+      ).toEqual([third.key]);
     });
 
     it("lists a new item on sale that doesn't fit the New row under On sale", async () => {
@@ -674,6 +758,102 @@ describe("store Featured tab", () => {
       expect(internals(again).dealRollover).not.toBeNull();
       again.close();
       expect(internals(again).dealRollover).toBeNull();
+    });
+  });
+
+  describe("a catalog the open will replace", () => {
+    it("lands on Featured when a deal rolled over while the store was closed", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const dealA = flashPromotion(
+        new Date(Date.now() + 60_000).toISOString(),
+        "flash-a",
+      );
+      resolvedCatalog = [skin("zap", discounted(dealA))];
+      vi.mocked(fetchCosmetics).mockResolvedValue(catalog([dealA]));
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      expect(activeTab(modal)).toBe("featured");
+      modal.close();
+
+      // Deal A ends and deal B starts while the store is closed. The store
+      // still holds the catalog with A; the refetch brings B.
+      await vi.advanceTimersByTimeAsync(61_000);
+      const dealB = flashPromotion(hour(), "flash-b");
+      vi.mocked(fetchCosmetics).mockImplementation(async () => {
+        resolvedCatalog = [skin("bolt", discounted(dealB))];
+        return catalog([dealB]);
+      });
+      modal.open();
+      expect(tabKeys(modal)).toContain("featured");
+      expect(activeTab(modal)).toBe("featured");
+      await vi.waitFor(() =>
+        expect(
+          cardKeys(modal.querySelector('[data-featured-section="deal"]')!),
+        ).toEqual(["pattern:bolt"]),
+      );
+    });
+
+    it("prefers the shared cache, newer than the store's own copy", async () => {
+      const modal = await mountStore();
+      const ended = flashPromotion(new Date(Date.now() - 1_000).toISOString());
+      internals(modal).cosmetics = catalog([ended]);
+      const newer = catalog([]);
+      vi.mocked(getCachedCosmetics).mockReturnValue(newer);
+      vi.mocked(fetchCosmetics).mockResolvedValue(newer);
+      modal.open();
+      expect(internals(modal).cosmetics).toBe(newer);
+    });
+
+    it("shows Featured loading on a stale catalog, then what the refetch brings", async () => {
+      vi.mocked(cosmeticsCacheIsStale).mockReturnValue(true);
+      vi.mocked(refreshStaleCosmetics).mockReturnValue(true);
+      vi.mocked(getCachedCosmetics).mockReturnValue(catalog([]));
+      let resolve: (c: Cosmetics | null) => void = () => {};
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise<Cosmetics | null>((r) => (resolve = r)) as never,
+      );
+      const modal = await mountStore();
+      modal.open();
+      await modal.updateComplete;
+      expect(activeTab(modal)).toBe("featured");
+      expect(modal.querySelector("[data-featured-loading]")).toBeTruthy();
+      expect(modal.querySelector("[data-featured-empty]")).toBeNull();
+
+      resolvedCatalog = [skin("fresh", { newUntil: days(3) })];
+      resolve(catalog([]));
+      await settle(modal);
+      expect(
+        cardKeys(modal.querySelector('[data-featured-section="new"]')!),
+      ).toEqual(["pattern:fresh"]);
+    });
+
+    it("says nothing is featured once a stale catalog's refetch has nothing", async () => {
+      vi.mocked(cosmeticsCacheIsStale).mockReturnValue(true);
+      vi.mocked(refreshStaleCosmetics).mockReturnValue(true);
+      vi.mocked(getCachedCosmetics).mockReturnValue(catalog([]));
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      expect(activeTab(modal)).toBe("featured");
+      expect(modal.querySelector("[data-featured-empty]")).toBeTruthy();
+    });
+  });
+
+  describe("a store removed while open", () => {
+    it("runs no rollover or refetch when its deal ends", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const flash = flashPromotion(new Date(Date.now() + 60_000).toISOString());
+      resolvedCatalog = [skin("zap", discounted(flash))];
+      vi.mocked(fetchCosmetics).mockResolvedValue(catalog([flash]));
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      const calls = vi.mocked(fetchCosmetics).mock.calls.length;
+      modal.remove();
+      await vi.advanceTimersByTimeAsync(61_000 + 8 * 15_000);
+      expect(vi.mocked(fetchCosmetics).mock.calls.length).toBe(calls);
+      expect(internals(modal).dealRollover).toBeNull();
     });
   });
 

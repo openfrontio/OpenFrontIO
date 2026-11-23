@@ -47,6 +47,7 @@ import {
   newUntilMs,
   currentPrice,
   fetchCosmetics,
+  cosmeticsCacheIsStale,
   getCachedCosmetics,
   invalidateCosmetics,
   refreshStaleCosmetics,
@@ -101,8 +102,16 @@ function isFeaturedSection(
   );
 }
 
-/** How many cards a Featured row holds: one row at every width. */
-const FEATURED_ROW_LENGTH = 4;
+// How many cards a Featured row holds: one row at every width, 2 cards on
+// phones, 3 from Tailwind's sm and 4 from its xl. Without matchMedia, 4.
+const FEATURED_ROW_SM = "(min-width: 40rem)";
+const FEATURED_ROW_XL = "(min-width: 80rem)";
+
+function featuredRowLength(): number {
+  if (typeof window.matchMedia !== "function") return 4;
+  if (window.matchMedia(FEATURED_ROW_XL).matches) return 4;
+  return window.matchMedia(FEATURED_ROW_SM).matches ? 3 : 2;
+}
 
 type Group = readonly ResolvedCosmetic[];
 
@@ -258,6 +267,9 @@ export class StoreModal extends BaseModal {
    * Hidden before the first open, so an inline store mounts on Packs.
    */
   private featuredVisible = false;
+  /** Cards per Featured row at the current width; see featuredRowLength. */
+  private featuredRowLength = 4;
+  private rowQueries: MediaQueryList[] = [];
   /** Set as the store opens; the first onOpen of that open consumes it. */
   private firstOnOpen = false;
   /**
@@ -303,10 +315,18 @@ export class StoreModal extends BaseModal {
    */
   public open(args?: Record<string, unknown>): void {
     if (!this.isModalOpen) {
-      this.cosmetics ??= getCachedCosmetics();
-      // With no catalog in hand yet, Featured shows its loading state.
+      // The shared cache is at least as new as the store's own copy, which
+      // nothing updates while the store is closed.
+      this.cosmetics = getCachedCosmetics() ?? this.cosmetics;
+      this.featuredRowLength = featuredRowLength();
+      // Decide only from a catalog onOpen won't replace. With none in hand,
+      // or one that is stale or still lists an ended sale (a deal may have
+      // rolled over), Featured shows and waits for the refetch.
       this.featuredVisible =
-        this.cosmetics === null || this.featuredHasContent();
+        this.cosmetics === null ||
+        cosmeticsCacheIsStale() ||
+        hasEndedSale(this.cosmetics) ||
+        this.featuredHasContent();
       this.firstOnOpen = true;
     }
     super.open(args);
@@ -324,7 +344,26 @@ export class StoreModal extends BaseModal {
       this.rowObserver ??= new ResizeObserver(() => alignPurchaseRows(this));
       this.rowObserver.observe(this);
     }
+    if (typeof window.matchMedia === "function") {
+      this.rowQueries = [FEATURED_ROW_SM, FEATURED_ROW_XL].map((query) =>
+        window.matchMedia(query),
+      );
+      for (const query of this.rowQueries) {
+        query.addEventListener("change", this.onRowLengthChange);
+      }
+    }
   }
+
+  /** A Featured row holds as many cards as fit, so a resize re-picks them. */
+  private onRowLengthChange = () => {
+    const length = featuredRowLength();
+    if (length === this.featuredRowLength) return;
+    this.featuredRowLength = length;
+    if (this.isModalOpen && this.activeTab === "featured") {
+      this.selectVisible(this.groupsForTab(this.activeTab));
+      this.requestUpdate();
+    }
+  };
 
   disconnectedCallback() {
     document.removeEventListener("userMeResponse", this.onUserMeEvent);
@@ -333,13 +372,23 @@ export class StoreModal extends BaseModal {
       this.onOpenCosmeticPreview,
     );
     this.rowObserver?.disconnect();
+    for (const query of this.rowQueries) {
+      query.removeEventListener("change", this.onRowLengthChange);
+    }
+    this.rowQueries = [];
     this.tracker?.dispose();
     this.tracker = null;
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
     // A store removed while open never gets onClose; don't let a days-long
-    // timeout hold on to it.
+    // timeout hold on to it, or a sale end start a rollover and refetch on
+    // the detached element.
     this.clearNewEnd();
+    if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
+    this.saleEndTimer = null;
+    if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
+    this.saleRetryTimer = null;
+    this.saleRefetchGeneration++;
     super.disconnectedCallback();
   }
 
@@ -536,9 +585,9 @@ export class StoreModal extends BaseModal {
     const dealKeys = keysOf(deal ? [deal] : []);
     const fresh = this.cosmeticsGroups("new")
       .filter((group) => !group.some((item) => dealKeys.has(item.key)))
-      .slice(0, FEATURED_ROW_LENGTH);
-    // Only what the New row shows: a new item on sale that doesn't fit there
-    // still shows under On sale.
+      .slice(0, this.featuredRowLength);
+    // Only what the New row shows at this width: a new item on sale that
+    // doesn't fit there still shows under On sale.
     const newKeys = keysOf(fresh);
     const sale = onSale.filter(
       (group) =>
@@ -548,7 +597,7 @@ export class StoreModal extends BaseModal {
     return {
       deal,
       new: fresh,
-      sale: sale.slice(0, FEATURED_ROW_LENGTH),
+      sale: sale.slice(0, this.featuredRowLength),
     };
   }
 
@@ -1250,6 +1299,14 @@ export class StoreModal extends BaseModal {
       sections.new.length === 0 &&
       sections.sale.length === 0
     ) {
+      // A stale catalog with nothing to feature: the refetch (or a sale-end
+      // retry) may bring something, so wait for it before saying so.
+      if (
+        this.catalogRequest !== this.settledCatalogRequest ||
+        this.saleRetryTimer !== null
+      ) {
+        return this.renderFeaturedLoading();
+      }
       return html`<div
         data-featured-empty
         class="py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
@@ -1339,14 +1396,8 @@ export class StoreModal extends BaseModal {
   ): TemplateResult | typeof nothing {
     if (groups.length === 0) return nothing;
     const headingId = `store-featured-${section}-heading`;
-    // One row at every width: 2 cards on phones, 3 from sm, 4 from xl.
-    // Hidden cards never intersect, so they record no impressions.
-    const cardClass = (i: number) =>
-      i === 2
-        ? "hidden h-full min-w-0 sm:block"
-        : i === 3
-          ? "hidden h-full min-w-0 xl:block"
-          : "block h-full min-w-0";
+    // featuredSections keeps only what fits one row at this width.
+    const cardClass = "block h-full min-w-0";
     return html`<div data-featured-section=${section}>
       <div
         class="mx-3 mt-4 flex items-center justify-between gap-3 border-b border-white/10 pb-2"
@@ -1370,8 +1421,8 @@ export class StoreModal extends BaseModal {
         data-featured-grid
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 xl:grid-cols-4"
       >
-        ${groups.map((group, i) =>
-          this.renderCosmeticCards([group], false, cardClass(i)),
+        ${groups.map((group) =>
+          this.renderCosmeticCards([group], false, cardClass),
         )}
       </div>
     </div>`;
@@ -1831,12 +1882,13 @@ export class StoreModal extends BaseModal {
     ) {
       await this.loadCatalog();
     }
-    this.selectVisible(this.groupsForTab(this.activeTab));
-    await this.refresh();
     // A catalog still carrying a sale that has ended (the store was closed
     // while the sale-end refetch was retrying, then reopened within the
-    // stale window) would show its prices with no banner: refetch it.
+    // stale window) would show its prices with no banner: refetch it. Started
+    // before the render, so Featured shows loading rather than its empty line.
     if (hasEndedSale(this.cosmetics)) void this.refetchAfterSaleEnd(0);
+    this.selectVisible(this.groupsForTab(this.activeTab));
+    await this.refresh();
   }
 
   /**
