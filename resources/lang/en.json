@@ -2920,6 +2920,8 @@
     "save_failed": "Not saved: {error}",
     "saved": "Saved",
     "saving": "Saving…",
+    "settings": "Settings",
+    "settings_removed": "Removed what the new settings don't allow: {structures, plural, one {# structure} other {# structures}}, {warships, plural, one {# warship} other {# warships}} and {alliances, plural, one {# alliance} other {# alliances}}. Undo brings them back.",
     "size_rule": "Width and height must be multiples of 4, from 100 to {max}.",
     "starting": "Starting…",
     "stock_size": "{width} × {height} tiles",

@@ -9,6 +9,7 @@
 import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
 import {
   CustomGameMap,
+  Difficulty,
   GameMapSize,
   Structures,
   UnitType,
@@ -33,6 +34,7 @@ import {
   land,
   newScenarioDocument,
   resizeScenarioDocument,
+  type ScenarioConfig,
   type ScenarioDocument,
   type ScenarioNation,
   ScenarioDocumentSchema,
@@ -577,6 +579,8 @@ test("an edit that can't apply changes nothing", () => {
     { type: "add_alliance", nations: ["EASTNAT1", "EASTNAT1"] },
     { type: "add_alliance", nations: ["EASTNAT1", "NOBODY01"] },
     { type: "remove_alliance", nations: ["WESTNAT1", "NOLAND01"] },
+    { type: "set_config", config: { ...doc.config, goldMultiplier: 0 } },
+    { type: "set_config", config: { ...doc.config, maxTimerValue: 121 } },
   ];
   for (const edit of bad) expect(() => editor.apply(edit)).toThrow();
   expect(doc).toEqual(original);
@@ -705,6 +709,119 @@ test("a brush stroke reaches the engine in batches, and undo takes it all back",
   expect(doc).toEqual(original);
   expect(editor.canUndo()).toBe(false);
   expectEngineHolds(live.runner, doc);
+});
+
+describe("settings", () => {
+  test("a change is one undo step, and reaches the engine only through what it removes", async () => {
+    const doc = built();
+    const original = copy(doc);
+    const live = await replayed(doc);
+    const editor = new DocumentEditor(doc, live.send);
+    live.sent.length = 0;
+    const config: ScenarioConfig = {
+      ...doc.config,
+      difficulty: Difficulty.Hard,
+      instantBuild: true,
+      maxTimerValue: 45,
+      goldMultiplier: 2.5,
+      customAllianceDuration: 10,
+      doomsdayClock: { enabled: true, speed: "fast" },
+      overtime: { enabled: true, startMinutes: 30 },
+    };
+    applySteps(editor, [[{ type: "set_config", config }]]);
+    expect(doc.config).toEqual(config);
+    expect(live.sent).toEqual([]);
+    expect(copy(doc)).toEqual(doc);
+
+    editor.undo();
+    expect(doc).toEqual(original);
+    expect(editor.canUndo()).toBe(false);
+    editor.redo();
+    expect(doc.config).toEqual(config);
+    expectEngineHolds(live.runner, doc);
+  });
+
+  const removals: [
+    string,
+    (c: ScenarioConfig) => ScenarioConfig,
+    (d: ScenarioDocument) => unknown[],
+  ][] = [
+    [
+      "disabling a structure type removes its structures",
+      (c) => ({
+        ...c,
+        disabledUnits: [UnitType.Port, UnitType.MissileSilo],
+      }),
+      (d) => d.structures.filter((s) => s.type === UnitType.Port),
+    ],
+    [
+      "disabling warships removes every warship",
+      (c) => ({ ...c, disabledUnits: [UnitType.Warship] }),
+      (d) => d.warships,
+    ],
+    [
+      "turning alliances off removes every alliance",
+      (c) => ({ ...c, customAllianceDuration: 0 }),
+      (d) => d.alliances,
+    ],
+  ];
+
+  test.each(removals)(
+    "%s, and undo puts the settings and them back",
+    async (_, change, removed) => {
+      const doc = built();
+      const original = copy(doc);
+      expect(removed(doc).length).toBeGreaterThan(0);
+      const live = await replayed(doc);
+      const editor = new DocumentEditor(doc, live.send);
+      const config = change(doc.config);
+      applySteps(editor, [[{ type: "set_config", config }]]);
+      expect(doc.config).toEqual(config);
+      expect(removed(doc)).toEqual([]);
+      expectEngineHolds(live.runner, doc);
+      // The document still parses: nothing in it conflicts with its settings.
+      expect(copy(doc)).toEqual(doc);
+
+      editor.undo();
+      expect(doc).toEqual(original);
+      expect(editor.canUndo()).toBe(false);
+      expectEngineHolds(live.runner, doc);
+
+      editor.redo();
+      expect(removed(doc)).toEqual([]);
+      expectEngineHolds(live.runner, doc);
+      editor.undo();
+      expect(doc).toEqual(original);
+    },
+  );
+
+  test("one change can remove structures, warships and alliances together", async () => {
+    const doc = built();
+    const original = copy(doc);
+    const live = await replayed(doc);
+    const editor = new DocumentEditor(doc, live.send);
+    applySteps(editor, [
+      [
+        {
+          type: "set_config",
+          config: {
+            ...doc.config,
+            disabledUnits: [...Structures.types, UnitType.Warship],
+            customAllianceDuration: 0,
+          },
+        },
+      ],
+    ]);
+    expect(doc.structures).toEqual([]);
+    expect(doc.warships).toEqual([]);
+    expect(doc.alliances).toEqual([]);
+    expectEngineHolds(live.runner, doc);
+    expect(copy(doc)).toEqual(doc);
+
+    editor.undo();
+    expect(doc).toEqual(original);
+    expectEngineHolds(live.runner, doc);
+  });
 });
 
 describe("resizing", () => {

@@ -2,8 +2,8 @@
 
 Status: design, 2026-11-19. The engine's editor mode, the document model
 (with undo and local drafts), the editor page, the terrain, territory and
-units tools, the nations panel, bundle export and loading
-and test play are built. The settings tool and PNG import are not.
+units tools, the nations panel, the settings panel, bundle export and
+loading and test play are built. PNG import is not.
 
 ## What it is
 
@@ -245,6 +245,18 @@ The nations panel lists, under the picked nation, every other nation with a
 checkbox for an alliance between the two at the start; each change is one
 undo step. The list is hidden when the settings turn alliances off.
 
+The Settings button in the bar opens a panel with the document's game
+settings: difficulty, instant build, infinite gold and troops, donating
+gold and troops, water nukes, the doomsday clock and its speed, the max
+timer, the gold multiplier, the alliance duration (0 turns alliances off),
+overtime and the disabled units. Each change is one `set_config` edit and
+one undo step. The editing engine keeps its own settings, which disable
+nothing, so the settings only reach a game through export. A change that
+disables something the scenario uses removes it in the same edit:
+structures of a disabled type, every warship if warships are disabled, and
+every alliance if alliances are turned off. The panel then says how many
+structures, warships and alliances went.
+
 Changing the map's width or height is the one edit the engine cannot take
 live. It rebuilds the engine from the document.
 
@@ -272,6 +284,8 @@ command to the engine.
   starts. `set_nation` then restores its troops, gold and playable.
 - Undoing `add_alliance` is `remove_alliance`, and the other way round,
   and the same for `place_warship` and `remove_warship`.
+- Undoing `set_config` restores the old settings first, then puts back the
+  structures, warships and alliances the change removed.
 
 Undo history is not saved with a draft.
 
