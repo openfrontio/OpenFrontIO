@@ -123,15 +123,18 @@ function filesShapeOk(files: unknown): files is CardBackgroundFiles {
   return files.layers.every(isObject);
 }
 
-// A layer's src in a catalogue entry: a relative path to a PNG, like
+// A layer's src in a catalogue entry: a PNG at a relative path, like
 // /cosmetics/card-backgrounds/bg_neon_grid_fx-drift.png, or the bare file
-// name. No scheme, host, "..", backslash or quote: the game loads it as an
-// image and inside a CSS url().
+// name, or an https:// link, as the Assets page hands out for the bucket. A
+// link has a host (letters, digits, "." and "-") and an optional port. No
+// other scheme, no "//host" without one, no query, fragment, "..", backslash,
+// quote, bracket or space: the game loads it as an image and inside a CSS
+// url(). infra's LayerSrcSchema uses this same regex.
 const CATALOGUE_SRC =
-  /^\/?(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.png$/i;
+  /^(?:https:\/\/[A-Za-z0-9.-]+(?::[0-9]{1,5})?\/|\/)?(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.png$/i;
 const MAX_SRC_LENGTH = 200;
 
-/** Whether `src` is a relative catalogue path to a PNG layer. */
+/** Whether `src` is a catalogue PNG layer: a relative path or an https:// link. */
 export function isCatalogueLayerSrc(src: unknown): boolean {
   return (
     typeof src === "string" &&
@@ -141,7 +144,7 @@ export function isCatalogueLayerSrc(src: unknown): boolean {
 }
 
 /**
- * The layers of `animation` whose src isn't a relative catalogue path, as
+ * The layers of `animation` whose src isn't a catalogue PNG path or link, as
  * `layer_src` errors. Not part of checkCardBackground, since the browser
  * previews layers from blob: URLs: the checks entry adds it, for what a host
  * stores or sends on.

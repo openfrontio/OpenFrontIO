@@ -143,7 +143,7 @@ export type CardIssueCode =
   | "animation_invalid"
   | "layer_count_mismatch"
   | "layer_effect_mismatch"
-  /** A layer src isn't a relative catalogue path (checks entry only). */
+  /** A layer src isn't a catalogue PNG path or https:// link (checks entry only). */
   | "layer_src"
   | "layer_opaque"
   | "set_too_large"
