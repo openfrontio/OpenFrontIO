@@ -18,6 +18,7 @@ import {
   peekPendingPurchase,
 } from "../../src/client/components/inventory/PendingEquip";
 import {
+  broadcastFreshUserMe,
   checkInPlacePurchase,
   fetchCosmetics,
 } from "../../src/client/Cosmetics";
@@ -408,6 +409,25 @@ describe("Inventory: unsaved card changes guard", () => {
     await click("[data-card-slot-row='tracker:2'] [data-card-row-open]");
     await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
     expect(editor.canSave()).toBe(true);
+  });
+
+  it("a purchase's profile refresh from before session-reauth never seeds the card editor", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    // A purchase under A refreshes the profile; the account switches
+    // before it lands.
+    let answer!: (v: UserMeResponse) => void;
+    vi.mocked(getUserMe).mockReturnValueOnce(new Promise((r) => (answer = r)));
+    const refreshing = broadcastFreshUserMe();
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    const late = owner();
+    answer(late);
+    await refreshing;
+    await settle(modal);
+    const editor = (modal as unknown as { cardEditor: CardEditorLike })
+      .cardEditor;
+    expect(editor.isSeededWith(late)).toBe(false);
+    expect(editor.canSave()).toBe(false);
   });
 
   for (const event of ["session-reauth", "session-cleared"]) {

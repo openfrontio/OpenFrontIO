@@ -413,12 +413,26 @@ async function hardPriceOf(key: string): Promise<number | null> {
  * stale balance is much the better failure.
  */
 let freshUserMeRequestId = 0;
+// Bumped at sign-out and at a portal account change. A profile fetched
+// before one is the old account's: it's returned to its caller (that
+// purchase's own result) but never broadcast, or every surface holding a
+// profile would take it as the new session's.
+let freshUserMeSession = 0;
+if (typeof document !== "undefined") {
+  const bump = () => {
+    freshUserMeSession++;
+  };
+  document.addEventListener("session-reauth", bump);
+  document.addEventListener("session-cleared", bump);
+}
 export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
   const requestId = ++freshUserMeRequestId;
+  const session = freshUserMeSession;
   invalidateUserMe();
   const fresh = await getUserMe();
   // A newer refresh owns the broadcast, even if it is still pending or failed.
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
+  if (session !== freshUserMeSession) return fresh;
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
