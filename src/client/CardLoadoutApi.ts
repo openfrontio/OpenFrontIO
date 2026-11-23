@@ -1,7 +1,4 @@
-import type {
-  PlayerCardRefs,
-  TrackerStat,
-} from "@openfront/shared/PlayerCardSchemas";
+import type { TrackerStat } from "@openfront/shared/PlayerCardSchemas";
 import { invalidateUserMe } from "./Api";
 import { getApiBase } from "./ApiBase";
 import { getAuthHeader, logOut } from "./Auth";
@@ -14,29 +11,6 @@ export interface CardLoadoutBody {
   title: string | null;
   taunt: string | null;
   trackers: TrackerStat[];
-}
-
-// A saved loadout as /users/@me would carry it, for patching a copy in hand
-// (when the refresh after a save fails, it still has to show the save).
-// Tracker values come from `previous`; a newly equipped one reads 0 until
-// the next /users/@me.
-export function cardRefsFromLoadout(
-  loadout: CardLoadoutBody,
-  previous: PlayerCardRefs | null | undefined,
-): PlayerCardRefs {
-  const values = new Map(
-    (previous?.trackers ?? []).map((t) => [t.stat, t.value] as const),
-  );
-  const refs: PlayerCardRefs = {
-    trackers: loadout.trackers.map((stat) => ({
-      stat,
-      value: values.get(stat) ?? 0,
-    })),
-  };
-  if (loadout.background !== null) refs.background = loadout.background;
-  if (loadout.title !== null) refs.title = loadout.title;
-  if (loadout.taunt !== null) refs.taunt = loadout.taunt;
-  return refs;
 }
 
 export type SaveCardResult =
