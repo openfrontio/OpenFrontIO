@@ -1827,7 +1827,7 @@
     {
       "id": "w10kland",
       "placement": "land",
-      "alpha": 0.75,
+      "alpha": 0.60,
       "nukeable": true
     },
     {

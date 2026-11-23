@@ -5,7 +5,7 @@
   "id": "World2000",
   "layers": [
     {
-      "alpha": 0.75,
+      "alpha": 0.6,
       "id": "w2kland",
       "nukeable": true,
       "placement": "land"
