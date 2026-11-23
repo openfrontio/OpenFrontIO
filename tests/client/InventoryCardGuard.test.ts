@@ -102,6 +102,11 @@ function owner(flares: string[] = OWNER): UserMeResponse {
   } as unknown as UserMeResponse;
 }
 
+type CardEditorLike = {
+  isSeededWith(userMe: UserMeResponse): boolean;
+  canSave(): boolean;
+};
+
 async function settle(modal: InventoryModal) {
   for (let i = 0; i < 5; i++) {
     await modal.updateComplete;
@@ -377,6 +382,32 @@ describe("Inventory: unsaved card changes guard", () => {
     q<HTMLButtonElement>("[data-card-save]")?.click();
     await settle(modal);
     expect(saveCardLoadout).not.toHaveBeenCalled();
+  });
+
+  it("a /users/@me started before session-reauth never seeds the card editor", async () => {
+    let answer!: (v: UserMeResponse) => void;
+    vi.mocked(getUserMe).mockReturnValueOnce(new Promise((r) => (answer = r)));
+    modal.open({ tab: "card" });
+    await settle(modal);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    // The old account's request lands after the switch, as a new object.
+    const late = owner();
+    answer(late);
+    await settle(modal);
+    const editor = (modal as unknown as { cardEditor: CardEditorLike })
+      .cardEditor;
+    expect(editor.isSeededWith(late)).toBe(false);
+    expect(editor.canSave()).toBe(false);
+    // The new session's profile (here the same account again) is taken.
+    const fresh = owner();
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(editor.isSeededWith(fresh)).toBe(true);
+    await click("[data-card-slot-row='tracker:2'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
+    expect(editor.canSave()).toBe(true);
   });
 
   for (const event of ["session-reauth", "session-cleared"]) {

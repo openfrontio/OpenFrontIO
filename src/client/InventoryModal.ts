@@ -232,8 +232,11 @@ export class InventoryModal extends BaseModal {
 
   /** Signed out, or into another account: the card being edited isn't
    * this session's any more, so its unsaved changes (and an open guard
-   * asking about them) go. */
+   * asking about them) go. A profile load already running was fetched for
+   * the old session: it's discarded, and the new session's /users/@me
+   * (Main broadcasts it) loads the Inventory again. */
   private onSessionChange = () => {
+    this.ownershipLoadId++;
     if (this.cardGuard !== null) {
       this.cardGuard.resolve(false);
       this.cardGuard = null;
