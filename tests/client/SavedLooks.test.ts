@@ -203,4 +203,39 @@ describe("endScreenLookRows", () => {
       ["a", ["cardTracker:wins", "cardTracker:games", "cardTracker:kills"]],
     ]);
   });
+
+  // A look saved for its one buyable item (hasSomethingToBuy looks at every
+  // candidate) must keep it past the cap: buyable items go first.
+  it("three earned items and a buyable fourth: the fourth is kept", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          item("cardTitle", "t1", "earned"),
+          item("cardTitle", "t2", "earned"),
+          item("cardTitle", "t3", "earned"),
+          item("cardTracker", "wins"),
+        ]),
+      ],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["cardTracker:wins", "cardTitle:t1", "cardTitle:t2"]],
+    ]);
+  });
+
+  it("buyable first keeps their own order, and the card stays first", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          CARD,
+          item("cardTitle", "t1", "earned"),
+          item("cardBackground", "bg_a"),
+        ]),
+      ],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["playerCard:standard", "cardBackground:bg_a", "cardTitle:t1"]],
+    ]);
+  });
 });

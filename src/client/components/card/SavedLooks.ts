@@ -90,7 +90,8 @@ const itemKey = (i: LoadoutItem) => `${i.type}:${i.item.name}`;
  * saved looks), filtered against what the viewer owns now rather than when
  * the look was saved. The player card is offered in the first row shown only,
  * no item shows in two rows, each row shows at most MAX_LOOK_ITEMS (counted
- * after those filters), and a row left with nothing to buy is dropped (an
+ * after those filters, buyable items first so the cap never drops the one a
+ * look was saved for), and a row left with nothing to buy is dropped (an
  * earned item alone doesn't keep it).
  */
 export function endScreenLookRows(
@@ -102,13 +103,17 @@ export function endScreenLookRows(
   const offered = new Set<string>();
   const out: LookRow[] = [];
   for (const row of rows) {
-    const items = row.items
-      .filter((i) => {
-        const key = itemKey(i);
-        if (owned.has(key) || offered.has(key)) return false;
-        return i.type !== "playerCard" || (!ownsCard && out.length === 0);
-      })
-      .slice(0, MAX_LOOK_ITEMS);
+    const left = row.items.filter((i) => {
+      const key = itemKey(i);
+      if (owned.has(key) || offered.has(key)) return false;
+      return i.type !== "playerCard" || (!ownsCard && out.length === 0);
+    });
+    // Buyable first, each kept in its own order: "has something to buy"
+    // (the panel's save, the killer row) then holds after the cap too.
+    const items = [
+      ...left.filter((i) => i.state === "buy"),
+      ...left.filter((i) => i.state !== "buy"),
+    ].slice(0, MAX_LOOK_ITEMS);
     if (!items.some((i) => i.state === "buy")) continue;
     for (const i of items) offered.add(itemKey(i));
     out.push({ ...row, items });
