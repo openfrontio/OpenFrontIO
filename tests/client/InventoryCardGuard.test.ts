@@ -346,6 +346,17 @@ describe("Inventory: unsaved card changes guard", () => {
     );
   });
 
+  for (const event of ["session-reauth", "session-cleared"]) {
+    it(`${event} with the card tab open drops the unsaved changes`, async () => {
+      await openWithChange();
+      expect(q("[data-card-change-count]")).not.toBeNull();
+      document.dispatchEvent(new CustomEvent(event));
+      await settle(modal);
+      expect(q("[data-card-change-count]")).toBeNull();
+      expect(saveCardLoadout).not.toHaveBeenCalled();
+    });
+  }
+
   it("a Save that fails stays, with the changes", async () => {
     vi.mocked(saveCardLoadout).mockResolvedValue({
       ok: false,

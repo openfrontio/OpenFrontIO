@@ -213,6 +213,17 @@ export class InventoryModal extends BaseModal {
     void this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
   };
 
+  /** Signed out, or into another account: the card being edited isn't
+   * this session's any more, so its unsaved changes (and an open guard
+   * asking about them) go. */
+  private onSessionChange = () => {
+    if (this.cardGuard !== null) {
+      this.cardGuard.resolve(false);
+      this.cardGuard = null;
+    }
+    this.cardEditor.dropAccount();
+  };
+
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
     this.previewingCosmetic = customEvent.detail;
@@ -221,6 +232,8 @@ export class InventoryModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
+    document.addEventListener("session-reauth", this.onSessionChange);
+    document.addEventListener("session-cleared", this.onSessionChange);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.addEventListener(
@@ -239,6 +252,8 @@ export class InventoryModal extends BaseModal {
     );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
+    document.removeEventListener("session-reauth", this.onSessionChange);
+    document.removeEventListener("session-cleared", this.onSessionChange);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${key}`,

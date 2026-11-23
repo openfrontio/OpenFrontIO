@@ -44,7 +44,8 @@ export const CARD_SLOT_KIND_LIST = Object.keys(
 
 /** A slot on the card: the background, or row `index` of a kind. */
 export type CardSlotRef =
-  { kind: "background" } | { kind: CardSlotKind; index: number };
+  | { kind: "background" }
+  | { kind: CardSlotKind; index: number };
 
 export interface CardDraft {
   background: string | null;
@@ -274,7 +275,8 @@ export function slotItem(
   }
   const spec = CARD_SLOT_KINDS[slot.kind];
   const section = cosmetics?.[spec.section] as
-    Record<string, CardItem> | undefined;
+    | Record<string, CardItem>
+    | undefined;
   const item = section?.[name];
   return item ? { type: spec.type, item } : null;
 }
@@ -326,6 +328,9 @@ export class CardEditor {
   private sending: CardDraft | null = null;
   /** The save in flight, for a Save clicked while it runs to wait on. */
   private inFlight: Promise<boolean> | null = null;
+  /** Bumped when the card turns out to be another account's: a save
+   * started before never lands on the next one's card. */
+  private account = 0;
   private listeners = new Set<() => void>();
 
   subscribe(listener: () => void): () => void {
@@ -340,10 +345,15 @@ export class CardEditor {
   /**
    * Takes the stored card from a new /users/@me. Unsaved changes stay (a
    * purchase broadcasts a fresh profile while they're pending); with none,
-   * the draft follows the stored card.
+   * the draft follows the stored card. A profile of another account (or
+   * none: signed out) drops them, whatever else is going on.
    */
   seed(userMe: UserMeResponse | null): void {
     if (userMe === this.seededFrom) return;
+    const owner = userMe?.player.publicId ?? null;
+    const sameAccount =
+      owner !== null && owner === (this.seededFrom?.player.publicId ?? null);
+    if (!sameAccount) this.dropAccount();
     this.seededFrom = userMe;
     const card = userMe?.player.card ?? null;
     const hadChanges = this.changeCount() > 0;
@@ -354,6 +364,23 @@ export class CardEditor {
     );
     this.flares = userMe?.player.flares ?? [];
     if (!hadChanges) this.draft = cloneDraft(this.saved);
+    this.emit();
+  }
+
+  /**
+   * The session changed (signed out, or another account): unsaved changes
+   * and a save in flight belong to a card that's no longer this one. The
+   * draft goes back to the saved card, nothing is left to Retry, and the
+   * next /users/@me is taken whoever it's for.
+   */
+  dropAccount(): void {
+    this.account++;
+    this.clearSavedTimer();
+    this.seededFrom = null;
+    this.draft = cloneDraft(this.saved);
+    this.droppedTo = null;
+    this.sending = null;
+    this.saveState = "idle";
     this.emit();
   }
 
@@ -473,7 +500,11 @@ export class CardEditor {
     // and a sign-out meanwhile must not send this card under the next
     // session's token.
     const epoch = sessionEpoch;
+    const account = this.account;
     const result = await saveCardLoadout(body, () => sessionEpoch === epoch);
+    // Another account's card by now: dropAccount() has reset the editor,
+    // and anything since is that account's.
+    if (this.account !== account) return false;
     this.sending = null;
     if (sessionEpoch !== epoch) {
       // Signed out, or into another account, while it saved: whatever it
