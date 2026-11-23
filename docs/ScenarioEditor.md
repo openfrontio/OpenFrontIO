@@ -2,8 +2,8 @@
 
 Status: design, 2026-11-19. The engine's editor mode, the document model
 (with undo and local drafts), the editor page, the terrain and territory
-tools, the nations panel and bundle export and loading are built. The
-structure and settings tools, PNG import and test play are not.
+and structure tools, the nations panel, bundle export and loading and test
+play are built. The settings tool and PNG import are not.
 
 ## What it is
 
@@ -199,6 +199,14 @@ terrain byte; this is how water-nuke craters reach the screen today.
 
 Terrain, territory and structures are tools in the same view. There is no
 separate terrain mode and no engine to throw away when switching.
+
+The structure tool places a structure of the picked type and level for the
+nation that owns the clicked tile; a click on a structure removes it, and a
+drag pans. It keeps the document's rules (one per tile, on its nation's
+land, a port on a shore, no type the config disables, a defense post at
+level 1) and nothing more: the in-game spacing between structures
+(`structureMinDist`) is a build rule for players, not a scenario rule, so an
+author may place structures closer than a player could build them.
 
 Changing the map's width or height is the one edit the engine cannot take
 live. It rebuilds the engine from the document.

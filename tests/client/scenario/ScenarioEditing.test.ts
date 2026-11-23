@@ -402,6 +402,27 @@ test("undoing remove_nation brings back its land, troops, gold and structures", 
   expectEngineHolds(live.runner, doc);
 });
 
+test("land given to another nation loses the old owner's structure, and undo gives both back", async () => {
+  const doc = built();
+  const original = copy(doc);
+  const live = await replayed(doc);
+  const editor = new DocumentEditor(doc, live.send);
+  // East's SAM stands at (170, 95); West takes the tiles around it.
+  editor.apply({
+    type: "set_owner",
+    tiles: rect(168, 93, 5, 5),
+    owner: "WESTNAT1",
+  });
+  editor.commit();
+  expect(doc.structures.map((s) => s.type)).not.toContain(UnitType.SAMLauncher);
+  expect(doc.structures).toHaveLength(5);
+  expectEngineHolds(live.runner, doc);
+
+  editor.undo();
+  expect(doc).toEqual(original);
+  expectEngineHolds(live.runner, doc);
+});
+
 test("a stroke is one undo, with one full terrain pass", async () => {
   const doc = built();
   const original = copy(doc);
