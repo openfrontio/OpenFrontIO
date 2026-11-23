@@ -1,8 +1,8 @@
 # Scenario editor
 
 Status: design, 2026-11-19. The engine's editor mode, the document model
-(with undo and local drafts), the editor page, the terrain, territory,
-structure and warship tools, the nations panel, bundle export and loading
+(with undo and local drafts), the editor page, the terrain, territory and
+units tools, the nations panel, bundle export and loading
 and test play are built. The settings tool and PNG import are not.
 
 ## What it is
@@ -223,21 +223,22 @@ advancing a tick, so the renderer and borrowed HUD layers show it the normal
 way. Terrain edits arrive as ordinary tile updates, which already carry the
 terrain byte; this is how water-nuke craters reach the screen today.
 
-Terrain, territory, structures and warships are tools in the same view. There is no
-separate terrain mode and no engine to throw away when switching.
+Terrain, territory and units (structures and warships) are tools in the
+same view. There is no separate terrain mode and no engine to throw away
+when switching.
 
-The structure tool places a structure of the picked type and level for the
-nation that owns the clicked tile; a click on a structure removes it, and a
-drag pans. It keeps the document's rules (one per tile, on its nation's
+The units tool places a unit of the picked type, a structure or a warship;
+a click on or near a unit of any type removes the nearest, and a drag pans.
+A structure goes, at the picked level, to the nation that owns the clicked
+tile. It keeps the document's rules (one per tile, on its nation's
 land, a port on a shore, no type the config disables, a defense post at
 level 1) and nothing more: the in-game spacing between structures
 (`structureMinDist`) is a build rule for players, not a scenario rule, so an
 author may place structures closer than a player could build them.
 
-The warship tool places a warship for the nation picked in the nations
-panel on the clicked water tile; a click on or near a warship removes the
-nearest, and a drag pans. With no nation picked, on land, with warships
-disabled or at `MAX_WARSHIPS` it places nothing and says why. Warships
+A warship goes on the clicked water tile, for the nation picked in the
+nations panel. With no nation picked, on land, with warships disabled or at
+`MAX_WARSHIPS` it places nothing and says why. Warships
 render as in game, from the engine's unit updates.
 
 The nations panel lists, under the picked nation, every other nation with a
