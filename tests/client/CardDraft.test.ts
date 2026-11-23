@@ -670,6 +670,37 @@ describe("CardEditor", () => {
     expect(editor.saved.background).toBe("bg_pacific");
   });
 
+  it("a profile while the session's account is briefly unknown keeps the draft", async () => {
+    // A failed token refresh drops the token without a session event, so
+    // currentPublicId() is null for a while: a profile landing then (one
+    // already in flight) must not wipe unsaved changes or the save.
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    session.id = "account-a";
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.pick({ kind: "tracker", index: 1 }, "wins");
+    session.id = null;
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker[1]).toBe("wins");
+    expect(editor.saveState).toBe("saving");
+    session.id = "account-a";
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["games_played"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+  });
+
   it("the session moving to another account turns Save off at once", async () => {
     session.id = "account-a";
     const editor = new CardEditor();
