@@ -17,6 +17,7 @@ import {
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
+  ScheduledPublicGameTypeSchema,
   ServerErrorMessage,
 } from "@openfront/shared/WireSchemas";
 import {
@@ -44,6 +45,7 @@ import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import {
+  clientAuth,
   isSteamAuthenticated,
   type JoinVerifyResponse,
   planJoinVerify,
@@ -51,7 +53,12 @@ import {
 } from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
-import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
+import { boostScheduledLobby } from "./LobbyBoost";
+import {
+  payForLobbyQueue,
+  payForMapBoost,
+  queueListedLobby,
+} from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
@@ -531,6 +538,59 @@ export async function startWorker() {
     res.status(outcome.status).json(outcome.body);
   });
 
+  // A player in a scheduled public lobby pays (plutonium, charged by the API
+  // with their token) to move it to the front of its queue, right behind the
+  // lobby that's counting down.
+  app.post("/api/game/:id/boost", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    const queue = ScheduledPublicGameTypeSchema.safeParse(
+      game.gameInfo().publicGameType,
+    );
+    const outcome = await boostScheduledLobby(
+      {
+        hasConnectedClient: (id) => game.hasConnectedClient(id),
+        isScheduledLobby: () =>
+          queue.success &&
+          game.isPublic() &&
+          game.phase() === GamePhase.Lobby &&
+          !game.hasStarted(),
+        boostBlockedFor: (id) => game.boostBlockedFor(id),
+        boostHeldFor: (id) => game.boostHeldFor(id),
+        startsAt: () => game.gameInfo().startsAt,
+        wouldMoveUp: () =>
+          queue.success && lobbyService.boostWouldMove(game.id, queue.data),
+        reserveBoost: (id) => game.reserveBoost(id),
+        releaseBoost: () => game.releaseBoost(),
+        holdBoostForPayer: () => game.holdBoostForPayer(),
+        boost: () => game.boost(),
+      },
+      auth.persistentId,
+      // Dev has no payment backend; skip the charge, like the queue route.
+      ServerEnv.env() === GameEnv.Dev
+        ? async () => ({ type: "success" })
+        : () => payForMapBoost(token, game.id),
+    );
+    if (outcome.status === 502) {
+      log.warn("map boost payment failed", { gameID: game.id });
+    } else if (outcome.status === 200) {
+      log.info("public lobby boosted", { gameID: game.id });
+    }
+    res.status(outcome.status).json(outcome.body);
+  });
+
   // Singleplayer games run in the browser; the client beats here once a
   // minute so the worker can export how many are in progress (see
   // SingleplayerPresence). The id is client-minted and routes here by hash,
@@ -712,11 +772,15 @@ export async function startWorker() {
         // Gate the join and screen the display name in one API call: status
         // is the Turnstile verdict, and the response carries the
         // display-ready (username, clanTag) pair, so a banned name is never
-        // visible — not even in the lobby. Turnstile gates the FIRST join
-        // only: an already-admitted player who reconnects or refreshes must
-        // not be re-challenged — their original token is single-use and was
-        // already redeemed — so the token is omitted for them and the API
-        // runs the name check alone (an omitted token is always approved).
+        // visible — not even in the lobby. The API handles three modes:
+        // - `token`: Turnstile siteverify + name check (first joins with a
+        //   token; an approved account join also issues/refreshes a 6h pass).
+        // - `pass`: checks for an active 6h Turnstile pass for
+        //   `(persistentId, ip)` + name check (signed-in account first joins
+        //   that omit a token).
+        // - `readmit`: name check alone (Steam-authenticated first joins, and
+        //   already-admitted reconnects whose single-use token was already
+        //   redeemed).
         // Re-admits only call out when the verdict could matter (pre-start,
         // with a changed identity); otherwise the reconnect proceeds with
         // zero API calls, keeping mass reconnects at game start off the
@@ -733,12 +797,15 @@ export async function startWorker() {
         if (ServerEnv.env() !== GameEnv.Dev) {
           const stored = game?.storedIdentity(persistentId) ?? null;
           const steamAuthed = isSteamAuthenticated(claims);
+          const accountAuthed = clientAuth(claims) === "account";
           // SECURITY: the reject/skip/verify split (first joins must
-          // present a token, only re-admits may omit it) lives in
-          // planJoinVerify — see its doc comment. Steam-authenticated first
-          // joins are the one sanctioned null-token first join: Steam
-          // ownership (a signed, unforgeable provider="steam" claim) stands
-          // in for the bot check, and the name check still runs.
+          // present a token, Steam auth, or an eligible account pass; only
+          // re-admits may skip) lives in planJoinVerify — see its doc comment.
+          // Null-token first joins are sanctioned only for Steam-authenticated
+          // joins (mode "readmit": signed provider="steam" claim stands in for
+          // the bot check, name check still runs) and account-authenticated
+          // joins (mode "pass": API verifies an active 6h pass for
+          // persistentId + ip and runs the name check).
           const plan = planJoinVerify({
             isReadmit,
             gameStarted: game?.hasStarted() ?? false,
@@ -748,6 +815,7 @@ export async function startWorker() {
               stored.username === clientMsg.username &&
               stored.clanTag === (clientMsg.clanTag ?? null),
             steamAuthed,
+            accountAuthed,
           });
           if (steamAuthed && !isReadmit) {
             log.info(
@@ -764,12 +832,19 @@ export async function startWorker() {
             return;
           }
           if (plan.action === "verify") {
+            if (plan.mode === "pass") {
+              log.info("Account-authed join: verifying 6h Turnstile pass", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+              });
+            }
             const verdict = await verifyJoin(
               ip,
               plan.token,
               clientMsg.username,
               clientMsg.clanTag ?? null,
               persistentId,
+              plan.mode,
             );
             if (verdict.status === "approved" || verdict.status === "error") {
               admissionGuard.markAdmittedIfNeeded();
@@ -785,12 +860,18 @@ export async function startWorker() {
               log.warn("Unauthorized: Turnstile token rejected", {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,
+                mode: plan.mode,
                 reason: resolved.reason,
                 ...(resolved.errorCodes !== undefined && {
                   errorCodes: resolved.errorCodes,
                 }),
               });
-              ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
+              ws.close(
+                CloseCode.Unauthorized,
+                plan.mode === "pass"
+                  ? CloseReason.TurnstilePassRequired
+                  : CloseReason.TurnstileFailed,
+              );
               return;
             }
             username = resolved.username;

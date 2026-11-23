@@ -419,6 +419,267 @@ describe("verifyJoin", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("forwards persistentId and mode in the POST body when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        status: "approved",
+        username: "Alice",
+        clanTag: "TAG",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verifyJoin("1.2.3.4", "tok", "Alice", "TAG", "pid-42", "token");
+    await verifyJoin("1.2.3.4", null, "Alice", null, "pid-42", "pass");
+    await verifyJoin("1.2.3.4", null, "Alice", null, "pid-42", "readmit");
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      ip: "1.2.3.4",
+      token: "tok",
+      username: "Alice",
+      clanTag: "TAG",
+      persistentId: "pid-42",
+      mode: "token",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      ip: "1.2.3.4",
+      token: null,
+      username: "Alice",
+      clanTag: null,
+      persistentId: "pid-42",
+      mode: "pass",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({
+      ip: "1.2.3.4",
+      token: null,
+      username: "Alice",
+      clanTag: null,
+      persistentId: "pid-42",
+      mode: "readmit",
+    });
+  });
+
+  it("coalesces concurrent mode=pass calls by (persistentId, ip, username, clanTag) and forces null token", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c1 = verifyJoin("1.2.3.4", null, "Alice", "TAG", "pid-1", "pass");
+    const c2 = verifyJoin(
+      "1.2.3.4",
+      "ignored-tok",
+      "Alice",
+      "TAG",
+      "pid-1",
+      "pass",
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(_inFlightTokenCount()).toBe(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      ip: "1.2.3.4",
+      token: null,
+      username: "Alice",
+      clanTag: "TAG",
+      persistentId: "pid-1",
+      mode: "pass",
+    });
+
+    resolveFetch!(
+      jsonResponse({ status: "approved", username: "Alice", clanTag: "TAG" }),
+    );
+
+    const [v1, v2] = await Promise.all([c1, c2]);
+    expect(v1).toEqual({
+      status: "approved",
+      username: "Alice",
+      clanTag: "TAG",
+    });
+    expect(v2).toBe(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce mode=pass calls when ip, persistentId, username, or clanTag differs", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cBase = verifyJoin("1.2.3.4", null, "Alice", "TAG", "pid-1", "pass");
+    const cDiffIp = verifyJoin(
+      "5.6.7.8",
+      null,
+      "Alice",
+      "TAG",
+      "pid-1",
+      "pass",
+    );
+    const cDiffPid = verifyJoin(
+      "1.2.3.4",
+      null,
+      "Alice",
+      "TAG",
+      "pid-2",
+      "pass",
+    );
+    const cDiffName = verifyJoin(
+      "1.2.3.4",
+      null,
+      "Bob",
+      "TAG",
+      "pid-1",
+      "pass",
+    );
+    const cDiffClan = verifyJoin(
+      "1.2.3.4",
+      null,
+      "Alice",
+      null,
+      "pid-1",
+      "pass",
+    );
+    const cDup = verifyJoin("1.2.3.4", null, "Alice", "TAG", "pid-1", "pass");
+
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(_inFlightTokenCount()).toBe(5);
+
+    resolveFetch!(
+      jsonResponse({ status: "approved", username: "Mocked", clanTag: null }),
+    );
+
+    const results = await Promise.all([
+      cBase,
+      cDiffIp,
+      cDiffPid,
+      cDiffName,
+      cDiffClan,
+      cDup,
+    ]);
+    expect(results[5]).toBe(results[0]);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("clears mode=pass in-flight entry on fetch rejection and on HTTP error/rejection verdict", async () => {
+    let rejectFetch: (err: unknown) => void;
+    const failingPromise = new Promise((_, reject) => {
+      rejectFetch = reject;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => failingPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c1 = verifyJoin("1.2.3.4", null, "Alice", null, "pid-1", "pass");
+    const c2 = verifyJoin("1.2.3.4", null, "Alice", null, "pid-1", "pass");
+    expect(_inFlightTokenCount()).toBe(1);
+
+    rejectFetch!(new Error("network down"));
+    const [e1, e2] = await Promise.all([c1, c2]);
+    expect(e1.status).toBe("error");
+    expect(e2).toEqual(e1);
+    expect(_inFlightTokenCount()).toBe(0);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ status: "rejected", reason: "pass_required" }),
+    );
+    const rej = await verifyJoin(
+      "1.2.3.4",
+      null,
+      "Alice",
+      null,
+      "pid-1",
+      "pass",
+    );
+    expect(rej).toEqual({ status: "rejected", reason: "pass_required" });
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("isolates mode=pass and mode=token coalescing key namespaces", async () => {
+    let resolvePass: (val: unknown) => void;
+    let resolveToken: (val: unknown) => void;
+    const passPromise = new Promise((resolve) => {
+      resolvePass = resolve;
+    });
+    const tokenPromise = new Promise((resolve) => {
+      resolveToken = resolve;
+    });
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => passPromise)
+      .mockImplementationOnce(() => tokenPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Make the trailing tuples identical so only the namespace prefix separates
+    // the keys.
+    const passCall = verifyJoin("shared", null, "Alice", null, "pid-1", "pass");
+    const tokenCall = verifyJoin(
+      "shared",
+      "pid-1",
+      "Alice",
+      null,
+      "shared",
+      "token",
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(2);
+
+    resolvePass!(jsonResponse({ status: "rejected", reason: "pass_required" }));
+    resolveToken!(
+      jsonResponse({ status: "approved", username: "Alice", clanTag: null }),
+    );
+
+    const [passRes, tokenRes] = await Promise.all([passCall, tokenCall]);
+    expect(passRes).toEqual({ status: "rejected", reason: "pass_required" });
+    expect(tokenRes).toEqual({
+      status: "approved",
+      username: "Alice",
+      clanTag: null,
+    });
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce mode=readmit calls even with identical arguments", async () => {
+    let resolveFirst: (val: unknown) => void;
+    let resolveSecond: (val: unknown) => void;
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c1 = verifyJoin("1.2.3.4", null, "Alice", "TAG", "pid-1", "readmit");
+    const c2 = verifyJoin("1.2.3.4", null, "Alice", "TAG", "pid-1", "readmit");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(0);
+
+    resolveFirst!(
+      jsonResponse({ status: "approved", username: "Alice", clanTag: "TAG" }),
+    );
+    resolveSecond!(
+      jsonResponse({ status: "approved", username: "Alice", clanTag: "TAG" }),
+    );
+
+    const [r1, r2] = await Promise.all([c1, c2]);
+    expect(r1.status).toBe("approved");
+    expect(r2.status).toBe("approved");
+    expect(_inFlightTokenCount()).toBe(0);
+  });
 });
 
 describe("planJoinVerify", () => {
@@ -428,17 +689,19 @@ describe("planJoinVerify", () => {
     turnstileToken: "tok" as string | null,
     identityUnchanged: false,
     steamAuthed: false,
+    accountAuthed: false,
   };
   const readmit = { ...firstJoin, isReadmit: true, turnstileToken: null };
 
-  it("verifies a first join with its token", () => {
+  it("verifies a first join with its token in token mode", () => {
     expect(planJoinVerify(firstJoin)).toEqual({
       action: "verify",
       token: "tok",
+      mode: "token",
     });
   });
 
-  it("rejects a first join without a token", () => {
+  it("rejects an anonymous first join without a token", () => {
     expect(planJoinVerify({ ...firstJoin, turnstileToken: null })).toEqual({
       action: "reject",
     });
@@ -456,7 +719,7 @@ describe("planJoinVerify", () => {
         gameStarted: true,
         identityUnchanged: true,
       }),
-    ).toEqual({ action: "verify", token: "tok" });
+    ).toEqual({ action: "verify", token: "tok", mode: "token" });
     expect(
       planJoinVerify({
         ...firstJoin,
@@ -465,10 +728,62 @@ describe("planJoinVerify", () => {
         identityUnchanged: true,
       }),
     ).toEqual({ action: "reject" });
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        turnstileToken: null,
+        accountAuthed: true,
+        gameStarted: true,
+        identityUnchanged: true,
+      }),
+    ).toEqual({ action: "verify", token: null, mode: "pass" });
   });
 
-  it("verifies a pre-start re-admit with a changed identity using a null token", () => {
-    expect(planJoinVerify(readmit)).toEqual({ action: "verify", token: null });
+  it("verifies an account-authed first join without a token in pass mode", () => {
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        turnstileToken: null,
+        accountAuthed: true,
+      }),
+    ).toEqual({
+      action: "verify",
+      token: null,
+      mode: "pass",
+    });
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        turnstileToken: "",
+        accountAuthed: true,
+      }),
+    ).toEqual({
+      action: "verify",
+      token: null,
+      mode: "pass",
+    });
+  });
+
+  it("prefers token mode over pass mode when an account-authed first join presents a token", () => {
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        turnstileToken: "tok",
+        accountAuthed: true,
+      }),
+    ).toEqual({
+      action: "verify",
+      token: "tok",
+      mode: "token",
+    });
+  });
+
+  it("verifies a pre-start re-admit with a changed identity in readmit mode using a null token", () => {
+    expect(planJoinVerify(readmit)).toEqual({
+      action: "verify",
+      token: null,
+      mode: "readmit",
+    });
   });
 
   // A stale token re-sent by the client must not reach the API: it was
@@ -477,6 +792,7 @@ describe("planJoinVerify", () => {
     expect(planJoinVerify({ ...readmit, turnstileToken: "stale" })).toEqual({
       action: "verify",
       token: null,
+      mode: "readmit",
     });
   });
 
@@ -502,30 +818,64 @@ describe("planJoinVerify", () => {
         turnstileToken: null,
         identityUnchanged: false,
         steamAuthed: false,
+        accountAuthed: false,
       }),
-    ).toEqual({ action: "verify", token: null });
+    ).toEqual({ action: "verify", token: null, mode: "readmit" });
   });
 
-  it("verifies a Steam-authed first join with a null token (skips siteverify, keeps the name check)", () => {
+  it("verifies a Steam-authed first join in readmit mode with a null token (skips siteverify, keeps the name check)", () => {
     expect(planJoinVerify({ ...firstJoin, steamAuthed: true })).toEqual({
       action: "verify",
       token: null,
+      mode: "readmit",
+    });
+    expect(
+      planJoinVerify({
+        ...firstJoin,
+        steamAuthed: true,
+        accountAuthed: true,
+      }),
+    ).toEqual({
+      action: "verify",
+      token: null,
+      mode: "readmit",
     });
   });
 
   // Steam ownership stands in for the token: a Steam-authed first join is never
   // rejected for a missing token, and never skips the API (name check still runs).
-  it("verifies a Steam-authed first join with a null token even when no turnstile token is present", () => {
+  it("verifies a Steam-authed first join in readmit mode even when no turnstile token is present", () => {
     expect(
-      planJoinVerify({ ...firstJoin, steamAuthed: true, turnstileToken: null }),
-    ).toEqual({ action: "verify", token: null });
+      planJoinVerify({
+        ...firstJoin,
+        steamAuthed: true,
+        accountAuthed: true,
+        turnstileToken: null,
+      }),
+    ).toEqual({ action: "verify", token: null, mode: "readmit" });
   });
 
-  it("ignores steamAuthed on re-admits (they already went through the gate)", () => {
+  it("ignores steamAuthed and accountAuthed on re-admits (they already went through the gate)", () => {
     expect(planJoinVerify({ ...readmit, steamAuthed: true })).toEqual({
       action: "verify",
       token: null,
+      mode: "readmit",
     });
+    expect(planJoinVerify({ ...readmit, accountAuthed: true })).toEqual({
+      action: "verify",
+      token: null,
+      mode: "readmit",
+    });
+    expect(
+      planJoinVerify({ ...readmit, accountAuthed: true, gameStarted: true }),
+    ).toEqual({ action: "skip" });
+    expect(
+      planJoinVerify({
+        ...readmit,
+        accountAuthed: true,
+        identityUnchanged: true,
+      }),
+    ).toEqual({ action: "skip" });
   });
 });
 

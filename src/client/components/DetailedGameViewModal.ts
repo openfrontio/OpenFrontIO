@@ -70,7 +70,7 @@ const SCHEDULED_PANES = ["ffa", "team", "special"] as const;
  * the lobby counting down plus the queue behind it. Holding the slot count
  * fixed keeps the pane's height steady while a started lobby is replaced.
  */
-const PANE_SLOTS = 6;
+const PANE_SLOTS = 12;
 
 /** Tab key for the overview: every bucket at once, as three panes. */
 const ALL_TAB = "all";
@@ -914,6 +914,7 @@ export class DetailedGameViewModal extends BaseModal {
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
+        cancelable: true,
       }),
     );
   }
