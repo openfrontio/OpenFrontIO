@@ -85,12 +85,14 @@ function catalog(
 }
 
 let resolvedCatalog: ResolvedCosmetic[];
-let store: StoreModal | undefined;
+// Every store a test mounts, so afterEach removes them all, not just the last.
+const stores: StoreModal[] = [];
 
 async function mountStore(): Promise<StoreModal> {
-  store = document.createElement("store-modal") as StoreModal;
+  const store = document.createElement("store-modal") as StoreModal;
   store.inline = true;
   document.body.appendChild(store);
+  stores.push(store);
   await store.updateComplete;
   return store;
 }
@@ -183,8 +185,7 @@ describe("store Featured tab", () => {
 
   afterEach(() => {
     delete (window as { matchMedia?: unknown }).matchMedia;
-    store?.remove();
-    store = undefined;
+    for (const mounted of stores.splice(0)) mounted.remove();
     vi.useRealTimers();
     localStorage.clear();
   });
