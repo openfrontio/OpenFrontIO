@@ -23,7 +23,10 @@ export interface LoadoutItem {
   unlockLabel?: string;
 }
 
-const MAX_ITEMS = 3;
+// At most this many items in one end-screen row. Applied there
+// (endScreenLookRows), after the ownership, dedupe and card-in-first-row
+// filters, so a saved look keeps every candidate.
+export const MAX_LOOK_ITEMS = 3;
 
 function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
   const unlock =
@@ -40,7 +43,8 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
 /**
  * What to offer from `view` (the killer's card): the card itself if the
  * viewer lacks it, then background, taunt and title (only while switched on
- * in HeldBack.ts) and the killer's trackers.
+ * in HeldBack.ts) and the killer's trackers. Every candidate, in that order:
+ * the end screen caps each row (endScreenLookRows).
  * Anything the viewer owns, or that is neither sold nor earnable, is skipped.
  */
 export function loadoutItems(
@@ -76,7 +80,6 @@ export function loadoutItems(
   }
   const out: LoadoutItem[] = [];
   for (const [type, item] of candidates) {
-    if (out.length === MAX_ITEMS) break;
     if (item === undefined || !isOfferedCardItem(type, item)) continue;
     if (owned.has(`${type}:${item.name}`)) continue;
     const entry = toItem(type, item);

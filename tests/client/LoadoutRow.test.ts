@@ -43,6 +43,7 @@ vi.mock("../../src/client/StoreTracking", () => ({
 }));
 
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { MAX_LOOK_ITEMS } from "../../src/client/components/card/LoadoutItems";
 import {
   buildPlayerCardView,
   type PlayerCardView,
@@ -175,10 +176,23 @@ describe("loadoutItems", () => {
 
   it("viewer without the card sees the card first", () => {
     const items = loadoutItems(VOLT, COSMETICS, []);
+    expect(items.map((i) => `${i.type}:${i.item.name}`).slice(0, 3)).toEqual([
+      "playerCard:standard",
+      "cardBackground:bg_frontline",
+      "taunt:salute",
+    ]);
+  });
+
+  // Uncapped: a saved look keeps every candidate, and the end screen caps
+  // each row after its filters (endScreenLookRows).
+  it("every candidate, not just three", () => {
+    const items = loadoutItems(VOLT, COSMETICS, []);
     expect(items.map((i) => `${i.type}:${i.item.name}`)).toEqual([
       "playerCard:standard",
       "cardBackground:bg_frontline",
       "taunt:salute",
+      "cardTitle:warmonger",
+      "cardTracker:wins",
     ]);
   });
 
@@ -364,10 +378,11 @@ describe("<loadout-row>", () => {
     ]);
   const shown = () =>
     qa("[data-loadout-item]").map((i) => i.getAttribute("data-loadout-item"));
+  // Capped as the end screen hands rows over (endScreenLookRows).
   const look = (clientID: string, name: string, items: LoadoutItem[]) => ({
     clientID,
     name,
-    items,
+    items: items.slice(0, MAX_LOOK_ITEMS),
   });
   // Built per test: the held-back switches are set in beforeEach.
   const voltLook = () =>

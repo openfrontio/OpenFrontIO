@@ -166,4 +166,46 @@ describe("endScreenLookRows", () => {
       ["b", ["cardTracker:games"]],
     ]);
   });
+
+  // A look is saved with every candidate; the three-item cap applies here,
+  // after the filters, so a dropped card doesn't cost a later row a slot.
+  it("at most three per row, counted after the filters", () => {
+    const four = (who: string) => [
+      CARD,
+      item("cardBackground", `bg_${who}`),
+      item("cardTracker", `wins_${who}`),
+      item("cardTracker", `games_${who}`),
+    ];
+    const rows = endScreenLookRows(
+      [row("a", four("a")), row("b", four("b"))],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      [
+        "a",
+        ["playerCard:standard", "cardBackground:bg_a", "cardTracker:wins_a"],
+      ],
+      [
+        "b",
+        ["cardBackground:bg_b", "cardTracker:wins_b", "cardTracker:games_b"],
+      ],
+    ]);
+  });
+
+  it("an item owned since saving lets the next one in", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          item("cardBackground", "bg_a"),
+          item("cardTracker", "wins"),
+          item("cardTracker", "games"),
+          item("cardTracker", "kills"),
+        ]),
+      ],
+      ["cardBackground:bg_a"],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["cardTracker:wins", "cardTracker:games", "cardTracker:kills"]],
+    ]);
+  });
 });
