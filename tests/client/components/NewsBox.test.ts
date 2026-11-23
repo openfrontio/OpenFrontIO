@@ -236,23 +236,6 @@ describe("NewsBox", () => {
           expect(box.querySelector("[data-steam-awards-banner]")).toBeTruthy();
           expect(box.textContent).not.toContain("Patch notes");
         });
-
-        it("goes back to the news once the banner is closed", async () => {
-          const box = document.createElement("news-box");
-          document.body.appendChild(box);
-          await vi.waitFor(() =>
-            expect(
-              box.querySelector("[data-steam-awards-dismiss]"),
-            ).toBeTruthy(),
-          );
-
-          box
-            .querySelector<HTMLButtonElement>("[data-steam-awards-dismiss]")!
-            .click();
-
-          await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
-          expect(box.querySelector("[data-steam-awards-banner]")).toBeNull();
-        });
       },
     );
 

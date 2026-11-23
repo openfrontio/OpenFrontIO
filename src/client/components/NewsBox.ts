@@ -261,9 +261,7 @@ export class NewsBox extends LitElement {
     if (!showSteamAwardsBanner()) return this.renderBox();
     const sales = this.renderSales();
     return html`<div class="flex flex-col gap-1.5">
-      <steam-awards-banner
-        @steam-awards-dismissed=${this.rerender}
-      ></steam-awards-banner>
+      <steam-awards-banner></steam-awards-banner>
       ${sales}
     </div>`;
   }
