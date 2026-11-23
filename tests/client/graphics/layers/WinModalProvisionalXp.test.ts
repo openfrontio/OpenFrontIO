@@ -20,6 +20,9 @@ vi.mock("../../../../src/client/Utils", () => ({
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
   homeHref: vi.fn(() => "/"),
+  exitGame: vi.fn(() => {
+    window.location.href = "/";
+  }),
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 

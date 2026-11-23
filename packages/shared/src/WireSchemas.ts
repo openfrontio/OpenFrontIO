@@ -277,6 +277,9 @@ export const GameInfoSchema = z.object({
   // Listed lobbies only: the host paid to put it in the public Special
   // queue, so the queue's countdown starts it.
   queued: z.boolean().optional(),
+  // Scheduled public lobbies only: the client who paid to boost the lobby to
+  // the front of its queue.
+  boostedBy: z.string().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -301,6 +304,8 @@ export const PublicGameInfoSchema = z.object({
   // than one the server scheduled, so the browser can label it Custom.
   // Featured lobbies are official events and never carry it.
   custom: z.boolean().optional(),
+  // A scheduled lobby a player paid to boost to the front of its queue.
+  boosted: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({

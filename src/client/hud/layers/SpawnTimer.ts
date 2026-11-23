@@ -19,7 +19,7 @@ export class SpawnTimer extends LitElement implements Controller {
   public transformHandler: TransformHandler;
 
   private ratios: number[] = [0];
-  private _barVisible = false;
+  private _barVisible: boolean | null = null;
   private teams: Team[] = [];
   private colors = [
     "rgb(from var(--color-bright-blue) r g b / 0.85)",
@@ -27,6 +27,7 @@ export class SpawnTimer extends LitElement implements Controller {
   ];
 
   private isVisible = false;
+  private initGeneration = 0;
 
   @state()
   private hoveredIndex: number | null = null;
@@ -43,10 +44,36 @@ export class SpawnTimer extends LitElement implements Controller {
   }
 
   init() {
+    const gen = ++this.initGeneration;
     this.isVisible = true;
+    this._barVisible = null;
+    this.ratios = [];
+    this.teams = [];
+    this.colors = [];
+    this.hoveredIndex = null;
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
+  }
+
+  dispose() {
+    this.initGeneration++;
+    this.isVisible = false;
+    this._barVisible = null;
+    this.ratios = [];
+    this.teams = [];
+    this.colors = [];
+    this.hoveredIndex = null;
+    this.requestUpdate();
   }
 
   tick() {
+    if (!this.game || !this.isVisible) {
+      return;
+    }
+
     if (
       this.game.config().gameConfig().gameType === GameType.Singleplayer &&
       this.game.inSpawnPhase()
@@ -56,6 +83,7 @@ export class SpawnTimer extends LitElement implements Controller {
       this.teams = [];
       this.colors = [];
       this.requestUpdate();
+      this.emitBarVisibility();
       return;
     }
 

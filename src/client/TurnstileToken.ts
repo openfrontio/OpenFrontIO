@@ -31,6 +31,8 @@ export interface TurnstileRenderOptions {
   execution?: "render" | "execute";
   callback?: (token: string) => void;
   "error-callback"?: (errorCode: string) => void;
+  "before-interactive-callback"?: () => void;
+  "after-interactive-callback"?: () => void;
 }
 
 export interface TurnstileApi {
@@ -45,6 +47,10 @@ export interface TurnstileApi {
 export interface TurnstileToken {
   token: string;
   createdAt: number;
+}
+
+export interface GamePortal {
+  isOnGamePortal(): boolean;
 }
 
 /**
@@ -63,6 +69,22 @@ export const TURNSTILE_TOKEN_TIMEOUT_MS = 15_000;
 
 /** The code reported when the widget never answers within the timeout. */
 export const TURNSTILE_TIMEOUT_CODE = "timeout";
+
+/**
+ * How long a visible (managed) challenge may wait for the player. Separate from
+ * the silent timeout: it is armed by before-interactive-callback and the silent
+ * timeout is re-armed by after-interactive-callback.
+ */
+export const TURNSTILE_INTERACTIVE_TIMEOUT_MS = 60_000;
+
+/** Reported when a visible challenge sat unanswered; never auto-retried. */
+export const TURNSTILE_INTERACTIVE_TIMEOUT_CODE = "interactive-timeout";
+
+/** Reported when the player dismissed the visible challenge. */
+export const TURNSTILE_CANCELLED_CODE = "cancelled";
+
+/** Reported when a boot prefetch is dropped because it turned interactive. */
+export const TURNSTILE_PREFETCH_INTERACTIVE_CODE = "prefetch-interactive";
 
 /** The code reported when the Turnstile script itself never loaded. */
 export const TURNSTILE_LOAD_FAILED_CODE = "load-failed";
@@ -84,7 +106,50 @@ export class TurnstileError extends Error {
 
 /** The code to show for any failure, Turnstile's own or otherwise. */
 function turnstileErrorCode(error: unknown): string {
-  return error instanceof TurnstileError ? error.code : "unknown";
+  if (error instanceof TurnstileError) {
+    return error.code;
+  }
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return "unknown";
+}
+
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) return true;
+  if (
+    typeof DOMException !== "undefined" &&
+    error instanceof DOMException &&
+    error.name === "AbortError"
+  ) {
+    return true;
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return true;
+  }
+  return false;
+}
+
+function createAbortError(signal?: AbortSignal): Error {
+  if (signal?.reason instanceof Error) {
+    return signal.reason;
+  }
+  if (typeof signal?.reason === "string") {
+    const error = new Error(signal.reason);
+    error.name = "AbortError";
+    return error;
+  }
+  if (typeof DOMException !== "undefined") {
+    return new DOMException("The operation was aborted", "AbortError");
+  }
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  return error;
 }
 
 /**
@@ -108,49 +173,187 @@ export function requestTurnstileToken(
     sitekey: string;
     container: HTMLElement;
     timeoutMs?: number;
+    interactiveTimeoutMs?: number;
+    /** Boot prefetch: never show a challenge, drop the request instead. */
+    abortOnInteractive?: boolean;
+    /** Fired when the player dismisses a visible challenge. */
+    onCancel?: () => void;
+    /** Visible Cancel button text; the keyboard route out of the iframe. */
+    cancelLabel?: string;
+    /** Accessible name announced for the challenge overlay. */
+    dialogLabel?: string;
     now?: () => number;
+    signal?: AbortSignal;
   },
 ): Promise<TurnstileToken> {
   const timeoutMs = options.timeoutMs ?? TURNSTILE_TOKEN_TIMEOUT_MS;
+  const interactiveTimeoutMs =
+    options.interactiveTimeoutMs ?? TURNSTILE_INTERACTIVE_TIMEOUT_MS;
   const now = options.now ?? Date.now;
+  const signal = options.signal;
 
   return new Promise<TurnstileToken>((resolve, reject) => {
     let widgetId: string | undefined;
-    let removed = false;
+    let widgetRemoved = false;
+    let hostRemoved = false;
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 
     const host = document.createElement("div");
     options.container.appendChild(host);
 
+    // The backdrop is the container itself: inert until a challenge turns
+    // interactive, and always reset on removal so no path strands it.
+    const onBackdropClick = (event: Event) => {
+      if (event.target === options.container) cancel();
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      // Capture phase: keep BaseModal's own Escape handler from also firing.
+      event.stopPropagation();
+      event.preventDefault();
+      cancel();
+    };
+    // Only a request that raised the backdrop may lower it: the container is
+    // shared, so a prefetch settling must not strip a join's live backdrop. The
+    // body fallback (no #turnstile-container) never gets one, since styling it
+    // would block the whole page.
+    let backdropShown = false;
+    let cancelButton: HTMLButtonElement | undefined;
+    let previousFocus: HTMLElement | null = null;
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        event.target instanceof Node &&
+        !options.container.contains(event.target)
+      ) {
+        cancelButton?.focus();
+      }
+    };
+    const showBackdrop = () => {
+      if (backdropShown || options.container === document.body) return;
+      backdropShown = true;
+      previousFocus =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== document.body &&
+        !options.container.contains(document.activeElement)
+          ? document.activeElement
+          : null;
+      options.container.dataset.interactive = "true";
+      options.container.style.pointerEvents = "auto";
+      options.container.setAttribute("role", "dialog");
+      options.container.setAttribute("aria-modal", "true");
+      if (options.dialogLabel) {
+        options.container.setAttribute("aria-label", options.dialogLabel);
+      }
+      // The iframe is cross-origin, so Escape pressed inside it never reaches
+      // us. Tab leaves the frame, and this button is the next stop.
+      cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.textContent = options.cancelLabel ?? "Cancel";
+      cancelButton.className =
+        "ml-4 px-4 py-2 rounded bg-white text-black font-semibold shadow";
+      cancelButton.addEventListener("click", cancel);
+      options.container.appendChild(cancelButton);
+      cancelButton.focus();
+      options.container.addEventListener("click", onBackdropClick);
+      document.addEventListener("keydown", onEscape, true);
+      document.addEventListener("focusin", onFocusIn, true);
+    };
+    const hideBackdrop = () => {
+      if (!backdropShown) return;
+      backdropShown = false;
+      delete options.container.dataset.interactive;
+      options.container.style.pointerEvents = "none";
+      options.container.removeAttribute("role");
+      options.container.removeAttribute("aria-modal");
+      options.container.removeAttribute("aria-label");
+      document.removeEventListener("focusin", onFocusIn, true);
+      cancelButton?.remove();
+      cancelButton = undefined;
+      options.container.removeEventListener("click", onBackdropClick);
+      document.removeEventListener("keydown", onEscape, true);
+      const toRestore = previousFocus;
+      previousFocus = null;
+      if (toRestore?.isConnected) {
+        try {
+          toRestore.focus();
+        } catch {
+          // Ignore focus errors on detached/disabled targets
+        }
+      }
+    };
+
     // Turnstile can still call back after we are done with the widget (a late
     // error after a timeout, say). Removing once and settling once means such
     // a call cannot double-resolve, and cannot throw by removing a widget id
     // Turnstile no longer knows about.
     const removeWidget = () => {
-      if (removed || widgetId === undefined) return;
-      removed = true;
-      try {
-        turnstile.remove(widgetId);
-      } catch (error) {
-        console.error("Turnstile: failed to remove widget", error);
+      hideBackdrop();
+      if (!widgetRemoved && widgetId !== undefined) {
+        widgetRemoved = true;
+        try {
+          turnstile.remove(widgetId);
+        } catch (error) {
+          console.error("Turnstile: failed to remove widget", error);
+        }
       }
-      // Takes the widget's iframe with it even when Turnstile has lost track
-      // of the id.
-      host.remove();
+      if (!hostRemoved) {
+        hostRemoved = true;
+        // Takes the widget's iframe with it even when Turnstile has lost track
+        // of the id.
+        host.remove();
+      }
+    };
+
+    const cleanup = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+      if (signal !== undefined) {
+        signal.removeEventListener("abort", onAbort);
+      }
     };
 
     const settle = (finish: () => void) => {
       if (settled) return;
       settled = true;
-      if (timer !== undefined) clearTimeout(timer);
+      cleanup();
       removeWidget();
       finish();
     };
 
+    const onAbort = () => {
+      settle(() => reject(createAbortError(signal)));
+    };
+
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+    signal?.addEventListener("abort", onAbort);
+
     const succeed = (token: string) =>
       settle(() => resolve({ token, createdAt: now() }));
     const fail = (error: unknown) => settle(() => reject(error));
+    function cancel() {
+      if (settled) return;
+      settle(() =>
+        reject(
+          new TurnstileError(TURNSTILE_CANCELLED_CODE, "Turnstile cancelled"),
+        ),
+      );
+      options.onCancel?.();
+    }
+
+    const armTimer = (ms: number, code: string) => {
+      if (timer !== undefined) clearTimeout(timer);
+      timer = setTimeout(
+        () =>
+          fail(new TurnstileError(code, `Turnstile timed out after ${ms}ms`)),
+        ms,
+      );
+    };
 
     try {
       widgetId = turnstile.render(host, {
@@ -162,6 +365,22 @@ export function requestTurnstileToken(
         callback: (token: string) => succeed(token),
         "error-callback": (errorCode: string) =>
           fail(new TurnstileError(errorCode ?? "unknown")),
+        "before-interactive-callback": () => {
+          if (settled) return;
+          if (options.abortOnInteractive) {
+            fail(new TurnstileError(TURNSTILE_PREFETCH_INTERACTIVE_CODE));
+            return;
+          }
+          showBackdrop();
+          armTimer(interactiveTimeoutMs, TURNSTILE_INTERACTIVE_TIMEOUT_CODE);
+        },
+        "after-interactive-callback": () => {
+          if (settled) return;
+          hideBackdrop();
+          // Short wait again, but the player has already been shown a
+          // challenge: report it as interactive so it is never auto-retried.
+          armTimer(timeoutMs, TURNSTILE_INTERACTIVE_TIMEOUT_CODE);
+        },
       });
     } catch (error) {
       host.remove();
@@ -176,16 +395,7 @@ export function requestTurnstileToken(
       return;
     }
 
-    timer = setTimeout(
-      () =>
-        fail(
-          new TurnstileError(
-            TURNSTILE_TIMEOUT_CODE,
-            `Turnstile timed out after ${timeoutMs}ms`,
-          ),
-        ),
-      timeoutMs,
-    );
+    armTimer(timeoutMs, TURNSTILE_TIMEOUT_CODE);
 
     try {
       turnstile.execute(widgetId);
@@ -193,6 +403,21 @@ export function requestTurnstileToken(
       fail(error);
     }
   });
+}
+
+export interface ResolveTurnstileTokenDeps {
+  /** The boot-time prefetch, or null when there is none to reuse. */
+  prefetch?: Promise<TurnstileToken> | null;
+  requestFresh?: (signal?: AbortSignal) => Promise<TurnstileToken>;
+  /** Web game portal instance to detect if on portal. */
+  gamePortal?: GamePortal;
+  /** Signal to abort token request. */
+  signal?: AbortSignal;
+  /** Portals always want a token minted for this join. */
+  forceFresh?: boolean;
+  /** Shows the error modal. Called at most once, for the final failure. */
+  onError?: (code?: string) => void;
+  now?: () => number;
 }
 
 /**
@@ -204,40 +429,88 @@ export function requestTurnstileToken(
  * Only the fresh fetch's failure reaches `onError`, so a join shows at most one
  * error modal and only for the attempt that actually decided it.
  */
-export async function resolveTurnstileToken(deps: {
-  /** The boot-time prefetch, or null when there is none to reuse. */
-  prefetch: Promise<TurnstileToken> | null;
-  requestFresh: () => Promise<TurnstileToken>;
-  /** Portals always want a token minted for this join. */
-  forceFresh?: boolean;
-  /** Shows the error modal. Called at most once, for the final failure. */
-  onError: (code: string) => void;
-  now?: () => number;
-}): Promise<string | null> {
+export async function resolveTurnstileToken(
+  deps: ResolveTurnstileTokenDeps,
+): Promise<string | null> {
   const now = deps.now ?? Date.now;
 
-  const fresh = async (): Promise<string | null> => {
+  if (deps.signal?.aborted) {
+    return null;
+  }
+
+  const retryFresh = async (): Promise<string | null> => {
+    if (deps.signal?.aborted || !deps.requestFresh) return null;
+    console.warn("Turnstile timed out, retrying once on fresh widget");
     try {
-      return (await deps.requestFresh())?.token ?? null;
-    } catch (error) {
-      console.warn("Turnstile: token request failed", error);
-      deps.onError(turnstileErrorCode(error));
-      throw error;
+      const retryRes = await deps.requestFresh(deps.signal);
+      if (deps.signal?.aborted) return null;
+      return retryRes?.token ?? null;
+    } catch (retryError) {
+      if (isAbortError(retryError, deps.signal)) return null;
+      if (turnstileErrorCode(retryError) === TURNSTILE_CANCELLED_CODE) {
+        throw retryError instanceof TurnstileError
+          ? retryError
+          : new TurnstileError(TURNSTILE_CANCELLED_CODE);
+      }
+      console.warn("Turnstile retry failed", retryError);
+      deps.onError?.(turnstileErrorCode(retryError));
+      throw retryError instanceof TurnstileError
+        ? retryError
+        : new TurnstileError(
+            turnstileErrorCode(retryError),
+            retryError instanceof Error ? retryError.message : undefined,
+          );
     }
   };
 
-  if (deps.prefetch === null || deps.forceFresh === true) {
+  const fetchFreshWithRetry = async (): Promise<string | null> => {
+    if (deps.signal?.aborted) return null;
+    if (!deps.requestFresh) return null;
+    try {
+      const res = await deps.requestFresh(deps.signal);
+      if (deps.signal?.aborted) return null;
+      return res?.token ?? null;
+    } catch (error) {
+      if (isAbortError(error, deps.signal)) return null;
+      // The player dismissed the challenge: leave quietly, no modal, no retry.
+      if (turnstileErrorCode(error) === TURNSTILE_CANCELLED_CODE) {
+        throw error instanceof TurnstileError
+          ? error
+          : new TurnstileError(TURNSTILE_CANCELLED_CODE);
+      }
+      if (turnstileErrorCode(error) === TURNSTILE_TIMEOUT_CODE) {
+        return retryFresh();
+      }
+      console.warn("Turnstile: token request failed", error);
+      deps.onError?.(turnstileErrorCode(error));
+      throw error instanceof TurnstileError
+        ? error
+        : new TurnstileError(
+            turnstileErrorCode(error),
+            error instanceof Error ? error.message : undefined,
+          );
+    }
+  };
+
+  const forceFresh =
+    deps.forceFresh ?? deps.gamePortal?.isOnGamePortal() ?? false;
+
+  if (!deps.prefetch || forceFresh) {
     console.log("No prefetched turnstile token, getting new token");
-    return fresh();
+    return fetchFreshWithRetry();
   }
 
-  let prefetched: TurnstileToken | null;
+  let prefetched: TurnstileToken | null = null;
   try {
     prefetched = await deps.prefetch;
   } catch (error) {
     // Boot-time failure: worth a line, not a modal. The join gets its own try.
     console.warn("Prefetched turnstile token failed, getting new token", error);
-    return fresh();
+    return fetchFreshWithRetry();
+  }
+
+  if (deps.signal?.aborted) {
+    return null;
   }
 
   if (!prefetched) {
@@ -251,5 +524,5 @@ export async function resolveTurnstileToken(deps: {
   }
 
   console.log("Turnstile token expired, getting new token");
-  return fresh();
+  return fetchFreshWithRetry();
 }
