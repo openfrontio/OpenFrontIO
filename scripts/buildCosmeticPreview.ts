@@ -13,6 +13,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { build } from "vite";
 import { PREVIEW_ASSET_PATHS } from "../src/client/cosmetic-preview/assets";
+import { CHECKS_DTS, indexDts } from "./cosmeticPreviewTypes";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "dist", "cosmetic-preview");
@@ -64,64 +65,16 @@ function copyAssets(): void {
 }
 
 /**
- * Write index.d.ts from the import-free public types and runtime declarations.
+ * Write index.d.ts from the import-free public types and runtime declarations,
+ * and checks.d.ts for the DOM-free entry.
  */
 function writeTypes(): void {
   const api = fs.readFileSync(
     path.join(root, "src", "client", "cosmetic-preview", "api.ts"),
     "utf8",
   );
-  fs.writeFileSync(
-    path.join(outDir, "index.d.ts"),
-    `${api}
-/** Configure where assets/ is served, then load the renderer. Call once. */
-export declare function loadCosmeticPreview(
-  options: LoadCosmeticPreviewOptions,
-): Promise<CosmeticPreviewModule>;
-
-/** Files under assets/ the host must serve at \`\${assetBase}/\${path}\`. */
-export declare const PREVIEW_ASSET_PATHS: readonly string[];
-`,
-  );
-  // The DOM-free entry: its types come from index.d.ts.
-  fs.writeFileSync(
-    path.join(outDir, "checks.d.ts"),
-    `import type { CardBackgroundFiles, CardEffect, CardIssue } from "./index.js";
-
-export declare const CARD_ART_WIDTH: 2800;
-export declare const CARD_ART_HEIGHT: 400;
-export declare const MAX_SET_BYTES: number;
-export declare const MAX_LAYERS: 3;
-
-/** A layer animation as the game's schema accepts it. */
-export interface CardLayerAnimation {
-  kind: "layers";
-  layers: {
-    src: string;
-    effect: CardEffect;
-    period?: number;
-    strength?: number;
-    min?: number;
-    max?: number;
-    angle?: number;
-    rate?: "low" | "medium" | "high";
-  }[];
-}
-
-export type CardAnimationResult =
-  | { ok: true; animation: CardLayerAnimation }
-  | { ok: false; error: string };
-
-/** Parse a layer animation with the game's own schema. */
-export declare function parseCardAnimation(input: unknown): CardAnimationResult;
-
-/** The artist guide's checks: errors first, then warnings. Pure. */
-export declare function checkCardBackground(
-  files: CardBackgroundFiles,
-  animation: unknown,
-): CardIssue[];
-`,
-  );
+  fs.writeFileSync(path.join(outDir, "index.d.ts"), indexDts(api));
+  fs.writeFileSync(path.join(outDir, "checks.d.ts"), CHECKS_DTS);
 }
 
 /** Write package metadata with the supplied version and commit, and copy licenses. */

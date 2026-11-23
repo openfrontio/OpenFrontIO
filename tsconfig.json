@@ -19,7 +19,8 @@
     "scripts/split-packages",
     "vite.config.ts",
     "vite.cosmetic-preview.config.ts",
-    "scripts/buildCosmeticPreview.ts"
+    "scripts/buildCosmeticPreview.ts",
+    "scripts/cosmeticPreviewTypes.ts"
   ],
   "exclude": [
     "node_modules",

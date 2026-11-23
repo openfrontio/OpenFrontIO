@@ -1,0 +1,87 @@
+// The hand-written declarations @openfront/cosmetic-preview publishes. Kept
+// apart from buildCosmeticPreview.ts so a test can compile a consumer against
+// them without running the Vite build.
+
+/** index.d.ts: the import-free public types (api.ts) and the runtime entry. */
+export function indexDts(api: string): string {
+  return `${api}
+/** Configure where assets/ is served, then load the renderer. Call once. */
+export declare function loadCosmeticPreview(
+  options: LoadCosmeticPreviewOptions,
+): Promise<CosmeticPreviewModule>;
+
+/** Files under assets/ the host must serve at \`\${assetBase}/\${path}\`. */
+export declare const PREVIEW_ASSET_PATHS: readonly string[];
+`;
+}
+
+/**
+ * checks.d.ts: the DOM-free entry (src/client/cosmetic-preview/checks.ts). Its
+ * card types come from index.d.ts. Keep it in step with that file's exports.
+ */
+export const CHECKS_DTS = `import type { CardBackgroundFiles, CardEffect, CardIssue } from "./index.js";
+
+export declare const CARD_ART_WIDTH: 2800;
+export declare const CARD_ART_HEIGHT: 400;
+export declare const MAX_SET_BYTES: number;
+export declare const MAX_LAYERS: 3;
+
+/** A layer animation as the game's schema accepts it. */
+export interface CardLayerAnimation {
+  kind: "layers";
+  layers: {
+    src: string;
+    effect: CardEffect;
+    period?: number;
+    strength?: number;
+    min?: number;
+    max?: number;
+    angle?: number;
+    rate?: "low" | "medium" | "high";
+  }[];
+}
+
+export type CardAnimationResult =
+  | { ok: true; animation: CardLayerAnimation }
+  | { ok: false; error: string };
+
+/** Which layer srcs the checks accept, beyond relative catalogue paths. */
+export interface LayerSrcOptions {
+  /**
+   * The origins an https:// layer src may come from, like
+   * "https://cdn.example.com" (a bare host gets https:// added; a port must
+   * match as written). The src must also be under /cosmetics/. Empty, the
+   * default, refuses every https:// src. Relative srcs don't depend on it.
+   */
+  allowedLayerHosts?: readonly string[];
+}
+
+/**
+ * Whether \`src\` is a catalogue PNG layer: a relative path, or an https://
+ * link from one of \`allowedLayerHosts\`, under /cosmetics/.
+ */
+export declare function isCatalogueLayerSrc(
+  src: unknown,
+  options?: LayerSrcOptions,
+): boolean;
+
+/**
+ * Parse a layer animation with the game's own schema, and check each layer's
+ * src as checkCardBackground does.
+ */
+export declare function parseCardAnimation(
+  input: unknown,
+  options?: LayerSrcOptions,
+): CardAnimationResult;
+
+/**
+ * The artist guide's checks, errors first, then warnings, plus a \`layer_src\`
+ * error for each layer whose src isn't allowed (see isCatalogueLayerSrc).
+ * Check with the srcs that will be stored. Pure.
+ */
+export declare function checkCardBackground(
+  files: CardBackgroundFiles,
+  animation: unknown,
+  options?: LayerSrcOptions,
+): CardIssue[];
+`;
