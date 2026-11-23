@@ -134,6 +134,23 @@ export const ScenarioConfigSchema = GameConfigSchema.pick({
 });
 export type ScenarioConfig = z.infer<typeof ScenarioConfigSchema>;
 
+export const ScenarioWarshipSchema = z.object({
+  /** The id of the nation it belongs to. */
+  nation: ID,
+  /** A water tile, which it patrols around once the game starts. */
+  tile: z.int().nonnegative(),
+});
+export type ScenarioWarship = z.infer<typeof ScenarioWarshipSchema>;
+
+// Each one runs a warship's execution, with its targeting and pathfinding,
+// every tick of the game.
+export const MAX_WARSHIPS = 1000;
+
+/** Whether the settings allow warships. */
+export function warshipsAllowed(config: ScenarioConfig): boolean {
+  return !config.disabledUnits?.includes(UnitType.Warship);
+}
+
 /** Two nations allied from the start, by id, the lesser id first. */
 export type ScenarioAlliance = [string, string];
 
@@ -161,6 +178,8 @@ export interface ScenarioDocument {
   structures: ScenarioStructure[];
   /** Each pair once, in order (see addAlliance). */
   alliances: ScenarioAlliance[];
+  /** At most one per tile, in tile order. */
+  warships: ScenarioWarship[];
   config: ScenarioConfig;
 }
 
@@ -189,6 +208,8 @@ export const ScenarioDocumentSchema = z
     // Optional, so a document from before alliances still loads, and left
     // out when there are none.
     alliances: z.array(z.tuple([ID, ID])).optional(),
+    // Optional for the same reasons.
+    warships: z.array(ScenarioWarshipSchema).max(MAX_WARSHIPS).optional(),
     config: ScenarioConfigSchema,
   })
   .transform((stored, ctx): ScenarioDocument => {
@@ -238,6 +259,7 @@ function decode(stored: StoredScenarioDocument): ScenarioDocument {
       .map((s) => ({ ...s }))
       .sort((a, b) => a.tile - b.tile),
     alliances: [],
+    warships: [],
     config: stored.config,
   };
   doc.structures.forEach((s, i) => {
@@ -266,6 +288,21 @@ function decode(stored: StoredScenarioDocument): ScenarioDocument {
       throw new Error(`${p[0]} and ${p[1]} are already allies`);
     }
   });
+  // addWarship's rules, in one pass as well.
+  const warships = stored.warships ?? [];
+  if (warships.length > 0 && !warshipsAllowed(doc.config)) {
+    throw new Error(`${UnitType.Warship} is disabled in this scenario`);
+  }
+  doc.warships = warships
+    .map((w) => ({ ...w }))
+    .sort((a, b) => a.tile - b.tile);
+  doc.warships.forEach((w, i) => {
+    if (!ids.has(w.nation)) nationIndex(doc, w.nation);
+    checkWarshipTile(doc, w.tile);
+    if (i > 0 && doc.warships[i - 1].tile === w.tile) {
+      throw new Error(`tile ${w.tile} already has a warship`);
+    }
+  });
   return doc;
 }
 
@@ -285,6 +322,9 @@ export function serializeScenarioDocument(
     structures: doc.structures.map((s) => ({ ...s })),
     ...(doc.alliances.length > 0
       ? { alliances: doc.alliances.map(([a, b]): ScenarioAlliance => [a, b]) }
+      : {}),
+    ...(doc.warships.length > 0
+      ? { warships: doc.warships.map((w) => ({ ...w })) }
       : {}),
     config: doc.config,
   };
@@ -320,9 +360,9 @@ export function newScenarioDocument(
 
 /**
  * The document on a map of another size, which keeps its top-left corner:
- * cropped tiles go with their owners and structures, new ones are water,
- * and a port left without a shore goes. Nations, alliances and settings
- * stay.
+ * cropped tiles go with their owners, structures and warships, new ones
+ * are water, and a port left without a shore goes. Nations, alliances and
+ * settings stay.
  */
 export function resizeScenarioDocument(
   doc: ScenarioDocument,
@@ -350,6 +390,7 @@ export function resizeScenarioDocument(
     owners,
     structures: [],
     alliances: doc.alliances.map(([a, b]): ScenarioAlliance => [a, b]),
+    warships: [],
   };
   for (const s of doc.structures) {
     const x = s.tile % doc.width;
@@ -358,6 +399,13 @@ export function resizeScenarioDocument(
     const tile = y * width + x;
     if (s.type === UnitType.Port && !isShore(resized, tile)) continue;
     resized.structures.push({ ...s, tile });
+  }
+  // A tile kept keeps its terrain, so a warship on one is still on water.
+  for (const w of doc.warships) {
+    const x = w.tile % doc.width;
+    const y = Math.floor(w.tile / doc.width);
+    if (x >= width || y >= height) continue;
+    resized.warships.push({ ...w, tile: y * width + x });
   }
   return resized;
 }
@@ -457,6 +505,42 @@ export function addStructure(
   checkStructure(doc, s);
   const i = doc.structures.findIndex((other) => other.tile > s.tile);
   doc.structures.splice(i === -1 ? doc.structures.length : i, 0, s);
+}
+
+export function warshipAt(
+  doc: ScenarioDocument,
+  tile: number,
+): ScenarioWarship | undefined {
+  return doc.warships.find((w) => w.tile === tile);
+}
+
+/** Throws unless a warship can be on the tile: on the map, and water. */
+function checkWarshipTile(doc: ScenarioDocument, tile: number): void {
+  checkTile(doc, tile);
+  if (doc.terrain[tile] !== WATER) {
+    throw new Error(`a warship needs water, tile ${tile} is not`);
+  }
+}
+
+/**
+ * Adds the warship in tile order, as structures are kept. Throws unless
+ * its nation exists, its tile is water with no warship, the settings allow
+ * warships and the document has fewer than MAX_WARSHIPS.
+ */
+export function addWarship(doc: ScenarioDocument, w: ScenarioWarship): void {
+  nationIndex(doc, w.nation);
+  checkWarshipTile(doc, w.tile);
+  if (warshipAt(doc, w.tile) !== undefined) {
+    throw new Error(`tile ${w.tile} already has a warship`);
+  }
+  if (!warshipsAllowed(doc.config)) {
+    throw new Error(`${UnitType.Warship} is disabled in this scenario`);
+  }
+  if (doc.warships.length >= MAX_WARSHIPS) {
+    throw new Error(`a scenario has at most ${MAX_WARSHIPS} warships`);
+  }
+  const i = doc.warships.findIndex((other) => other.tile > w.tile);
+  doc.warships.splice(i === -1 ? doc.warships.length : i, 0, w);
 }
 
 /** Orders alliance pairs by their first id, then their second. */

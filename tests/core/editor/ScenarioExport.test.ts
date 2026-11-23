@@ -3,7 +3,7 @@
  * the editing engine writes its terrain out as map files, a second engine
  * on those files replays everything but terrain and is finalised, and its
  * snapshot is the playable start. Restored onto the exported files, the
- * nations play and the structures work.
+ * nations play and the structures and warships work.
  */
 
 import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
@@ -31,6 +31,7 @@ import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { PortExecution } from "@openfront/engine/execution/PortExecution";
 import { RecomputeRailClusterExecution } from "@openfront/engine/execution/RecomputeRailClusterExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
 import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
 import { Execution, Game } from "@openfront/engine/game/Game";
 import {
@@ -326,6 +327,73 @@ describe("starting alliances", () => {
     west.breakAlliance(west.allianceWith(east)!);
     expect(west.isAlliedWith(east)).toBe(false);
     expect(west.isTraitor()).toBe(true);
+  });
+});
+
+describe("starting warships", () => {
+  // In opposite corners, out of each other's reach for the ticks played.
+  const WARSHIPS: [string, number, number][] = [
+    ["WESTNAT1", 2, 2],
+    ["EASTNAT1", 197, 157],
+    ["NOLAND01", 100, 5],
+  ];
+  const ARMED: EditorCommand[] = [
+    ...SCENARIO,
+    ...WARSHIPS.map(([nation, x, y]): EditorCommand => ({
+      type: "place_warship",
+      tile: tile(x, y),
+      nation,
+    })),
+  ];
+
+  async function restored(): Promise<GameRunner> {
+    const { files, snapshot } = await exportScenario(ARMED);
+    return createGameRunnerFromSnapshot(
+      editorStart(),
+      snapshot,
+      undefined,
+      copy(files),
+      throwOnError,
+    );
+  }
+
+  test("are in the snapshot with their nation, at their tile, patrolling it", async () => {
+    const game = (await restored()).game;
+    const warships = game.units(UnitType.Warship);
+    expect(
+      warships.map((u) => [
+        u.owner().id(),
+        u.tile(),
+        u.warshipState().patrolTile,
+      ]),
+    ).toEqual([
+      ["WESTNAT1", tile(2, 2), tile(2, 2)],
+      ["EASTNAT1", tile(197, 157), tile(197, 157)],
+    ]);
+    // A nation with no land is dead at the start, and the dead have no
+    // units, as when a player dies in play.
+    expect(game.player("NOLAND01").units()).toEqual([]);
+    expect(count(game, WarshipExecution)).toBe(2);
+  });
+
+  test("patrol once the game runs", async () => {
+    const runner = await restored();
+    const game = runner.game;
+    for (let i = 0; i < 50; i++) {
+      runner.addTurn({ turnNumber: game.ticks(), intents: [] });
+      expect(runner.executeNextTick()).toBe(true);
+    }
+    const warships = game.units(UnitType.Warship);
+    expect(warships.map((u) => u.owner().id())).toEqual([
+      "WESTNAT1",
+      "EASTNAT1",
+    ]);
+    for (const [i, u] of warships.entries()) {
+      const [, x, y] = WARSHIPS[i];
+      expect(u.isActive()).toBe(true);
+      expect(u.tile()).not.toBe(tile(x, y));
+      expect(game.isWater(u.tile())).toBe(true);
+    }
   });
 });
 

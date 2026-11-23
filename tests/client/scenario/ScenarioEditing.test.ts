@@ -125,7 +125,7 @@ async function replayed(doc: ScenarioDocument): Promise<Engine> {
 /**
  * What the engine holds, by id rather than small id: the whole terrain
  * bytes (derived bits included) and minimap, owners, the nations that are
- * there, their structures and their alliances.
+ * there, their structures, warships and alliances.
  */
 function engineState(runner: GameRunner) {
   const game = runner.game;
@@ -167,6 +167,10 @@ function engineState(runner: GameRunner) {
         level: u.level(),
       }))
       .sort((a, b) => a.tile - b.tile),
+    warships: game
+      .units(UnitType.Warship)
+      .map((u) => ({ nation: u.owner().id(), tile: u.tile() }))
+      .sort((a, b) => a.tile - b.tile),
     // Each once, though both allies have it: requestor first.
     alliances: [
       ...new Set(
@@ -192,6 +196,7 @@ function expectEngineHolds(runner: GameRunner, doc: ScenarioDocument): void {
     [...doc.nations].sort((a, b) => a.id.localeCompare(b.id)),
   );
   expect(state.structures).toEqual(doc.structures);
+  expect(state.warships).toEqual(doc.warships);
   expect(state.alliances).toEqual(doc.alliances);
 }
 
@@ -221,7 +226,8 @@ const CONTINENT = rect(20, 30, 160, 100);
 
 /**
  * A continent with a mountain range, West and East on it with structures,
- * and a nation with no land. West's coast is x = 20, East's x = 179.
+ * and a nation with no land; each has a warship. West's coast is x = 20,
+ * East's x = 179.
  */
 const BUILD: Edit[][] = [
   [
@@ -261,6 +267,15 @@ const BUILD: Edit[][] = [
       structure: { type, tile: tile(x, y), nation: n, level },
     },
   ]),
+  ...(
+    [
+      [10, 70, "WESTNAT1"],
+      [190, 90, "EASTNAT1"],
+      [100, 5, "NOLAND01"],
+    ] as const
+  ).map(([x, y, n]): Edit[] => [
+    { type: "place_warship", warship: { nation: n, tile: tile(x, y) } },
+  ]),
   [{ type: "set_nation", id: "EASTNAT1", name: "Orient", gold: 123 }],
   [{ type: "add_alliance", nations: ["WESTNAT1", "EASTNAT1"] }],
   [{ type: "add_alliance", nations: ["NOLAND01", "EASTNAT1"] }],
@@ -289,6 +304,14 @@ const CHANGES: Edit[][] = [
       type: "set_terrain",
       tiles: [tile(170, 95)],
       terrain: [IMPASSABLE],
+    },
+  ],
+  // Land under East's warship.
+  [
+    {
+      type: "set_terrain",
+      tiles: [tile(190, 90)],
+      terrain: [land(3)],
     },
   ],
   // A nation first in the list, which moves everyone's owner index.
@@ -332,6 +355,7 @@ function built(): ScenarioDocument {
 test("a replayed document is what the engine holds", async () => {
   const doc = built();
   expect(doc.structures).toHaveLength(6);
+  expect(doc.warships).toHaveLength(3);
   const { runner } = await replayed(doc);
   expectEngineHolds(runner, doc);
   expect(runner.game.ticks()).toBe(0);
@@ -349,8 +373,10 @@ test("editing live gives the engine and map files a replay gives", async () => {
   expectEngineHolds(live.runner, doc);
 
   // The edits did what the engine does: East's port lost its shore, its
-  // SAM its land, and West took its structures with it.
+  // SAM its land, and West took its structures with it. East's warship's
+  // water became land, and West took its warship.
   expect(doc.structures).toEqual([]);
+  expect(doc.warships).toEqual([{ nation: "NOLAND01", tile: tile(100, 5) }]);
 
   const fresh = await replayed(doc);
   expect(engineState(live.runner)).toEqual(engineState(fresh.runner));
@@ -384,7 +410,7 @@ test("undo takes every edit back, and redo does it again", async () => {
   expect(engineState(live.runner)).toEqual(editedEngine);
 }, 30_000);
 
-test("undoing remove_nation brings back its land, troops, gold, structures and alliances", async () => {
+test("undoing remove_nation brings back its land, troops, gold, structures, warships and alliances", async () => {
   const doc = built();
   const original = copy(doc);
   const live = await replayed(doc);
@@ -393,6 +419,7 @@ test("undoing remove_nation brings back its land, troops, gold, structures and a
   editor.commit();
   expect(doc.nations.map((n) => n.id)).toEqual(["EASTNAT1", "NOLAND01"]);
   expect(doc.structures.every((s) => s.nation === "EASTNAT1")).toBe(true);
+  expect(doc.warships.map((w) => w.nation)).toEqual(["NOLAND01", "EASTNAT1"]);
   expect(doc.alliances).toEqual([["EASTNAT1", "NOLAND01"]]);
   // East was nations[1], owner 2; now it's owner 1.
   expect(doc.owners[tile(160, 90)]).toBe(1);
@@ -407,6 +434,9 @@ test("undoing remove_nation brings back its land, troops, gold, structures and a
   expect(west.troops()).toBe(20_000);
   expect(west.gold()).toBe(500n);
   expect(west.playable()).toBe(true);
+  expect(west.units(UnitType.Warship).map((u) => u.tile())).toEqual([
+    tile(10, 70),
+  ]);
 
   // And redo takes it away again.
   editor.redo();
@@ -529,6 +559,20 @@ test("an edit that can't apply changes nothing", () => {
       },
     },
     { type: "remove_structure", tile: tile(100, 100) },
+    // On land, for nobody, and on a tile with one.
+    {
+      type: "place_warship",
+      warship: { nation: "EASTNAT1", tile: tile(100, 100) },
+    },
+    {
+      type: "place_warship",
+      warship: { nation: "NOBODY01", tile: tile(0, 0) },
+    },
+    {
+      type: "place_warship",
+      warship: { nation: "EASTNAT1", tile: tile(10, 70) },
+    },
+    { type: "remove_warship", tile: tile(0, 0) },
     { type: "add_alliance", nations: ["EASTNAT1", "WESTNAT1"] },
     { type: "add_alliance", nations: ["EASTNAT1", "EASTNAT1"] },
     { type: "add_alliance", nations: ["EASTNAT1", "NOBODY01"] },
@@ -695,7 +739,7 @@ describe("resizing", () => {
     }
   }
 
-  test("cropping keeps the top-left corner and drops a port off the coast", async () => {
+  test("cropping keeps the top-left corner and drops a port off the coast and a warship off the map", async () => {
     const doc = built();
     // At width 180 East's port, at x = 179, has no water beside it.
     const cropped = resizeScenarioDocument(doc, 180, 120);
@@ -707,6 +751,11 @@ describe("resizing", () => {
     expect(cropped.structures).toEqual(
       doc.structures.filter((s) => s.tile !== tile(179, 90)).map(moved),
     );
+    // East's warship, at x = 190, is cropped.
+    expect(cropped.warships).toEqual([
+      { nation: "NOLAND01", tile: 5 * 180 + 100 },
+      { nation: "WESTNAT1", tile: 70 * 180 + 10 },
+    ]);
     expect(cropped.nations).toEqual(doc.nations);
     expect(cropped.alliances).toEqual(doc.alliances);
     // Still a valid document, and the engine built for it holds it.
@@ -719,6 +768,7 @@ describe("resizing", () => {
     const grown = resizeScenarioDocument(doc, 240, 200);
     expectSameTiles(doc, grown);
     expect(grown.structures).toHaveLength(doc.structures.length);
+    expect(grown.warships).toHaveLength(doc.warships.length);
     expectEngineHolds(await rebuilt(grown), grown);
   });
 

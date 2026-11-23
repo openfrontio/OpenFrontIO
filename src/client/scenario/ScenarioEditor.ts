@@ -6,7 +6,7 @@
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
  * HUD layers as in game. Resizing the map rebuilds the engine. Its tools
- * so far are the terrain and territory brushes, the structure tool and the
+ * so far are the terrain and territory brushes, the units tool and the
  * nations panel.
  */
 
@@ -70,6 +70,7 @@ import {
   land,
   MAX_NATIONS,
   MAX_SIDE,
+  MAX_WARSHIPS,
   MAX_ELEVATION,
   newNation,
   newScenarioDocument,
@@ -93,42 +94,42 @@ import {
 } from "./ScenariosApi";
 import { scenarioGameStart } from "./ScenarioStart";
 import {
-  structureClick,
-  type StructureProblem,
-  type StructureType,
-} from "./StructureTool";
-import {
   type BrushStroke,
   TerrainStroke,
   TerritoryStroke,
 } from "./TerrainBrush";
+import { unitClick, type UnitPick, type UnitProblem } from "./UnitTool";
 
 const WHEEL_ZOOM = 1.0015;
 const MAX_BRUSH_RADIUS = 50;
 /** How far, in CSS px, a finger moves before its touch is a stroke. */
 const TOUCH_SLOP = 8;
 
-type Tool = "pan" | "terrain" | "territory" | "structure";
+type Tool = "pan" | "terrain" | "territory" | "units";
 type TerrainKind = "water" | "land" | "impassable";
 type NationFields = Omit<Extract<Edit, { type: "set_nation" }>, "type" | "id">;
 
-/** How far from a structure, in CSS px, a click still hits it. */
-const STRUCTURE_REACH = 10;
+/** How far from a unit, in CSS px, a click still hits it. */
+const UNIT_REACH = 10;
 const MAX_STRUCTURE_LEVEL = 100;
 
-const STRUCTURE_NAMES: Record<StructureType, string> = {
+const UNIT_NAMES: Record<UnitPick, string> = {
   [UnitType.City]: "unit_type.city",
   [UnitType.DefensePost]: "unit_type.defense_post",
   [UnitType.SAMLauncher]: "unit_type.sam_launcher",
   [UnitType.MissileSilo]: "unit_type.missile_silo",
   [UnitType.Port]: "unit_type.port",
   [UnitType.Factory]: "unit_type.factory",
+  [UnitType.Warship]: "unit_type.warship",
 };
 
-const STRUCTURE_PROBLEMS: Record<StructureProblem, string> = {
+const UNIT_PROBLEMS: Record<UnitProblem, string> = {
+  disabled: "scenario_editor.unit_disabled",
   unowned: "scenario_editor.structure_unowned",
   no_shore: "scenario_editor.structure_no_shore",
-  disabled: "scenario_editor.structure_disabled",
+  no_nation: "scenario_editor.warship_no_nation",
+  land: "scenario_editor.warship_land",
+  too_many: "scenario_editor.warship_too_many",
 };
 
 /** The flags a nation can take, as the flag picker lists them. */
@@ -196,13 +197,14 @@ export class ScenarioEditor extends LitElement {
   @state() private elevation = 0;
   /** In tiles; 0 paints one tile. */
   @state() private brushRadius = 2;
-  @state() private structureType: StructureType = UnitType.City;
+  @state() private unitType: UnitPick = UnitType.City;
   @state() private structureLevel = 1;
-  /** Why the structure tool's last click placed nothing. */
-  @state() private structureProblem: StructureProblem | null = null;
+  /** Why the units tool's last click placed nothing. */
+  @state() private unitProblem: UnitProblem | null = null;
   /**
    * The nation picked in the nations panel, which the territory brush
-   * paints; null, or a nation since removed, erases.
+   * paints (null, or a nation since removed, erases) and the units tool
+   * places warships for.
    */
   @state() private nationId: string | null = null;
   /** The Play button's menu: the nations to play as, or why there are none. */
@@ -240,7 +242,7 @@ export class ScenarioEditor extends LitElement {
     confirmed: boolean;
   } | null = null;
   /**
-   * The structure tool's press, which places or removes on release unless
+   * The units tool's press, which places or removes on release unless
    * it moved (a drag pans) or a second finger came (a pinch).
    */
   private pendingClick: { pointerId: number; x: number; y: number } | null =
@@ -895,7 +897,7 @@ export class ScenarioEditor extends LitElement {
 
   // With a brush tool, the primary button or a single finger paints.
   // The other buttons and two fingers move the camera, as in pan mode.
-  // With the structure tool, a click places or removes and a drag pans.
+  // With the units tool, a click places or removes and a drag pans.
 
   private onPointerDown(e: PointerEvent): void {
     const el = e.currentTarget as HTMLElement;
@@ -910,7 +912,7 @@ export class ScenarioEditor extends LitElement {
       if (stroke.confirmed) this.endStroke();
       else this.stroke = null;
       this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
-    } else if (this.tool === "structure") {
+    } else if (this.tool === "units") {
       // A second finger makes the first one's press a pinch.
       this.pendingClick =
         e.button === 0 && this.gestures?.active === false
@@ -1041,15 +1043,15 @@ export class ScenarioEditor extends LitElement {
     if (click?.pointerId === e.pointerId) {
       this.pendingClick = null;
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      this.clickStructure(click.x, click.y, rect);
+      this.clickUnit(click.x, click.y, rect);
     }
     this.gestures?.up(e.pointerId);
     // A finger lifted leaves nothing to preview the brush under.
     if (e.pointerType !== "mouse") this.hover = null;
   }
 
-  /** The structure tool's click at (x, y): places or removes a structure. */
-  private clickStructure(x: number, y: number, rect: DOMRect): void {
+  /** The units tool's click at (x, y): places or removes a unit. */
+  private clickUnit(x: number, y: number, rect: DOMRect): void {
     const doc = this.doc;
     const camera = this.camera;
     if (doc === null || camera === null) return;
@@ -1057,18 +1059,19 @@ export class ScenarioEditor extends LitElement {
     const tx = Math.floor(world.x);
     const ty = Math.floor(world.y);
     if (tx < 0 || ty < 0 || tx >= doc.width || ty >= doc.height) return;
-    const result = structureClick(
+    const result = unitClick(
       doc,
       ty * doc.width + tx,
       this.placedType(doc),
       this.structureLevel,
-      STRUCTURE_REACH / camera.zoom,
+      this.selectedNation()?.id ?? null,
+      UNIT_REACH / camera.zoom,
     );
     if (typeof result === "string") {
-      this.structureProblem = result;
+      this.unitProblem = result;
       return;
     }
-    this.structureProblem = null;
+    this.unitProblem = null;
     this.applyEdit(result);
   }
 
@@ -1092,10 +1095,10 @@ export class ScenarioEditor extends LitElement {
     // The centre tile's centre, on screen; the disc reaches radius + 0.5.
     const cx = (Math.floor(world.x) + 0.5 - camera.x) * camera.zoom + w / 2;
     const cy = (Math.floor(world.y) + 0.5 - camera.y) * camera.zoom + h / 2;
-    // A stroke keeps the radius it started with. A structure takes a tile.
+    // A stroke keeps the radius it started with. A unit takes a tile.
     const radius =
       this.stroke?.brush.radius ??
-      (this.tool === "structure" ? 0 : this.brushRadius);
+      (this.tool === "units" ? 0 : this.brushRadius);
     const size = (2 * radius + 1) * camera.zoom;
     el.style.display = "block";
     el.style.left = `${cx - size / 2}px`;
@@ -1537,7 +1540,7 @@ export class ScenarioEditor extends LitElement {
           ${tool("pan", "scenario_editor.tool_pan")}
           ${tool("terrain", "scenario_editor.tool_terrain")}
           ${tool("territory", "scenario_editor.tool_territory")}
-          ${tool("structure", "scenario_editor.tool_structure")}
+          ${tool("units", "scenario_editor.tool_units")}
         </div>
         <div class="flex gap-1">
           <button
@@ -1585,7 +1588,7 @@ export class ScenarioEditor extends LitElement {
               `
             : nothing
         }
-        ${this.tool === "structure" ? this.renderStructureTool() : nothing}
+        ${this.tool === "units" ? this.renderUnitTool() : nothing}
         ${
           this.tool === "terrain" || this.tool === "territory"
             ? html`
@@ -1614,75 +1617,98 @@ export class ScenarioEditor extends LitElement {
     `;
   }
 
-  /** The structure types the document's settings allow. */
-  private structureTypes(doc: ScenarioDocument): StructureType[] {
+  /** The unit types the document's settings allow. */
+  private unitTypes(doc: ScenarioDocument): UnitPick[] {
     const disabled = doc.config.disabledUnits ?? [];
-    return Structures.types.filter((t) => !disabled.includes(t));
+    const types: UnitPick[] = [...Structures.types, UnitType.Warship];
+    return types.filter((t) => !disabled.includes(t));
   }
 
   /** The picked type, or the first allowed one if the picked one is not. */
-  private placedType(doc: ScenarioDocument): StructureType {
-    const types = this.structureTypes(doc);
-    return types.includes(this.structureType)
-      ? this.structureType
-      : (types[0] ?? this.structureType);
+  private placedType(doc: ScenarioDocument): UnitPick {
+    const types = this.unitTypes(doc);
+    return types.includes(this.unitType)
+      ? this.unitType
+      : (types[0] ?? this.unitType);
   }
 
-  /** The structure tool's type and level, and why a click placed nothing. */
-  private renderStructureTool() {
+  /**
+   * The units tool's type, a structure's level or the nation a warship is
+   * placed for, and why a click placed nothing.
+   */
+  private renderUnitTool() {
     const doc = this.doc!;
-    const types = this.structureTypes(doc);
+    const types = this.unitTypes(doc);
     const picked = this.placedType(doc);
-    const levels = picked !== UnitType.DefensePost;
+    const warship = picked === UnitType.Warship;
+    const levels = !warship && picked !== UnitType.DefensePost;
+    const nation = this.selectedNation();
     return html`
       <label class="flex flex-col gap-1">
-        ${translateText("scenario_editor.structure_type")}
+        ${translateText("scenario_editor.unit_type")}
         <select
           class="rounded bg-zinc-800 px-2 py-1 text-white"
           @change=${(e: Event) => {
-            this.structureType = (e.target as HTMLSelectElement)
-              .value as StructureType;
-            this.structureProblem = null;
+            this.unitType = (e.target as HTMLSelectElement).value as UnitPick;
+            this.unitProblem = null;
           }}
         >
           ${types.map(
             (t) =>
               html`<option value=${t} .selected=${t === picked}>
-                ${translateText(STRUCTURE_NAMES[t])}
+                ${translateText(UNIT_NAMES[t])}
               </option>`,
           )}
         </select>
       </label>
-      <label class="flex flex-col gap-1 ${levels ? "" : "opacity-50"}">
-        ${translateText("scenario_editor.structure_level")}
-        <input
-          type="number"
-          min="1"
-          max=${MAX_STRUCTURE_LEVEL}
-          step="1"
-          class="rounded bg-zinc-800 px-2 py-1 text-white"
-          ?disabled=${!levels}
-          .value=${live(String(levels ? this.structureLevel : 1))}
-          @change=${(e: Event) => {
-            const level = (e.target as HTMLInputElement).valueAsNumber;
-            if (Number.isInteger(level)) {
-              this.structureLevel = Math.max(
-                1,
-                Math.min(MAX_STRUCTURE_LEVEL, level),
-              );
-            }
-            this.requestUpdate();
-          }}
-        />
-      </label>
+      ${
+        warship
+          ? nation === null
+            ? nothing
+            : html`<p>
+                ${translateText("scenario_editor.warship_for", {
+                  nation: nation.name,
+                })}
+              </p>`
+          : html`<label
+              class="flex flex-col gap-1 ${levels ? "" : "opacity-50"}"
+            >
+              ${translateText("scenario_editor.structure_level")}
+              <input
+                type="number"
+                min="1"
+                max=${MAX_STRUCTURE_LEVEL}
+                step="1"
+                class="rounded bg-zinc-800 px-2 py-1 text-white"
+                ?disabled=${!levels}
+                .value=${live(String(levels ? this.structureLevel : 1))}
+                @change=${(e: Event) => {
+                  const level = (e.target as HTMLInputElement).valueAsNumber;
+                  if (Number.isInteger(level)) {
+                    this.structureLevel = Math.max(
+                      1,
+                      Math.min(MAX_STRUCTURE_LEVEL, level),
+                    );
+                  }
+                  this.requestUpdate();
+                }}
+              />
+            </label>`
+      }
       <p class="text-zinc-400">
-        ${translateText("scenario_editor.structure_hint")}
+        ${translateText(
+          warship
+            ? "scenario_editor.warship_hint"
+            : "scenario_editor.structure_hint",
+        )}
       </p>
       ${
-        this.structureProblem === null
+        this.unitProblem === null
           ? nothing
           : html`<p class="text-red-400">
-              ${translateText(STRUCTURE_PROBLEMS[this.structureProblem])}
+              ${translateText(UNIT_PROBLEMS[this.unitProblem], {
+                max: MAX_WARSHIPS,
+              })}
             </p>`
       }
     `;
@@ -1690,7 +1716,8 @@ export class ScenarioEditor extends LitElement {
 
   /**
    * The nations: picking one makes it what the territory brush paints, or
-   * nobody to erase, and the picked one's fields are edited below the list.
+   * nobody to erase, and whose warships the units tool places, and the
+   * picked one's fields are edited below the list.
    */
   private renderNations() {
     const doc = this.doc!;

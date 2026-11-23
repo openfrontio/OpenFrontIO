@@ -410,6 +410,81 @@ describe("editor commands", () => {
     expect(france.gold()).toBe(added.gold());
   });
 
+  test("place_warship builds a free warship that patrols its tile, and remove_warship deletes it", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    e.apply({ type: "set_nation", id: "FRANCE01", gold: 100 });
+    const gu = e.apply({
+      type: "place_warship",
+      tile: e.water,
+      nation: "FRANCE01",
+    });
+    const [warship] = game.units(UnitType.Warship);
+    const france = game.player("FRANCE01");
+    expect(warship.tile()).toBe(e.water);
+    expect(warship.owner()).toBe(france);
+    expect(warship.warshipState().patrolTile).toBe(e.water);
+    expect(warship.health()).toBe(game.unitInfo(UnitType.Warship).maxHealth);
+    // Priced later as a nation that built it, but free now.
+    expect(france.unitsConstructed(UnitType.Warship)).toBe(1);
+    expect(france.gold()).toBe(100n);
+    expect(gu.packedUnitUpdates).toBeDefined();
+    // The editor engine runs nothing: finalize gives it its execution.
+    expect(game.executions()).toEqual([]);
+
+    const removed = e.apply({ type: "remove_warship", tile: e.water });
+    expect(game.units(UnitType.Warship)).toEqual([]);
+    expect(removed.packedUnitUpdates).toBeDefined();
+    expect(game.ticks()).toBe(0);
+  });
+
+  test("a warship whose water becomes land goes, and one beside it stays", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    const [a, b] = [e.water, game.neighbors(e.water).find(game.isWater, game)!];
+    e.apply({ type: "place_warship", tile: a, nation: "FRANCE01" });
+    e.apply({ type: "place_warship", tile: b, nation: "FRANCE01" });
+    e.apply({ type: "set_terrain", tiles: [a], terrain: [0x85] });
+    expect(game.units(UnitType.Warship).map((u) => u.tile())).toEqual([b]);
+    // Land becoming water takes none.
+    e.apply({ type: "set_terrain", tiles: [e.land[0]], terrain: [0] });
+    expect(game.units(UnitType.Warship).map((u) => u.tile())).toEqual([b]);
+  });
+
+  test("remove_nation deletes its warships", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    e.apply(ADD_SPAIN);
+    const spanish = game.neighbors(e.water).find(game.isWater, game)!;
+    e.apply({ type: "place_warship", tile: e.water, nation: "FRANCE01" });
+    e.apply({ type: "place_warship", tile: spanish, nation: "SPAIN001" });
+    e.apply({ type: "remove_nation", id: "FRANCE01" });
+    expect(game.units(UnitType.Warship).map((u) => u.tile())).toEqual([
+      spanish,
+    ]);
+    // Brought back, it has none, and can be given one again.
+    e.apply(ADD_FRANCE);
+    expect(game.player("FRANCE01").units(UnitType.Warship)).toEqual([]);
+    e.apply({ type: "place_warship", tile: e.water, nation: "FRANCE01" });
+    expect(game.player("FRANCE01").units(UnitType.Warship)).toHaveLength(1);
+  });
+
+  test("place_warship refuses when the config disables warships", async () => {
+    const e = await editor({ disabledUnits: [UnitType.Warship] });
+    e.apply(ADD_FRANCE);
+    expect(() =>
+      e.runner.applyEditorCommand({
+        type: "place_warship",
+        tile: e.water,
+        nation: "FRANCE01",
+      }),
+    ).toThrow(/disabled/);
+    expect(e.runner.game.units(UnitType.Warship)).toEqual([]);
+  });
+
   test("add_alliance allies two nations from now, and remove_alliance takes it back", async () => {
     const e = await editor();
     const game = e.runner.game;
@@ -628,6 +703,24 @@ describe("editor commands", () => {
         both,
         { type: "remove_alliance", nations: ["FRANCE01", "SPAIN001"] },
         /are not allies/,
+      );
+    });
+
+    test("a warship on land, off the map, for nobody, on a taken tile, or none to remove", async () => {
+      const e = await editor();
+      const ship: EditorCommand = {
+        type: "place_warship",
+        tile: e.water,
+        nation: "FRANCE01",
+      };
+      await rejects([ADD_FRANCE], { ...ship, tile: e.land[0] }, /needs water/);
+      await rejects([ADD_FRANCE], { ...ship, tile: 16 * 16 }, /not on the map/);
+      await rejects([], ship, /no nation/);
+      await rejects([ADD_FRANCE, ship], ship, /already has a warship/);
+      await rejects(
+        [ADD_FRANCE],
+        { type: "remove_warship", tile: e.water },
+        /has no warship/,
       );
     });
 
