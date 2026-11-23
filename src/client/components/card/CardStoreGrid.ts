@@ -14,6 +14,8 @@ import "../CosmeticCard";
 import type { PurchaseButton } from "../PurchaseButton";
 import "../PurchaseButton";
 import {
+  CARD_ITEM_GROUP,
+  CARD_ITEM_TYPES,
   type CardItem,
   type CardItemType,
   cardItemName,
@@ -36,13 +38,10 @@ const PLACEMENT: StorePlacement = {
   subTab: "card",
 };
 
-const SECTIONS: [keyof Cosmetics, CardItemType][] = [
-  ["playerCards", "playerCard"],
-  ["cardTrackers", "cardTracker"],
-  ["cardBackgrounds", "cardBackground"],
-  ["cardTitles", "cardTitle"],
-  ["taunts", "taunt"],
-];
+// In CARD_ITEM_TYPES order: card, trackers, backgrounds, titles, taunts.
+const SECTIONS: [keyof Cosmetics, CardItemType][] = CARD_ITEM_TYPES.map(
+  (type) => [CARD_ITEM_GROUP[type], type],
+);
 
 export interface CardStoreTracker {
   observe(el: Element, key: string, placement: StorePlacement): void;

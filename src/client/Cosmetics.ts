@@ -42,6 +42,7 @@ import { sessionUncertain, userAuth } from "./Auth";
 import {
   cardItemName,
   type CardItem,
+  CARD_ITEM_GROUP,
   type CardItemType,
   isCardItemType,
 } from "./components/card/CardItems";
@@ -382,16 +383,8 @@ const PLUTONIUM_RECHECK_MS = 3_000;
 // A card item's Plutonium price from its key ("<type>:<name>"), or null.
 async function hardPriceOf(key: string): Promise<number | null> {
   const [type, name] = key.split(":");
-  const group = (
-    {
-      playerCard: "playerCards",
-      cardBackground: "cardBackgrounds",
-      cardTracker: "cardTrackers",
-      cardTitle: "cardTitles",
-      taunt: "taunts",
-    } as const
-  )[type as "playerCard"];
-  if (group === undefined || !name) return null;
+  if (!isCardItemType(type) || !name) return null;
+  const group = CARD_ITEM_GROUP[type];
   const cosmetics = await fetchCosmetics();
   const item = (
     cosmetics?.[group] as Record<string, Pattern | Flag> | undefined
