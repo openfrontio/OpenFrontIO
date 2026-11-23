@@ -260,7 +260,7 @@ export class ControlPanel extends LitElement implements Controller {
   private renderGoldGainPop(textSize: "text-sm" | "text-xs") {
     if (this._goldGain === null) return "";
     const pop = html`<span
-      class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 ${textSize} font-extrabold tabular-nums whitespace-nowrap drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+      class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 ${textSize} font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
       >+${renderNumber(this._goldGain)}</span
     >`;
     return keyed(
