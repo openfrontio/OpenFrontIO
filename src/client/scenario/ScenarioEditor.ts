@@ -534,6 +534,9 @@ export class ScenarioEditor extends LitElement {
     if (editor === null || this.status !== "ready" || this.starting) return;
     // A stroke still open ends first, as its own step.
     this.endStroke();
+    // Undo would now take back this edit, not the settings change the note
+    // describes. setSetting sets the note again after its own edit.
+    this.settingsRemoved = null;
     editor.apply(edit);
     editor.commit();
     this.saveDraft();
@@ -1030,6 +1033,7 @@ export class ScenarioEditor extends LitElement {
     if (editor === null || this.status !== "ready" || this.starting) {
       return false;
     }
+    this.settingsRemoved = null;
     const terrain =
       this.terrainKind === "water"
         ? WATER
