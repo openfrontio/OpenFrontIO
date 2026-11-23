@@ -6,12 +6,18 @@
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
  * HUD layers as in game. Resizing the map rebuilds the engine. Its tools
- * so far are the terrain and territory brushes and the nations panel.
+ * so far are the terrain and territory brushes, the structure tool and the
+ * nations panel.
  */
 
 import { SetNationCommandSchema } from "@openfront/engine-api/EditorCommands";
 import type { GameMap } from "@openfront/engine-api/game/GameMap";
-import { Cell, GameMapSize } from "@openfront/engine-api/game/GameTypes";
+import {
+  Cell,
+  GameMapSize,
+  Structures,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
 import { Config } from "@openfront/engine-lib/configuration/Config";
@@ -57,6 +63,8 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  allianceIndex,
+  alliancesAllowed,
   IMPASSABLE,
   isScenarioSize,
   land,
@@ -85,6 +93,11 @@ import {
 } from "./ScenariosApi";
 import { scenarioGameStart } from "./ScenarioStart";
 import {
+  structureClick,
+  type StructureProblem,
+  type StructureType,
+} from "./StructureTool";
+import {
   type BrushStroke,
   TerrainStroke,
   TerritoryStroke,
@@ -95,9 +108,28 @@ const MAX_BRUSH_RADIUS = 50;
 /** How far, in CSS px, a finger moves before its touch is a stroke. */
 const TOUCH_SLOP = 8;
 
-type Tool = "pan" | "terrain" | "territory";
+type Tool = "pan" | "terrain" | "territory" | "structure";
 type TerrainKind = "water" | "land" | "impassable";
 type NationFields = Omit<Extract<Edit, { type: "set_nation" }>, "type" | "id">;
+
+/** How far from a structure, in CSS px, a click still hits it. */
+const STRUCTURE_REACH = 10;
+const MAX_STRUCTURE_LEVEL = 100;
+
+const STRUCTURE_NAMES: Record<StructureType, string> = {
+  [UnitType.City]: "unit_type.city",
+  [UnitType.DefensePost]: "unit_type.defense_post",
+  [UnitType.SAMLauncher]: "unit_type.sam_launcher",
+  [UnitType.MissileSilo]: "unit_type.missile_silo",
+  [UnitType.Port]: "unit_type.port",
+  [UnitType.Factory]: "unit_type.factory",
+};
+
+const STRUCTURE_PROBLEMS: Record<StructureProblem, string> = {
+  unowned: "scenario_editor.structure_unowned",
+  no_shore: "scenario_editor.structure_no_shore",
+  disabled: "scenario_editor.structure_disabled",
+};
 
 /** The flags a nation can take, as the flag picker lists them. */
 const FLAGS = Countries.filter((c) => c.code !== "xx" && c.restricted !== true);
@@ -164,6 +196,10 @@ export class ScenarioEditor extends LitElement {
   @state() private elevation = 0;
   /** In tiles; 0 paints one tile. */
   @state() private brushRadius = 2;
+  @state() private structureType: StructureType = UnitType.City;
+  @state() private structureLevel = 1;
+  /** Why the structure tool's last click placed nothing. */
+  @state() private structureProblem: StructureProblem | null = null;
   /**
    * The nation picked in the nations panel, which the territory brush
    * paints; null, or a nation since removed, erases.
@@ -203,6 +239,12 @@ export class ScenarioEditor extends LitElement {
      */
     confirmed: boolean;
   } | null = null;
+  /**
+   * The structure tool's press, which places or removes on release unless
+   * it moved (a drag pans) or a second finger came (a pinch).
+   */
+  private pendingClick: { pointerId: number; x: number; y: number } | null =
+    null;
   /** Where the pointer is over the map, in CSS px; null when off it. */
   private hover: { x: number; y: number } | null = null;
   /** Sends pointer moves to the HUD (InputHandler does this in game). */
@@ -842,6 +884,7 @@ export class ScenarioEditor extends LitElement {
     session.worker?.cleanup();
     // A stroke still open is dropped with the editor it paints through.
     this.stroke = null;
+    this.pendingClick = null;
     this.camera = null;
     this.gestures = null;
     // The overlay listens on the bus; a new one leaves the old listeners.
@@ -852,6 +895,7 @@ export class ScenarioEditor extends LitElement {
 
   // With a brush tool, the primary button or a single finger paints.
   // The other buttons and two fingers move the camera, as in pan mode.
+  // With the structure tool, a click places or removes and a drag pans.
 
   private onPointerDown(e: PointerEvent): void {
     const el = e.currentTarget as HTMLElement;
@@ -866,6 +910,12 @@ export class ScenarioEditor extends LitElement {
       if (stroke.confirmed) this.endStroke();
       else this.stroke = null;
       this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
+    } else if (this.tool === "structure") {
+      // A second finger makes the first one's press a pinch.
+      this.pendingClick =
+        e.button === 0 && this.gestures?.active === false
+          ? { pointerId: e.pointerId, x, y }
+          : null;
     } else if (
       this.tool !== "pan" &&
       e.button === 0 &&
@@ -940,6 +990,13 @@ export class ScenarioEditor extends LitElement {
   private onPointerMove(e: PointerEvent): void {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     this.hover = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const click = this.pendingClick;
+    if (
+      click?.pointerId === e.pointerId &&
+      Math.hypot(this.hover.x - click.x, this.hover.y - click.y) > TOUCH_SLOP
+    ) {
+      this.pendingClick = null;
+    }
     const stroke = this.stroke;
     if (stroke?.pointerId === e.pointerId) {
       if ((e.buttons & 1) !== 0) {
@@ -969,6 +1026,7 @@ export class ScenarioEditor extends LitElement {
   }
 
   private onPointerCancel(e: PointerEvent): void {
+    this.pendingClick = null;
     // A cancelled touch, as palm rejection sends, is not a lift: if it
     // hasn't painted yet, it paints nothing.
     if (this.stroke?.pointerId === e.pointerId && !this.stroke.confirmed) {
@@ -979,9 +1037,39 @@ export class ScenarioEditor extends LitElement {
 
   private onPointerUp(e: PointerEvent): void {
     if (this.stroke?.pointerId === e.pointerId) this.endStroke();
+    const click = this.pendingClick;
+    if (click?.pointerId === e.pointerId) {
+      this.pendingClick = null;
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      this.clickStructure(click.x, click.y, rect);
+    }
     this.gestures?.up(e.pointerId);
     // A finger lifted leaves nothing to preview the brush under.
     if (e.pointerType !== "mouse") this.hover = null;
+  }
+
+  /** The structure tool's click at (x, y): places or removes a structure. */
+  private clickStructure(x: number, y: number, rect: DOMRect): void {
+    const doc = this.doc;
+    const camera = this.camera;
+    if (doc === null || camera === null) return;
+    const world = camera.worldAt(x, y, rect.width, rect.height);
+    const tx = Math.floor(world.x);
+    const ty = Math.floor(world.y);
+    if (tx < 0 || ty < 0 || tx >= doc.width || ty >= doc.height) return;
+    const result = structureClick(
+      doc,
+      ty * doc.width + tx,
+      this.placedType(doc),
+      this.structureLevel,
+      STRUCTURE_REACH / camera.zoom,
+    );
+    if (typeof result === "string") {
+      this.structureProblem = result;
+      return;
+    }
+    this.structureProblem = null;
+    this.applyEdit(result);
   }
 
   private setBrushRadius(radius: number): void {
@@ -1004,8 +1092,10 @@ export class ScenarioEditor extends LitElement {
     // The centre tile's centre, on screen; the disc reaches radius + 0.5.
     const cx = (Math.floor(world.x) + 0.5 - camera.x) * camera.zoom + w / 2;
     const cy = (Math.floor(world.y) + 0.5 - camera.y) * camera.zoom + h / 2;
-    // A stroke keeps the radius it started with.
-    const radius = this.stroke?.brush.radius ?? this.brushRadius;
+    // A stroke keeps the radius it started with. A structure takes a tile.
+    const radius =
+      this.stroke?.brush.radius ??
+      (this.tool === "structure" ? 0 : this.brushRadius);
     const size = (2 * radius + 1) * camera.zoom;
     el.style.display = "block";
     el.style.left = `${cx - size / 2}px`;
@@ -1443,10 +1533,11 @@ export class ScenarioEditor extends LitElement {
         class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
         ?inert=${this.starting}
       >
-        <div class="flex gap-1">
+        <div class="grid grid-cols-2 gap-1">
           ${tool("pan", "scenario_editor.tool_pan")}
           ${tool("terrain", "scenario_editor.tool_terrain")}
           ${tool("territory", "scenario_editor.tool_territory")}
+          ${tool("structure", "scenario_editor.tool_structure")}
         </div>
         <div class="flex gap-1">
           <button
@@ -1494,8 +1585,9 @@ export class ScenarioEditor extends LitElement {
               `
             : nothing
         }
+        ${this.tool === "structure" ? this.renderStructureTool() : nothing}
         ${
-          this.tool !== "pan"
+          this.tool === "terrain" || this.tool === "territory"
             ? html`
                 <label
                   class="flex flex-col gap-1"
@@ -1519,6 +1611,80 @@ export class ScenarioEditor extends LitElement {
             : nothing
         }
       </div>
+    `;
+  }
+
+  /** The structure types the document's settings allow. */
+  private structureTypes(doc: ScenarioDocument): StructureType[] {
+    const disabled = doc.config.disabledUnits ?? [];
+    return Structures.types.filter((t) => !disabled.includes(t));
+  }
+
+  /** The picked type, or the first allowed one if the picked one is not. */
+  private placedType(doc: ScenarioDocument): StructureType {
+    const types = this.structureTypes(doc);
+    return types.includes(this.structureType)
+      ? this.structureType
+      : (types[0] ?? this.structureType);
+  }
+
+  /** The structure tool's type and level, and why a click placed nothing. */
+  private renderStructureTool() {
+    const doc = this.doc!;
+    const types = this.structureTypes(doc);
+    const picked = this.placedType(doc);
+    const levels = picked !== UnitType.DefensePost;
+    return html`
+      <label class="flex flex-col gap-1">
+        ${translateText("scenario_editor.structure_type")}
+        <select
+          class="rounded bg-zinc-800 px-2 py-1 text-white"
+          @change=${(e: Event) => {
+            this.structureType = (e.target as HTMLSelectElement)
+              .value as StructureType;
+            this.structureProblem = null;
+          }}
+        >
+          ${types.map(
+            (t) =>
+              html`<option value=${t} .selected=${t === picked}>
+                ${translateText(STRUCTURE_NAMES[t])}
+              </option>`,
+          )}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 ${levels ? "" : "opacity-50"}">
+        ${translateText("scenario_editor.structure_level")}
+        <input
+          type="number"
+          min="1"
+          max=${MAX_STRUCTURE_LEVEL}
+          step="1"
+          class="rounded bg-zinc-800 px-2 py-1 text-white"
+          ?disabled=${!levels}
+          .value=${live(String(levels ? this.structureLevel : 1))}
+          @change=${(e: Event) => {
+            const level = (e.target as HTMLInputElement).valueAsNumber;
+            if (Number.isInteger(level)) {
+              this.structureLevel = Math.max(
+                1,
+                Math.min(MAX_STRUCTURE_LEVEL, level),
+              );
+            }
+            this.requestUpdate();
+          }}
+        />
+      </label>
+      <p class="text-zinc-400">
+        ${translateText("scenario_editor.structure_hint")}
+      </p>
+      ${
+        this.structureProblem === null
+          ? nothing
+          : html`<p class="text-red-400">
+              ${translateText(STRUCTURE_PROBLEMS[this.structureProblem])}
+            </p>`
+      }
     `;
   }
 
@@ -1647,12 +1813,47 @@ export class ScenarioEditor extends LitElement {
           />
           ${translateText("scenario_editor.playable")}
         </label>
+        ${this.renderAllies(n)}
         <button
           class="rounded bg-red-700 px-2 py-1 hover:bg-red-600"
           @click=${() => this.applyEdit({ type: "remove_nation", id: n.id })}
         >
           ${translateText("scenario_editor.remove_nation")}
         </button>
+      </div>
+    `;
+  }
+
+  /** The nations `n` is allied with from the start, as one checkbox each. */
+  private renderAllies(n: ScenarioNation) {
+    const doc = this.doc!;
+    const others = doc.nations.filter((other) => other.id !== n.id);
+    if (others.length === 0 || !alliancesAllowed(doc.config)) return nothing;
+    return html`
+      <div
+        class="flex flex-col gap-1"
+        title=${translateText("scenario_editor.allies_hint")}
+      >
+        ${translateText("scenario_editor.allies")}
+        <ul class="flex max-h-40 flex-col gap-1 overflow-y-auto">
+          ${others.map((other) => {
+            const allied = allianceIndex(doc, n.id, other.id) !== -1;
+            return html`<li>
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  .checked=${live(allied)}
+                  @change=${() =>
+                    this.applyEdit({
+                      type: allied ? "remove_alliance" : "add_alliance",
+                      nations: [n.id, other.id],
+                    })}
+                />
+                <span class="truncate">${other.name}</span>
+              </label>
+            </li>`;
+          })}
+        </ul>
       </div>
     `;
   }

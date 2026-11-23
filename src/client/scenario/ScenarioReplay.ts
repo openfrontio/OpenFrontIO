@@ -65,6 +65,9 @@ export function replayDocument(
       level: s.level,
     });
   }
+  for (const nations of doc.alliances) {
+    send({ type: "add_alliance", nations });
+  }
 }
 
 /** Sends a terrain write as set_terrain commands the engine takes. */

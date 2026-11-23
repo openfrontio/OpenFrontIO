@@ -24,6 +24,9 @@ import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
+// Safari before 17 has no popovers; the gold gain pop falls back to sitting
+// inside the gold box there.
+const supportsPopover = "showPopover" in HTMLElement.prototype;
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -248,6 +251,46 @@ export class ControlPanel extends LitElement implements Controller {
       this._goldGainTimeoutId = null;
       this.requestUpdate();
     }, 2000);
+  }
+
+  // A popover, so it's drawn in the top layer: the events display and the
+  // tutorial panel sit above this panel (so the portrait unit bar doesn't
+  // cover them) and would otherwise hide it. `updated` pins it to the gold
+  // box's top-right corner, and the span keeps its old offsets from there.
+  private renderGoldGainPop(textSize: "text-sm" | "text-xs") {
+    if (this._goldGain === null) return "";
+    const pop = html`<span
+      class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 ${textSize} font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+      >+${renderNumber(this._goldGain)}</span
+    >`;
+    return keyed(
+      this._goldGainPulseId,
+      supportsPopover
+        ? html`<div
+            popover="manual"
+            data-gold-gain-pop
+            class="fixed inset-auto size-0 m-0 p-0 border-0 bg-transparent overflow-visible pointer-events-none"
+          >
+            ${pop}
+          </div>`
+        : pop,
+    );
+  }
+
+  updated() {
+    for (const pop of this.querySelectorAll<HTMLElement>(
+      "[data-gold-gain-pop]",
+    )) {
+      if (pop.matches(":popover-open")) continue;
+      const goldBox = pop.parentElement!;
+      const box = goldBox.getBoundingClientRect();
+      // The other layout's gold box, which is display: none.
+      if (box.width === 0) continue;
+      // Inside the border, where the span's absolute offsets used to start.
+      pop.style.left = `${box.right - goldBox.clientLeft}px`;
+      pop.style.top = `${box.top + goldBox.clientTop}px`;
+      pop.showPopover();
+    }
   }
 
   private trackOutgoingAttacks(player: PlayerView) {
@@ -684,17 +727,7 @@ export class ControlPanel extends LitElement implements Controller {
           )}"
           translate="no"
         >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
+          ${this.renderGoldGainPop("text-sm")}
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
           <span class="tabular-nums">${renderNumber(this._gold)}</span>
         </div>
@@ -765,17 +798,7 @@ export class ControlPanel extends LitElement implements Controller {
           )}"
           translate="no"
         >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
+          ${this.renderGoldGainPop("text-xs")}
           <img src=${goldCoinIcon} width="13" height="13" />
           <span class="px-0.5">${renderNumber(this._gold)}</span>
         </div>

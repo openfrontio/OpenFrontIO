@@ -134,6 +134,14 @@ export const ScenarioConfigSchema = GameConfigSchema.pick({
 });
 export type ScenarioConfig = z.infer<typeof ScenarioConfigSchema>;
 
+/** Two nations allied from the start, by id, the lesser id first. */
+export type ScenarioAlliance = [string, string];
+
+/** Whether the settings allow alliances (as Config.disableAlliances). */
+export function alliancesAllowed(config: ScenarioConfig): boolean {
+  return config.customAllianceDuration !== 0;
+}
+
 export interface ScenarioMeta {
   name: string;
   description: string;
@@ -151,6 +159,8 @@ export interface ScenarioDocument {
   owners: Uint16Array;
   /** At most one per tile, in tile order. */
   structures: ScenarioStructure[];
+  /** Each pair once, in order (see addAlliance). */
+  alliances: ScenarioAlliance[];
   config: ScenarioConfig;
 }
 
@@ -176,6 +186,9 @@ export const ScenarioDocumentSchema = z
     nations: z.array(ScenarioNationSchema).max(MAX_NATIONS),
     ownership: z.array(z.int().nonnegative()),
     structures: z.array(ScenarioStructureSchema),
+    // Optional, so a document from before alliances still loads, and left
+    // out when there are none.
+    alliances: z.array(z.tuple([ID, ID])).optional(),
     config: ScenarioConfigSchema,
   })
   .transform((stored, ctx): ScenarioDocument => {
@@ -224,6 +237,7 @@ function decode(stored: StoredScenarioDocument): ScenarioDocument {
     structures: stored.structures
       .map((s) => ({ ...s }))
       .sort((a, b) => a.tile - b.tile),
+    alliances: [],
     config: stored.config,
   };
   doc.structures.forEach((s, i) => {
@@ -231,6 +245,26 @@ function decode(stored: StoredScenarioDocument): ScenarioDocument {
       throw new Error(`tile ${s.tile} already has a structure`);
     }
     checkStructure(doc, s);
+  });
+  // addAlliance's rules, checked in one pass: a dense document has tens of
+  // thousands of pairs, too many to insert one at a time.
+  const alliances = stored.alliances ?? [];
+  if (alliances.length > 0 && !alliancesAllowed(doc.config)) {
+    throw new Error("alliances are disabled in this scenario");
+  }
+  doc.alliances = alliances
+    .map(([a, b]): ScenarioAlliance => {
+      // nationIndex throws the error for a nation that isn't there.
+      if (!ids.has(a)) nationIndex(doc, a);
+      if (!ids.has(b)) nationIndex(doc, b);
+      if (a === b) throw new Error(`${a} can't ally with itself`);
+      return a < b ? [a, b] : [b, a];
+    })
+    .sort(comparePairs);
+  doc.alliances.forEach((p, i) => {
+    if (i > 0 && comparePairs(doc.alliances[i - 1], p) === 0) {
+      throw new Error(`${p[0]} and ${p[1]} are already allies`);
+    }
   });
   return doc;
 }
@@ -249,6 +283,9 @@ export function serializeScenarioDocument(
     nations: doc.nations.map((n) => ({ ...n })),
     ownership: encodeOwnership(doc.owners),
     structures: doc.structures.map((s) => ({ ...s })),
+    ...(doc.alliances.length > 0
+      ? { alliances: doc.alliances.map(([a, b]): ScenarioAlliance => [a, b]) }
+      : {}),
     config: doc.config,
   };
 }
@@ -284,7 +321,8 @@ export function newScenarioDocument(
 /**
  * The document on a map of another size, which keeps its top-left corner:
  * cropped tiles go with their owners and structures, new ones are water,
- * and a port left without a shore goes. Nations and settings stay.
+ * and a port left without a shore goes. Nations, alliances and settings
+ * stay.
  */
 export function resizeScenarioDocument(
   doc: ScenarioDocument,
@@ -311,6 +349,7 @@ export function resizeScenarioDocument(
     nations: doc.nations.map((n) => ({ ...n })),
     owners,
     structures: [],
+    alliances: doc.alliances.map(([a, b]): ScenarioAlliance => [a, b]),
   };
   for (const s of doc.structures) {
     const x = s.tile % doc.width;
@@ -418,6 +457,50 @@ export function addStructure(
   checkStructure(doc, s);
   const i = doc.structures.findIndex((other) => other.tile > s.tile);
   doc.structures.splice(i === -1 ? doc.structures.length : i, 0, s);
+}
+
+/** Orders alliance pairs by their first id, then their second. */
+function comparePairs(p: ScenarioAlliance, q: ScenarioAlliance): number {
+  if (p[0] !== q[0]) return p[0] < q[0] ? -1 : 1;
+  if (p[1] !== q[1]) return p[1] < q[1] ? -1 : 1;
+  return 0;
+}
+
+/** The pair's place in doc.alliances, or -1. */
+export function allianceIndex(
+  doc: ScenarioDocument,
+  a: string,
+  b: string,
+): number {
+  const [x, y] = a < b ? [a, b] : [b, a];
+  return doc.alliances.findIndex(([p, q]) => p === x && q === y);
+}
+
+/**
+ * Allies two nations, as a pair with the lesser id first (the engine's
+ * requestor), kept in order of the pairs, so a document's alliances don't
+ * depend on the order they were made in. Returns the pair; throws unless
+ * both nations exist and differ, they are not allies yet, and the settings
+ * allow alliances.
+ */
+export function addAlliance(
+  doc: ScenarioDocument,
+  a: string,
+  b: string,
+): ScenarioAlliance {
+  nationIndex(doc, a);
+  nationIndex(doc, b);
+  if (a === b) throw new Error(`${a} can't ally with itself`);
+  if (!alliancesAllowed(doc.config)) {
+    throw new Error("alliances are disabled in this scenario");
+  }
+  if (allianceIndex(doc, a, b) !== -1) {
+    throw new Error(`${a} and ${b} are already allies`);
+  }
+  const pair: ScenarioAlliance = a < b ? [a, b] : [b, a];
+  const i = doc.alliances.findIndex((p) => comparePairs(p, pair) > 0);
+  doc.alliances.splice(i === -1 ? doc.alliances.length : i, 0, pair);
+  return pair;
 }
 
 export function checkTile(doc: ScenarioDocument, tile: number): void {

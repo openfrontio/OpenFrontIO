@@ -416,7 +416,12 @@ export class GameRunner {
       for (const tile of player.tiles()) {
         if (spawnTile === undefined || tile < spawnTile) spawnTile = tile;
       }
-      if (spawnTile === undefined) continue;
+      // One with no land is dead, and the dead have no allies (see
+      // PlayerExecution's removeOnDeath).
+      if (spawnTile === undefined) {
+        player.removeAllAlliances();
+        continue;
+      }
       player.setSpawnTile(spawnTile);
       this.game.stats().recordSpawnTile(player, spawnTile);
       this.game.addExecution(new PlayerExecution(player));

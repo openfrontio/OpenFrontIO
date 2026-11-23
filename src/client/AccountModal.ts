@@ -18,6 +18,7 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "./Api";
+import { appleLogin, appleServicesId, linkApple } from "./AppleSignIn";
 import {
   discordLogin,
   googleLogin,
@@ -47,6 +48,7 @@ import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
+import { appleButton, appleGlyph } from "./components/ui/AppleButton";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
@@ -802,7 +804,7 @@ export class AccountModal extends BaseModal {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
           ${this.renderCurrency()} ${this.renderGoogleLink()}
-          ${this.renderSteamLink()}
+          ${this.renderAppleLink()} ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.google) {
@@ -813,7 +815,8 @@ export class AccountModal extends BaseModal {
               account_name: me.google.email,
             })}
           </div>
-          ${this.renderCurrency()} ${this.renderSteamLink()}
+          ${this.renderCurrency()} ${this.renderAppleLink()}
+          ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.email) {
@@ -823,6 +826,19 @@ export class AccountModal extends BaseModal {
             ${translateText("account_modal.linked_account", {
               account_name: me.email,
             })}
+          </div>
+          ${this.renderCurrency()} ${this.renderGoogleLink()}
+          ${this.renderAppleLink()} ${this.renderSteamLink()}
+        </div>
+      `;
+    } else if (me?.apple) {
+      // Apple-primary: a player with only an Apple identity. The address is
+      // often Apple's private relay, which means nothing to the player, so it
+      // is not shown.
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          <div class="text-white text-lg font-medium">
+            ${translateText("account_modal.signed_in_with_apple")}
           </div>
           ${this.renderCurrency()} ${this.renderGoogleLink()}
           ${this.renderSteamLink()}
@@ -877,6 +893,21 @@ export class AccountModal extends BaseModal {
         ? "account_modal.link_google_on_web"
         : "account_modal.link_google",
     );
+  }
+
+  // Apple link state: a confirmation line when Apple is linked, otherwise the
+  // button to link it, on the website only (see appleServicesId).
+  private renderAppleLink(): TemplateResult {
+    if (this.userMeResponse?.user?.apple) {
+      return html`
+        <div class="flex items-center gap-2 text-white/70 text-sm">
+          ${appleGlyph("w-4 h-4")}
+          <span>${translateText("account_modal.linked_to_apple")}</span>
+        </div>
+      `;
+    }
+    if (appleServicesId() === null) return html``;
+    return appleButton(this.handleLinkApple, "account_modal.link_apple");
   }
 
   // Steam link state (OPE-115): the linked account when there is one,
@@ -1112,6 +1143,17 @@ export class AccountModal extends BaseModal {
               >
             </button>
 
+            <!-- Sign in with Apple: on the website only (appleServicesId). -->
+            ${
+              appleServicesId() === null
+                ? nothing
+                : appleButton(
+                    this.handleAppleLogin,
+                    "main.login_apple",
+                    "large",
+                  )
+            }
+
             <!-- Sign in through Steam. Hidden inside the desktop shell: the
                  player is already signed in there through the native Steam
                  ticket, so the button would be a no-op that looks like an
@@ -1214,6 +1256,16 @@ export class AccountModal extends BaseModal {
   private handleSteamLogin() {
     steamLogin();
   }
+
+  private handleAppleLogin() {
+    void appleLogin();
+  }
+
+  private handleLinkApple = async (): Promise<void> => {
+    if (!(await linkApple())) {
+      await showInGameAlert(translateText("account_modal.link_apple_error"));
+    }
+  };
 
   private handleLinkGoogle = async (): Promise<void> => {
     // On success linkGoogle navigates to Google; the result comes back as a

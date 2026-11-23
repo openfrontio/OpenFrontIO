@@ -125,7 +125,7 @@ async function replayed(doc: ScenarioDocument): Promise<Engine> {
 /**
  * What the engine holds, by id rather than small id: the whole terrain
  * bytes (derived bits included) and minimap, owners, the nations that are
- * there and their structures.
+ * there, their structures and their alliances.
  */
 function engineState(runner: GameRunner) {
   const game = runner.game;
@@ -167,6 +167,15 @@ function engineState(runner: GameRunner) {
         level: u.level(),
       }))
       .sort((a, b) => a.tile - b.tile),
+    // Each once, though both allies have it: requestor first.
+    alliances: [
+      ...new Set(
+        game.nations().flatMap((n) => game.player(n.playerInfo.id).alliances()),
+      ),
+    ]
+      .map((a) => [a.requestor().id(), a.recipient().id()])
+      // In the document's order, by code unit (ids are alphanumeric).
+      .sort((x, y) => (x.join() < y.join() ? -1 : 1)),
   };
 }
 
@@ -183,6 +192,7 @@ function expectEngineHolds(runner: GameRunner, doc: ScenarioDocument): void {
     [...doc.nations].sort((a, b) => a.id.localeCompare(b.id)),
   );
   expect(state.structures).toEqual(doc.structures);
+  expect(state.alliances).toEqual(doc.alliances);
 }
 
 const tile = (x: number, y: number) => y * W + x;
@@ -252,6 +262,8 @@ const BUILD: Edit[][] = [
     },
   ]),
   [{ type: "set_nation", id: "EASTNAT1", name: "Orient", gold: 123 }],
+  [{ type: "add_alliance", nations: ["WESTNAT1", "EASTNAT1"] }],
+  [{ type: "add_alliance", nations: ["NOLAND01", "EASTNAT1"] }],
 ];
 
 /** Edits on top of BUILD that touch everything undo has to put back. */
@@ -372,7 +384,7 @@ test("undo takes every edit back, and redo does it again", async () => {
   expect(engineState(live.runner)).toEqual(editedEngine);
 }, 30_000);
 
-test("undoing remove_nation brings back its land, troops, gold and structures", async () => {
+test("undoing remove_nation brings back its land, troops, gold, structures and alliances", async () => {
   const doc = built();
   const original = copy(doc);
   const live = await replayed(doc);
@@ -381,6 +393,7 @@ test("undoing remove_nation brings back its land, troops, gold and structures", 
   editor.commit();
   expect(doc.nations.map((n) => n.id)).toEqual(["EASTNAT1", "NOLAND01"]);
   expect(doc.structures.every((s) => s.nation === "EASTNAT1")).toBe(true);
+  expect(doc.alliances).toEqual([["EASTNAT1", "NOLAND01"]]);
   // East was nations[1], owner 2; now it's owner 1.
   expect(doc.owners[tile(160, 90)]).toBe(1);
   expect(live.runner.game.hasPlayer("WESTNAT1")).toBe(false);
@@ -399,6 +412,65 @@ test("undoing remove_nation brings back its land, troops, gold and structures", 
   editor.redo();
   expect(live.runner.game.hasPlayer("WESTNAT1")).toBe(false);
   editor.undo();
+  expectEngineHolds(live.runner, doc);
+});
+
+test("land given to another nation loses the old owner's structure, and undo gives both back", async () => {
+  const doc = built();
+  const original = copy(doc);
+  const live = await replayed(doc);
+  const editor = new DocumentEditor(doc, live.send);
+  // East's SAM stands at (170, 95); West takes the tiles around it.
+  editor.apply({
+    type: "set_owner",
+    tiles: rect(168, 93, 5, 5),
+    owner: "WESTNAT1",
+  });
+  editor.commit();
+  expect(doc.structures.map((s) => s.type)).not.toContain(UnitType.SAMLauncher);
+  expect(doc.structures).toHaveLength(5);
+  expectEngineHolds(live.runner, doc);
+
+  editor.undo();
+  expect(doc).toEqual(original);
+  expectEngineHolds(live.runner, doc);
+});
+
+test("an alliance made or ended is one undo step, in the document and the engine", async () => {
+  const doc = built();
+  expect(doc.alliances).toEqual([
+    ["EASTNAT1", "NOLAND01"],
+    ["EASTNAT1", "WESTNAT1"],
+  ]);
+  const live = await replayed(doc);
+  const editor = new DocumentEditor(doc, live.send);
+  const game = live.runner.game;
+  const west = game.player("WESTNAT1");
+  const east = game.player("EASTNAT1");
+  // The lesser id is the requestor, whatever order the edit gave.
+  expect(east.allianceWith(west)!.requestor()).toBe(east);
+
+  applySteps(editor, [
+    [{ type: "remove_alliance", nations: ["WESTNAT1", "EASTNAT1"] }],
+    [{ type: "add_alliance", nations: ["WESTNAT1", "NOLAND01"] }],
+  ]);
+  expect(doc.alliances).toEqual([
+    ["EASTNAT1", "NOLAND01"],
+    ["NOLAND01", "WESTNAT1"],
+  ]);
+  expect(west.isAlliedWith(east)).toBe(false);
+  expectEngineHolds(live.runner, doc);
+
+  editor.undo();
+  expect(doc.alliances).toEqual([["EASTNAT1", "NOLAND01"]]);
+  expectEngineHolds(live.runner, doc);
+  editor.undo();
+  expect(doc.alliances).toEqual([
+    ["EASTNAT1", "NOLAND01"],
+    ["EASTNAT1", "WESTNAT1"],
+  ]);
+  expectEngineHolds(live.runner, doc);
+  editor.redo();
   expectEngineHolds(live.runner, doc);
 });
 
@@ -457,6 +529,10 @@ test("an edit that can't apply changes nothing", () => {
       },
     },
     { type: "remove_structure", tile: tile(100, 100) },
+    { type: "add_alliance", nations: ["EASTNAT1", "WESTNAT1"] },
+    { type: "add_alliance", nations: ["EASTNAT1", "EASTNAT1"] },
+    { type: "add_alliance", nations: ["EASTNAT1", "NOBODY01"] },
+    { type: "remove_alliance", nations: ["WESTNAT1", "NOLAND01"] },
   ];
   for (const edit of bad) expect(() => editor.apply(edit)).toThrow();
   expect(doc).toEqual(original);
@@ -632,6 +708,7 @@ describe("resizing", () => {
       doc.structures.filter((s) => s.tile !== tile(179, 90)).map(moved),
     );
     expect(cropped.nations).toEqual(doc.nations);
+    expect(cropped.alliances).toEqual(doc.alliances);
     // Still a valid document, and the engine built for it holds it.
     expect(copy(cropped)).toEqual(cropped);
     expectEngineHolds(await rebuilt(cropped), cropped);

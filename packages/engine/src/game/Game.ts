@@ -560,6 +560,11 @@ export interface Game extends GameLike {
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
+  /**
+   * Makes the two players allies from now, as an accepted request does,
+   * for the config's alliance duration. Throws if they already are.
+   */
+  createAlliance(requestor: Player, recipient: Player): MutableAlliance;
   expireAlliance(alliance: Alliance): void;
 
   // Immunity timer
@@ -660,6 +665,7 @@ export interface Game extends GameLike {
   addNation(info: PlayerInfo): Player;
   removeNation(nation: Player): void;
   restoreNation(info: PlayerInfo): void;
+  removeAlliance(alliance: Alliance): void;
   setNationInfo(nation: Player, info: PlayerInfo): void;
   /**
    * Writes the authored terrain of the tiles and repairs the terrain around

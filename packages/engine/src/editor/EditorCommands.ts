@@ -135,6 +135,27 @@ export function applyEditorCommand(
       unit.delete(false);
       return;
     }
+    case "add_alliance": {
+      const [a, b] = command.nations.map((id) => nation(game, id));
+      if (a === b) throw new Error(`${a.id()} can't ally with itself`);
+      if (game.config().disableAlliances()) {
+        throw new Error("alliances are disabled in this game");
+      }
+      if (a.isAlliedWith(b)) {
+        throw new Error(`${a.id()} and ${b.id()} are already allies`);
+      }
+      game.createAlliance(a, b);
+      return;
+    }
+    case "remove_alliance": {
+      const [a, b] = command.nations.map((id) => nation(game, id));
+      const alliance = a.allianceWith(b);
+      if (alliance === null) {
+        throw new Error(`${a.id()} and ${b.id()} are not allies`);
+      }
+      game.removeAlliance(alliance);
+      return;
+    }
     case "set_terrain": {
       if (command.terrain.length !== command.tiles.length) {
         throw new Error(
