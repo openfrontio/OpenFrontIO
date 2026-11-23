@@ -3046,6 +3046,7 @@
     "card": "Card",
     "card_email_hint": "Your receipt goes here, and it links this purchase to your account so you can recover it.",
     "card_email_label": "Email",
+    "card_item_needs_card": "Needs the player card",
     "change_tier_failed": "Couldn't update your subscription. Please try again.",
     "change_tier_rate_limited": "You just changed tiers. Please wait a minute before changing again.",
     "change_tier_success": "Switched to {tier}.",

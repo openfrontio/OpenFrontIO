@@ -162,6 +162,29 @@ describe("<card-store-grid>", () => {
     }
   });
 
+  it("without the card: the card comes first and the rest say they need it", async () => {
+    await render([]);
+    expect(keys()[0]).toBe("playerCard:standard");
+    const note = (key: string) =>
+      (grid as unknown as Element).querySelector(
+        `[data-card-store-item='${key}'] [data-card-store-needs-card]`,
+      );
+    expect(note("playerCard:standard")).toBeNull();
+    expect(note("cardBackground:bg_frontline")!.textContent).toContain(
+      "store.card_item_needs_card",
+    );
+    expect(note("cardTracker:wins")).not.toBeNull();
+  });
+
+  it("with the card: no note", async () => {
+    await render(["playerCard:standard"]);
+    expect(
+      (grid as unknown as Element).querySelector(
+        "[data-card-store-needs-card]",
+      ),
+    ).toBeNull();
+  });
+
   it("owned items show Owned, not a price", async () => {
     await render(["cardTracker:wins"]);
     const wins = (grid as unknown as Element).querySelector(

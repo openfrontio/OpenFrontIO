@@ -1,5 +1,8 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
-import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import {
+  type Cosmetics,
+  ownsPlayerCard,
+} from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
@@ -18,7 +21,8 @@ import { buildPlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
 // itself first, then trackers and backgrounds (titles and taunts are held
-// back). Earned items
+// back). Without the card, its items still sell (the card comes first, as
+// in "Get {name}'s look") but each says it needs the card. Earned items
 // aren't listed (they're never sold). Prices in Plutonium and/or caps,
 // bought through the store's purchase flow.
 
@@ -124,6 +128,7 @@ export class CardStoreGrid extends LitElement {
       </p>`;
     }
     const owned = new Set(this.flares);
+    const hasCard = ownsPlayerCard(this.flares);
     return html`<div class="flex flex-wrap justify-center gap-3 p-3">
       ${items.map(({ type, item }) => {
         const key = `${type}:${item.name}`;
@@ -142,6 +147,15 @@ export class CardStoreGrid extends LitElement {
           <span class="truncate text-sm font-bold"
             >${cardItemName(type, item)}</span
           >
+          ${
+            !hasCard && type !== "playerCard"
+              ? html`<span
+                  data-card-store-needs-card
+                  class="text-[11px] font-bold text-amber-300"
+                  >${translateText("store.card_item_needs_card")}</span
+                >`
+              : nothing
+          }
           ${
             owned.has(key)
               ? html`<span
