@@ -2,8 +2,8 @@
 
 Status: design, 2026-11-19. The engine's editor mode, the document model
 (with undo and local drafts), the editor page, the terrain and territory
-tools, the nations panel and bundle export and loading are built. The
-structure and settings tools, PNG import and test play are not.
+and structure tools, the nations panel, bundle export and loading and test
+play are built. The settings tool and PNG import are not.
 
 ## What it is
 
@@ -75,6 +75,7 @@ ScenarioDocument
   nations[]         id (stable), name, flag, troops, gold, playable
   ownership         nation index per tile, run-length encoded
   structures[]      type, tile, nation, level
+  alliances[]       pairs of nation ids allied at the start (optional)
   config            GameConfig fields the author chose
 ```
 
@@ -92,6 +93,12 @@ The stored form is JSON (`src/client/scenario/ScenarioDocument.ts`):
   owned.
 - `structures` is kept in tile order, one per tile. A structure stands on its
   nation's land, a port on a shore, and none is a type the config disables.
+- `alliances` is optional: `[a, b]` pairs of nation ids, the lesser id first
+  (plain string order), kept in order of the pairs, each pair once and never
+  a nation with itself. It is left out when there are none, and a document
+  without it has none. Parsing puts pairs and the list in order, and
+  rejects an id no nation has and alliances when `customAllianceDuration`
+  is 0 (alliances off). Removing a nation removes its pairs.
 - `config` is `difficulty`, `donateGold`, `donateTroops`, `infiniteGold`,
   `infiniteTroops`, `instantBuild`, and optionally `disabledUnits`,
   `maxTimerValue`, `goldMultiplier`, `customAllianceDuration`, `waterNukes`,
@@ -101,6 +108,12 @@ The stored form is JSON (`src/client/scenario/ScenarioDocument.ts`):
 
 Parsing checks all of this and gives the editor its working form, with the
 terrain and owners as typed arrays.
+
+`alliances` came after the first documents and did not change `format`: it
+is optional, so every format 1 document still parses, unchanged. A new
+`format` is for a change an older document or build would read wrongly.
+The cost is that a build from before alliances drops them, as zod drops a
+key it doesn't know, if it saves a document that has them.
 
 The document stores only what the author decided. Shoreline flags, ocean
 versus lake, water depth and the downscaled maps are all derived by the
@@ -200,6 +213,18 @@ terrain byte; this is how water-nuke craters reach the screen today.
 Terrain, territory and structures are tools in the same view. There is no
 separate terrain mode and no engine to throw away when switching.
 
+The structure tool places a structure of the picked type and level for the
+nation that owns the clicked tile; a click on a structure removes it, and a
+drag pans. It keeps the document's rules (one per tile, on its nation's
+land, a port on a shore, no type the config disables, a defense post at
+level 1) and nothing more: the in-game spacing between structures
+(`structureMinDist`) is a build rule for players, not a scenario rule, so an
+author may place structures closer than a player could build them.
+
+The nations panel lists, under the picked nation, every other nation with a
+checkbox for an alliance between the two at the start; each change is one
+undo step. The list is hidden when the settings turn alliances off.
+
 Changing the map's width or height is the one edit the engine cannot take
 live. It rebuilds the engine from the document.
 
@@ -220,10 +245,11 @@ command to the engine.
   its owner and its structure. A port that loses its shore goes. Land given
   to another nation loses the old owner's structure.
 - Undoing `add_nation` is `remove_nation`. Undoing `remove_nation` adds the
-  nation back at its place in the list and gives back its land and
-  structures. The engine keeps a removed nation's player, so adding the id
-  again brings back that player, with its small id, as a new nation starts.
-  `set_nation` then restores its troops, gold and playable.
+  nation back at its place in the list and gives back its land, structures
+  and alliances. The engine keeps a removed nation's player, so adding the
+  id again brings back that player, with its small id, as a new nation
+  starts. `set_nation` then restores its troops, gold and playable.
+- Undoing `add_alliance` is `remove_alliance`, and the other way round.
 
 Undo history is not saved with a draft.
 
@@ -343,8 +369,17 @@ Commands:
 | `end_terrain_edit`                    | Run the full terrain pass (see "Terrain")                          |
 | `set_owner`                           | Give a batch of tiles to a nation, or to nobody                    |
 | `place_structure`, `remove_structure` | Structure of a type and level at a tile                            |
+| `add_alliance`, `remove_alliance`     | Two nations allied from the start, or not                          |
 | `export_terrain`                      | Run the full terrain pass and write out the map files (below)      |
 | `finalize`                            | Prepare for export (below)                                         |
+
+`add_alliance` makes the alliance an accepted request makes
+(`Game.createAlliance`, which `acceptAllianceRequest` also uses), at tick
+0, with the pair's first nation as the requestor. So in play it is an
+ordinary alliance: it lasts the config's alliance duration from the start,
+and can be renewed or broken. `remove_alliance` takes one back with no
+update or stat, as if it had never been made; only the editor needs it.
+`remove_nation` ends the nation's alliances the same way.
 
 ### Finalising for export
 
@@ -383,7 +418,8 @@ in. The terrain test checks this (see "Order of work").
   setting (a nation with no land is dead and stops on its first tick),
 - gives every nation with land what spawning gives it: a spawn tile (its
   lowest tile) and its player execution (troop and gold growth, structure
-  capture, death),
+  capture, death), and ends the alliances of a nation with none, as death
+  does in play,
 - gives every structure the execution it would have had if built in play,
 - adds what `GameRunner.init()` adds for a running game (win check, rail
   clusters, doomsday clock if enabled),
