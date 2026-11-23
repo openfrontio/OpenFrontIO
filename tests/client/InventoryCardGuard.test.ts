@@ -363,6 +363,22 @@ describe("Inventory: unsaved card changes guard", () => {
     }
   });
 
+  it("after session-reauth, an edit on the old profile can't be saved before the new one arrives", async () => {
+    vi.mocked(saveCardLoadout).mockResolvedValue({
+      ok: true,
+      loadout: {} as never,
+    });
+    modal.open({ tab: "card" });
+    await settle(modal);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    await settle(modal);
+    await click("[data-card-slot-row='tracker:2'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
+    q<HTMLButtonElement>("[data-card-save]")?.click();
+    await settle(modal);
+    expect(saveCardLoadout).not.toHaveBeenCalled();
+  });
+
   for (const event of ["session-reauth", "session-cleared"]) {
     it(`${event} with the card tab open drops the unsaved changes`, async () => {
       await openWithChange();

@@ -609,6 +609,26 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(0);
   });
 
+  it("after a session change, the old account's profile never re-seeds the editor", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    const a = me(CARD, B_FLARES, "account-a");
+    editor.seed(a);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    editor.dropAccount();
+    // The tab re-renders with the modal's profile, still A's.
+    editor.seed(a);
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    expect(editor.canSave()).toBe(false);
+    expect(await editor.save()).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+    // B's profile arrives: B's card, and B can save.
+    editor.seed(me(B_CARD, B_FLARES, "account-b"));
+    expect(editor.changeCount()).toBe(0);
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(editor.canSave()).toBe(true);
+  });
+
   it("closing mid-save that then fails leaves no Retry behind", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));

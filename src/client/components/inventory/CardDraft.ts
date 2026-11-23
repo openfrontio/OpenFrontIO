@@ -331,6 +331,14 @@ export class CardEditor {
   /** Bumped when the card turns out to be another account's: a save
    * started before never lands on the next one's card. */
   private account = 0;
+  /** Every profile seeded so far. After a session change none of them is
+   * taken again: one still in hand (the modal's, until the new session's
+   * /users/@me) is the old account's. */
+  private seen = new WeakSet<UserMeResponse>();
+  /** A session change happened and no newer profile has come since: Save
+   * stays off, so nothing goes out under the new session from the old
+   * account's card. */
+  private awaitingProfile = false;
   private listeners = new Set<() => void>();
 
   subscribe(listener: () => void): () => void {
@@ -350,10 +358,15 @@ export class CardEditor {
    */
   seed(userMe: UserMeResponse | null): void {
     if (userMe === this.seededFrom) return;
+    if (userMe !== null) {
+      if (this.awaitingProfile && this.seen.has(userMe)) return;
+      this.seen.add(userMe);
+      this.awaitingProfile = false;
+    }
     const owner = userMe?.player.publicId ?? null;
     const sameAccount =
       owner !== null && owner === (this.seededFrom?.player.publicId ?? null);
-    if (!sameAccount) this.dropAccount();
+    if (!sameAccount) this.resetAccount();
     this.seededFrom = userMe;
     const card = userMe?.player.card ?? null;
     const hadChanges = this.changeCount() > 0;
@@ -374,6 +387,13 @@ export class CardEditor {
    * next /users/@me is taken whoever it's for.
    */
   dropAccount(): void {
+    this.resetAccount();
+    this.awaitingProfile = true;
+    this.emit();
+  }
+
+  /** Another account's card from here: nothing of the last one's stays. */
+  private resetAccount(): void {
     this.account++;
     this.clearSavedTimer();
     this.seededFrom = null;
@@ -463,6 +483,7 @@ export class CardEditor {
 
   canSave(): boolean {
     return (
+      !this.awaitingProfile &&
       this.changeCount() > 0 &&
       this.unownedInChanges().length === 0 &&
       this.saveState !== "saving"
