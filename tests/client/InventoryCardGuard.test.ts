@@ -346,6 +346,23 @@ describe("Inventory: unsaved card changes guard", () => {
     );
   });
 
+  it("Get Plutonium from a page path changes only the hash, as the Store links do", async () => {
+    history.replaceState(null, "", "/store");
+    try {
+      modal.open({ tab: "card" });
+      await settle(modal);
+      (await plutoniumShort()).dispatchEvent(new CustomEvent("confirm"));
+      await settle(modal);
+      expect(window.location.pathname).toBe("/store");
+      expect(window.location.hash).toBe("#modal=store&tab=packs");
+      expect(peekPendingPurchase("guard-test-player")).toBe(
+        "cardBackground:bg_storm",
+      );
+    } finally {
+      history.replaceState(null, "", "/");
+    }
+  });
+
   for (const event of ["session-reauth", "session-cleared"]) {
     it(`${event} with the card tab open drops the unsaved changes`, async () => {
       await openWithChange();

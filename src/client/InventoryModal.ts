@@ -1242,7 +1242,8 @@ export class InventoryModal extends BaseModal {
         @change-flag=${() => this.setActiveTab("flags")}
         @open-store=${(event: CustomEvent<{ item?: string }>) =>
           this.openStore(event.detail.item ?? "card")}
-        @top-up=${(event: CustomEvent<{ go: () => void }>) => this.topUp(event)}
+        @top-up=${(event: CustomEvent<{ remember: () => void }>) =>
+          this.topUp(event)}
         @sign-in=${() =>
           this.leaveThen(() => window.showPage?.("page-account"))}
       ></inventory-card-tab>`;
@@ -1441,13 +1442,16 @@ export class InventoryModal extends BaseModal {
   }
 
   /** "Get Plutonium" from a card Buy's shortfall box leaves for the packs:
-   * like the Store links, ask about unsaved card changes first. */
-  private topUp(event: CustomEvent<{ go: () => void }>) {
+   * like the Store links, ask about unsaved card changes first, then change
+   * only the hash (never a full navigation from a page path, which would
+   * unload a card save still in flight). */
+  private topUp(event: CustomEvent<{ remember: () => void }>) {
     event.preventDefault();
-    const { go } = event.detail;
+    const { remember } = event.detail;
     this.leaveThen(() => {
+      remember();
       this.close();
-      go();
+      window.location.hash = "modal=store&tab=packs";
     });
   }
 
