@@ -6,8 +6,8 @@
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
  * HUD layers as in game. Resizing the map rebuilds the engine. Its tools
- * so far are the terrain and territory brushes, the structure tool and the
- * nations panel.
+ * so far are the terrain and territory brushes, the structure and warship
+ * tools and the nations panel.
  */
 
 import { SetNationCommandSchema } from "@openfront/engine-api/EditorCommands";
@@ -70,6 +70,7 @@ import {
   land,
   MAX_NATIONS,
   MAX_SIDE,
+  MAX_WARSHIPS,
   MAX_ELEVATION,
   newNation,
   newScenarioDocument,
@@ -102,17 +103,18 @@ import {
   TerrainStroke,
   TerritoryStroke,
 } from "./TerrainBrush";
+import { warshipClick, type WarshipProblem } from "./WarshipTool";
 
 const WHEEL_ZOOM = 1.0015;
 const MAX_BRUSH_RADIUS = 50;
 /** How far, in CSS px, a finger moves before its touch is a stroke. */
 const TOUCH_SLOP = 8;
 
-type Tool = "pan" | "terrain" | "territory" | "structure";
+type Tool = "pan" | "terrain" | "territory" | "structure" | "warship";
 type TerrainKind = "water" | "land" | "impassable";
 type NationFields = Omit<Extract<Edit, { type: "set_nation" }>, "type" | "id">;
 
-/** How far from a structure, in CSS px, a click still hits it. */
+/** How far from a structure or warship, in CSS px, a click still hits it. */
 const STRUCTURE_REACH = 10;
 const MAX_STRUCTURE_LEVEL = 100;
 
@@ -129,6 +131,13 @@ const STRUCTURE_PROBLEMS: Record<StructureProblem, string> = {
   unowned: "scenario_editor.structure_unowned",
   no_shore: "scenario_editor.structure_no_shore",
   disabled: "scenario_editor.structure_disabled",
+};
+
+const WARSHIP_PROBLEMS: Record<WarshipProblem, string> = {
+  disabled: "scenario_editor.warship_disabled",
+  no_nation: "scenario_editor.warship_no_nation",
+  land: "scenario_editor.warship_land",
+  too_many: "scenario_editor.warship_too_many",
 };
 
 /** The flags a nation can take, as the flag picker lists them. */
@@ -200,9 +209,12 @@ export class ScenarioEditor extends LitElement {
   @state() private structureLevel = 1;
   /** Why the structure tool's last click placed nothing. */
   @state() private structureProblem: StructureProblem | null = null;
+  /** Why the warship tool's last click placed nothing. */
+  @state() private warshipProblem: WarshipProblem | null = null;
   /**
    * The nation picked in the nations panel, which the territory brush
-   * paints; null, or a nation since removed, erases.
+   * paints (null, or a nation since removed, erases) and the warship tool
+   * places for.
    */
   @state() private nationId: string | null = null;
   /** The Play button's menu: the nations to play as, or why there are none. */
@@ -895,7 +907,8 @@ export class ScenarioEditor extends LitElement {
 
   // With a brush tool, the primary button or a single finger paints.
   // The other buttons and two fingers move the camera, as in pan mode.
-  // With the structure tool, a click places or removes and a drag pans.
+  // With the structure and warship tools, a click places or removes and a
+  // drag pans.
 
   private onPointerDown(e: PointerEvent): void {
     const el = e.currentTarget as HTMLElement;
@@ -910,7 +923,7 @@ export class ScenarioEditor extends LitElement {
       if (stroke.confirmed) this.endStroke();
       else this.stroke = null;
       this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
-    } else if (this.tool === "structure") {
+    } else if (this.tool === "structure" || this.tool === "warship") {
       // A second finger makes the first one's press a pinch.
       this.pendingClick =
         e.button === 0 && this.gestures?.active === false
@@ -1041,7 +1054,8 @@ export class ScenarioEditor extends LitElement {
     if (click?.pointerId === e.pointerId) {
       this.pendingClick = null;
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      this.clickStructure(click.x, click.y, rect);
+      if (this.tool === "warship") this.clickWarship(click.x, click.y, rect);
+      else this.clickStructure(click.x, click.y, rect);
     }
     this.gestures?.up(e.pointerId);
     // A finger lifted leaves nothing to preview the brush under.
@@ -1072,6 +1086,29 @@ export class ScenarioEditor extends LitElement {
     this.applyEdit(result);
   }
 
+  /** The warship tool's click at (x, y): places or removes a warship. */
+  private clickWarship(x: number, y: number, rect: DOMRect): void {
+    const doc = this.doc;
+    const camera = this.camera;
+    if (doc === null || camera === null) return;
+    const world = camera.worldAt(x, y, rect.width, rect.height);
+    const tx = Math.floor(world.x);
+    const ty = Math.floor(world.y);
+    if (tx < 0 || ty < 0 || tx >= doc.width || ty >= doc.height) return;
+    const result = warshipClick(
+      doc,
+      ty * doc.width + tx,
+      this.selectedNation()?.id ?? null,
+      STRUCTURE_REACH / camera.zoom,
+    );
+    if (typeof result === "string") {
+      this.warshipProblem = result;
+      return;
+    }
+    this.warshipProblem = null;
+    this.applyEdit(result);
+  }
+
   private setBrushRadius(radius: number): void {
     this.brushRadius = Math.max(0, Math.min(MAX_BRUSH_RADIUS, radius));
   }
@@ -1092,10 +1129,13 @@ export class ScenarioEditor extends LitElement {
     // The centre tile's centre, on screen; the disc reaches radius + 0.5.
     const cx = (Math.floor(world.x) + 0.5 - camera.x) * camera.zoom + w / 2;
     const cy = (Math.floor(world.y) + 0.5 - camera.y) * camera.zoom + h / 2;
-    // A stroke keeps the radius it started with. A structure takes a tile.
+    // A stroke keeps the radius it started with. A structure or warship
+    // takes a tile.
     const radius =
       this.stroke?.brush.radius ??
-      (this.tool === "structure" ? 0 : this.brushRadius);
+      (this.tool === "structure" || this.tool === "warship"
+        ? 0
+        : this.brushRadius);
     const size = (2 * radius + 1) * camera.zoom;
     el.style.display = "block";
     el.style.left = `${cx - size / 2}px`;
@@ -1538,6 +1578,7 @@ export class ScenarioEditor extends LitElement {
           ${tool("terrain", "scenario_editor.tool_terrain")}
           ${tool("territory", "scenario_editor.tool_territory")}
           ${tool("structure", "scenario_editor.tool_structure")}
+          ${tool("warship", "scenario_editor.tool_warship")}
         </div>
         <div class="flex gap-1">
           <button
@@ -1586,6 +1627,7 @@ export class ScenarioEditor extends LitElement {
             : nothing
         }
         ${this.tool === "structure" ? this.renderStructureTool() : nothing}
+        ${this.tool === "warship" ? this.renderWarshipTool() : nothing}
         ${
           this.tool === "terrain" || this.tool === "territory"
             ? html`
@@ -1688,9 +1730,38 @@ export class ScenarioEditor extends LitElement {
     `;
   }
 
+  /** The nation the warship tool places for, and why a click placed nothing. */
+  private renderWarshipTool() {
+    const nation = this.selectedNation();
+    return html`
+      ${
+        nation === null
+          ? nothing
+          : html`<p>
+              ${translateText("scenario_editor.warship_for", {
+                nation: nation.name,
+              })}
+            </p>`
+      }
+      <p class="text-zinc-400">
+        ${translateText("scenario_editor.warship_hint")}
+      </p>
+      ${
+        this.warshipProblem === null
+          ? nothing
+          : html`<p class="text-red-400">
+              ${translateText(WARSHIP_PROBLEMS[this.warshipProblem], {
+                max: MAX_WARSHIPS,
+              })}
+            </p>`
+      }
+    `;
+  }
+
   /**
    * The nations: picking one makes it what the territory brush paints, or
-   * nobody to erase, and the picked one's fields are edited below the list.
+   * nobody to erase, and whose warships the warship tool places, and the
+   * picked one's fields are edited below the list.
    */
   private renderNations() {
     const doc = this.doc!;

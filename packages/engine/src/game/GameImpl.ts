@@ -984,9 +984,10 @@ export class GameImpl implements Game {
   }
 
   /**
-   * Scenario editor: deletes the nation's structures and alliances, frees
-   * its land and forgets its id. Its small id stays taken, so what is left is a dead
-   * player that no longer appears under its id or among the nations.
+   * Scenario editor: deletes the nation's structures, warships and
+   * alliances, frees its land and forgets its id. Its small id stays
+   * taken, so what is left is a dead player that no longer appears under
+   * its id or among the nations.
    */
   removeNation(nation: Player): void {
     for (const alliance of nation.alliances()) this.detachAlliance(alliance);
