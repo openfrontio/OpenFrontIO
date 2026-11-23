@@ -1,6 +1,7 @@
 /**
- * Scenario drafts kept in this browser until the API stores them
- * (docs/ScenarioEditor.md, "Order of work"). IndexedDB, not localStorage:
+ * Scenario drafts kept in this browser before the API stored them. The
+ * editor now saves drafts to the API (ScenariosApi) and only lists these, to
+ * move them to the account. IndexedDB, not localStorage:
  * a 3M-tile document is about 4 MB of base64 (a 25M-tile one about 33 MB),
  * and localStorage holds about 5 MB for the whole site. A draft is kept in its stored form, the same
  * JSON the API will take, and is checked against the schema when loaded.
