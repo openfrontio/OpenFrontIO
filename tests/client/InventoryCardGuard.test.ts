@@ -467,6 +467,32 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(saveCardLoadout).not.toHaveBeenCalled();
   });
 
+  it("a background sign-out with the Inventory open ends signed out, not loading", async () => {
+    // Main hears session-cleared first (it registers at boot) and
+    // re-broadcasts the signed-out profile at once.
+    const mainLike = () =>
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: false }),
+      );
+    modal.remove();
+    document.addEventListener("session-cleared", mainLike);
+    try {
+      document.body.appendChild(modal);
+      modal.open({ tab: "card" });
+      await settle(modal);
+      vi.mocked(userAuth).mockResolvedValue(false);
+      session.id = null;
+      document.dispatchEvent(new CustomEvent("session-cleared"));
+      await settle(modal);
+      expect(q("[data-inventory-sign-in]")).not.toBeNull();
+      expect(
+        (modal as unknown as { ownershipState: string }).ownershipState,
+      ).toBe("guest");
+    } finally {
+      document.removeEventListener("session-cleared", mainLike);
+    }
+  });
+
   for (const event of ["session-reauth", "session-cleared"]) {
     it(`${event} with the card tab open drops the unsaved changes`, async () => {
       await openWithChange();
