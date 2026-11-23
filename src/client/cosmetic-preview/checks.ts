@@ -52,6 +52,9 @@ export function checkCardBackground(
   return [...issues.slice(0, at), ...sources, ...issues.slice(at)];
 }
 
+/** A layer animation as the game's schema accepts it. */
+export type CardLayerAnimation = LayerAnimation;
+
 export type CardAnimationResult =
   | { ok: true; animation: LayerAnimation }
   | { ok: false; error: string };
