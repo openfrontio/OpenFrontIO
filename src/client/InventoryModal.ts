@@ -32,6 +32,7 @@ import { EFFECT_SLOTS } from "./components/inventory/EffectSlots";
 import "./components/inventory/InventoryEffectList";
 import type { EffectRow } from "./components/inventory/InventoryEffectList";
 import "./components/inventory/InventoryItemTile";
+import type { InventoryItemTile } from "./components/inventory/InventoryItemTile";
 import "./components/inventory/InventoryYourLook";
 import type {
   YourLookEffect,
@@ -103,6 +104,22 @@ const IN_GAME_TABS: readonly InventoryCategory[] = [
   "effects",
 ];
 const CARD_TAB = "card";
+
+/** The In game category an item is listed under, for the purchase's
+ * StorePlacement. */
+function inventoryCategoryOf(item: ResolvedCosmetic): InventoryCategory {
+  switch (item.type) {
+    case "pattern":
+    case "skin":
+      return "skins";
+    case "flag":
+      return "flags";
+    case "crown":
+      return "crowns";
+    default:
+      return "effects";
+  }
+}
 
 function countryFlag(name: string, code: string): Flag {
   return {
@@ -1662,7 +1679,10 @@ export class InventoryModal extends BaseModal {
           )
         : null;
     try {
-      return await purchaseCosmetic(resolved, method, undefined);
+      return await purchaseCosmetic(resolved, method, {
+        kind: "inventory",
+        subTab: inventoryCategoryOf(resolved),
+      });
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would
@@ -1674,10 +1694,23 @@ export class InventoryModal extends BaseModal {
     }
   }
 
-  private equipBought() {
+  private async equipBought() {
     const item = this.buying;
     this.closeBuy();
-    if (item !== null) this.equip(item);
+    if (item === null) return;
+    this.equip(item);
+    // Equipping re-sorts the grid equipped-first, and its tiles aren't
+    // keyed, so the tile the closing dialog gave focus back to may now show
+    // another item: move focus to the one just equipped.
+    await this.updateComplete;
+    [...this.querySelectorAll<InventoryItemTile>("inventory-item-tile")]
+      .find(
+        (tile) =>
+          tile.resolved.key === item.key ||
+          tile.variants.some((variant) => variant.key === item.key),
+      )
+      ?.querySelector<HTMLElement>("[data-tile-main]")
+      ?.focus();
   }
 
   /** The dialog's item from the catalogue now shown: a refetch may have
