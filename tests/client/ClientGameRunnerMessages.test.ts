@@ -46,13 +46,39 @@ vi.mock("../../src/client/Utils", () => ({
   reloadForUpdate: vi.fn(),
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
+  exitGame: vi.fn(() => {
+    window.location.href = "/";
+  }),
 }));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {},
-  loadCachedTerrainMap: vi.fn(async () => ({}) as never),
+  loadCachedTerrainMap: vi.fn(
+    async () =>
+      ({
+        gameMap: {
+          width: () => 10,
+          height: () => 10,
+          ref: () => 0,
+          terrainByte: () => 0,
+        },
+      }) as never,
+  ),
 }));
 vi.mock("../../src/client/hud/GameRenderer", () => ({
-  createRenderer: vi.fn(),
+  createRenderer: vi.fn(() => ({
+    initialize: vi.fn(),
+    dispose: vi.fn(),
+    uiState: { attackRatio: 0.5, ghostStructure: null },
+    transformHandler: {
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      observeCanvasSize: vi.fn(() => ({ disconnect: vi.fn() })),
+      updateCanvasBoundingRect: vi.fn(),
+      centerAll: vi.fn(),
+      screenToWorldCoordinates: vi.fn(),
+    },
+  })),
 }));
 vi.mock("../../src/client/hud/layers/lib/GoldRateTracker", () => ({
   goldRateTracker: { resetAll: vi.fn() },
@@ -60,12 +86,53 @@ vi.mock("../../src/client/hud/layers/lib/GoldRateTracker", () => ({
 vi.mock("../../src/client/theme/ThemeProvider", () => ({
   themeProvider: { reset: vi.fn() },
 }));
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as never;
+}
+
 vi.mock("../../src/client/sound/SoundManager", () => ({
-  SoundManager: class {},
+  SoundManager: class {
+    playBackgroundMusic() {}
+    dispose() {}
+  },
 }));
+vi.mock("../../src/client/sound/AudioMixer", () => ({
+  audioMixer: () => ({}),
+  initAudioMixer: () => ({}),
+}));
+vi.mock("../../src/client/InputHandler", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/InputHandler")>();
+  class MockInputHandler {
+    initialize = vi.fn();
+    destroy = vi.fn();
+  }
+  return {
+    ...actual,
+    InputHandler: MockInputHandler,
+  };
+});
 vi.mock("../../src/client/render/gl", () => ({
   GLUnavailableError: class extends Error {},
-  MapRenderer: class {},
+  MapRenderer: class {
+    glLimited = null;
+    getSettings() {
+      return {};
+    }
+    rebuildTerrain() {}
+    applyTerrainRects() {}
+    uploadTileAndTrailState() {}
+    updateStructures() {}
+    uploadRailroadState() {}
+    updateRelations() {}
+    dispose() {}
+    setCameraState() {}
+    showMoveIndicator() {}
+  },
   applyGraphicsOverrides: vi.fn(),
   createRenderSettings: vi.fn(() => ({})),
   deepAssign: vi.fn(),
@@ -75,17 +142,70 @@ vi.mock("../../src/client/render/gl", () => ({
   trackGLInit: vi.fn(),
 }));
 vi.mock("../../src/client/WebGLFrameBuilder", () => ({
-  WebGLFrameBuilder: class {},
+  WebGLFrameBuilder: class {
+    clearCaches() {}
+    update() {}
+    refreshNames() {}
+    refreshPalette() {}
+    refreshCosmetics() {}
+    setEffectOverride() {}
+  },
 }));
 vi.mock("../../src/client/controllers/MapLayerController", () => ({
   MapLayerController: class {},
 }));
 vi.mock("../../src/client/view", () => ({
-  GameView: class {},
+  GameView: class {
+    config() {
+      return {
+        isRandomSpawn: () => false,
+        isReplay: () => false,
+      };
+    }
+    isCatchingUp() {
+      return false;
+    }
+    inSpawnPhase() {
+      return false;
+    }
+    myPlayer() {
+      return null;
+    }
+    update() {}
+    refreshPlayerColors() {}
+    invalidateTeamClanTags() {}
+    frameData() {
+      return {
+        tileState: new Uint8Array(),
+        trailState: new Uint8Array(),
+        units: new Map(),
+        railroadState: new Uint8Array(),
+        relationMatrix: new Uint8Array(),
+        relationSize: 0,
+      };
+    }
+    terrainByte() {
+      return 0;
+    }
+    x() {
+      return 0;
+    }
+    y() {
+      return 0;
+    }
+    unit() {
+      return undefined;
+    }
+  },
   PlayerView: class {},
 }));
 vi.mock("../../src/client/WorkerClient", () => ({
-  WorkerClient: class {},
+  WorkerClient: class {
+    async initialize(): Promise<void> {}
+    cleanup(): void {}
+    start(_cb?: unknown): void {}
+    sendTurn(_turn?: unknown): void {}
+  },
 }));
 vi.mock("../../src/client/Transport", async (importOriginal) => {
   const actual =
@@ -108,9 +228,11 @@ import {
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
 import type { GameHealthIndicators } from "../../src/client/hud/layers/GameHealthIndicators";
+import { MouseUpEvent } from "../../src/client/InputHandler";
 import { loadCachedTerrainMap } from "../../src/client/TerrainMapFileLoader";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
+import { WorkerClient } from "../../src/client/WorkerClient";
 
 function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
   return {
@@ -247,6 +369,248 @@ describe("joinLobby lobby-phase messages", () => {
     expect(errorModalText()).toContain("game id: game1234");
     expect(errorModalText()).toContain("Error: missing gameStartInfo");
   });
+
+  it("cleans up worker and skips DOM/WebGL setup if stopped before worker.initialize() resolves", async () => {
+    let resolveWorkerInit: () => void = () => {};
+    const workerInitPromise = new Promise<void>((res) => {
+      resolveWorkerInit = res;
+    });
+
+    const appendChildSpy = vi.spyOn(document.body, "appendChild");
+    const insertBeforeSpy = vi.spyOn(document.body, "insertBefore");
+    const appendSpy = vi.spyOn(document.body, "append");
+    const cleanupSpy = vi.spyOn(WorkerClient.prototype, "cleanup");
+    const startSpy = vi.spyOn(ClientGameRunner.prototype, "start");
+
+    const result = joinLobby(new EventBus(), makeLobbyConfig(false));
+
+    vi.spyOn(WorkerClient.prototype, "initialize").mockImplementation(() => {
+      // Called after terrain load completed and passed isStopped check;
+      // invoke stop() now while createClientGame is still awaiting worker init.
+      result.stop();
+      return workerInitPromise;
+    });
+
+    captured.lobbyOnMessage!({
+      type: "start",
+      myClientID: "c0000001",
+      turns: [],
+      gameStartInfo: {
+        gameID: "game1234",
+        config: { gameMap: "world", gameMapSize: "medium" },
+        players: [],
+      },
+    });
+
+    // Wait until worker.initialize has been invoked (and called result.stop())
+    await vi.waitFor(() => {
+      expect(WorkerClient.prototype.initialize).toHaveBeenCalled();
+    });
+
+    // Now resolve worker.initialize; createClientGame should abort before DOM/WebGL setup
+    resolveWorkerInit();
+    await result.join;
+    await vi.waitFor(() => {
+      expect(cleanupSpy).toHaveBeenCalled();
+    });
+
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(document.getElementById("game-input-overlay")).toBeNull();
+    expect(document.getElementById("webgl-debug-canvas")).toBeNull();
+
+    const insertedNodes = [
+      ...appendChildSpy.mock.calls.map(([node]) => node),
+      ...insertBeforeSpy.mock.calls.map(([node]) => node),
+      ...appendSpy.mock.calls.flat(),
+    ];
+    for (const node of insertedNodes) {
+      if (node instanceof Element) {
+        expect(node.id).not.toBe("game-input-overlay");
+        expect(node.id).not.toBe("webgl-debug-canvas");
+      }
+      if (node instanceof Element || node instanceof DocumentFragment) {
+        expect(
+          node.querySelector("#game-input-overlay, #webgl-debug-canvas"),
+        ).toBeNull();
+      }
+    }
+  });
+
+  it("skips worker initialization if stopped before terrain load completes", async () => {
+    let resolveTerrain: (val: unknown) => void = () => {};
+    const terrainPromise = new Promise((res) => {
+      resolveTerrain = res;
+    });
+    vi.mocked(loadCachedTerrainMap).mockReturnValueOnce(
+      terrainPromise as never,
+    );
+
+    const workerInitSpy = vi.spyOn(WorkerClient.prototype, "initialize");
+    const startSpy = vi.spyOn(ClientGameRunner.prototype, "start");
+
+    const result = joinLobby(new EventBus(), makeLobbyConfig(false));
+
+    captured.lobbyOnMessage!({
+      type: "start",
+      myClientID: "c0000001",
+      turns: [],
+      gameStartInfo: {
+        gameID: "game1234",
+        config: { gameMap: "world", gameMapSize: "medium" },
+        players: [],
+      },
+    });
+
+    // Call stop() while terrain load is still pending
+    result.stop();
+
+    // Now resolve terrain load
+    resolveTerrain({
+      gameMap: {
+        width: () => 10,
+        height: () => 10,
+        ref: () => 0,
+        terrainByte: () => 0,
+      },
+    });
+    await result.join;
+    await terrainPromise;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workerInitSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+  });
+
+  it("cleans up worker when stop() is called on an inactive runner", () => {
+    const unstartedWorker = {
+      start: vi.fn(),
+      sendTurn: vi.fn(),
+      cleanup: vi.fn(),
+    };
+    const unstartedRunner = new ClientGameRunner(
+      makeLobbyConfig(true),
+      "c0000001",
+      new EventBus(),
+      { initialize: vi.fn(), tick: vi.fn(), dispose: vi.fn() } as never,
+      { initialize: vi.fn(), destroy: vi.fn() } as never,
+      { leaveGame: vi.fn(), isLocal: true } as never,
+      unstartedWorker as never,
+      {
+        config: () => ({ isRandomSpawn: () => false, isReplay: () => false }),
+        inSpawnPhase: () => false,
+      } as never,
+      { playBackgroundMusic: vi.fn(), dispose: vi.fn() } as never,
+      { goToPlayer: () => false } as never,
+      null,
+      null,
+      null,
+      null,
+    );
+    unstartedRunner.stop();
+    expect(unstartedWorker.cleanup).toHaveBeenCalled();
+  });
+
+  it("notifies onTurnstileTokenAdmitted at most once across repeated lobby_info and start messages", async () => {
+    const onTurnstileTokenAdmitted = vi.fn();
+    const config = makeLobbyConfig(false);
+    config.turnstileToken = "turnstile-token";
+    config.onTurnstileTokenAdmitted = onTurnstileTokenAdmitted;
+
+    const result = joinLobby(new EventBus(), config);
+    const lobbyInfoMsg = {
+      type: "lobby_info",
+      myClientID: "c0000001",
+      lobby: {
+        gameID: "game1234",
+        serverTime: 1_700_000_000_000,
+        clients: [],
+      },
+    };
+
+    captured.lobbyOnMessage!(lobbyInfoMsg);
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+
+    captured.lobbyOnMessage!(lobbyInfoMsg);
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+
+    captured.lobbyOnMessage!({
+      type: "start",
+      myClientID: "c0000001",
+      turns: [],
+      gameStartInfo: {
+        gameID: "game1234",
+        config: { gameMap: "world", gameMapSize: "medium" },
+        players: [],
+      },
+    });
+    result.stop();
+    await result.join;
+
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies onTurnstileTokenAdmitted on start when turnstileToken is updated from null before admission", async () => {
+    const onTurnstileTokenAdmitted = vi.fn();
+    const config = makeLobbyConfig(false);
+    config.turnstileToken = null;
+    config.onTurnstileTokenAdmitted = onTurnstileTokenAdmitted;
+
+    const result = joinLobby(new EventBus(), config);
+
+    // Simulates fallback updating lobbyConfig.turnstileToken prior to admission.
+    config.turnstileToken = "fallback-turnstile-token";
+
+    captured.lobbyOnMessage!({
+      type: "start",
+      myClientID: "c0000001",
+      turns: [],
+      gameStartInfo: {
+        gameID: "game1234",
+        config: { gameMap: "world", gameMapSize: "medium" },
+        players: [],
+      },
+    });
+    result.stop();
+    await result.join;
+
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, ""])(
+    "does not notify onTurnstileTokenAdmitted when turnstileToken is %j",
+    async (token) => {
+      const onTurnstileTokenAdmitted = vi.fn();
+      const config = makeLobbyConfig(false);
+      config.turnstileToken = token;
+      config.onTurnstileTokenAdmitted = onTurnstileTokenAdmitted;
+
+      const result = joinLobby(new EventBus(), config);
+
+      captured.lobbyOnMessage!({
+        type: "lobby_info",
+        myClientID: "c0000001",
+        lobby: {
+          gameID: "game1234",
+          serverTime: 1_700_000_000_000,
+          clients: [],
+        },
+      });
+      captured.lobbyOnMessage!({
+        type: "start",
+        myClientID: "c0000001",
+        turns: [],
+        gameStartInfo: {
+          gameID: "game1234",
+          config: { gameMap: "world", gameMapSize: "medium" },
+          players: [],
+        },
+      });
+      result.stop();
+      await result.join;
+
+      expect(onTurnstileTokenAdmitted).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("ClientGameRunner in-game messages", () => {
@@ -805,5 +1169,108 @@ describe("version_mismatch takes the versioned page on this host first", () => {
 
     for (let i = 0; i < 10; i++) await Promise.resolve();
     expect(reloadForUpdate).toHaveBeenCalled();
+  });
+});
+
+describe("ClientGameRunner lifecycle idempotency and cleanup", () => {
+  function makeRunner(isLocal = false) {
+    const eventBus = new EventBus();
+    const worker = { start: vi.fn(), sendTurn: vi.fn(), cleanup: vi.fn() };
+    const transport = {
+      updateCallback: vi.fn(),
+      rejoinGame: vi.fn(),
+      turnComplete: vi.fn(),
+      leaveGame: vi.fn(),
+      reconnect: vi.fn(),
+      isLocal,
+    };
+    const renderer = {
+      initialize: vi.fn(),
+      tick: vi.fn(),
+      uiState: { attackRatio: 0.5, ghostStructure: null },
+      transformHandler: {
+        screenToWorldCoordinates: vi.fn(() => ({ x: 0, y: 0 })),
+      },
+    };
+    const gameView = {
+      config: () => ({
+        isRandomSpawn: () => false,
+        isReplay: () => false,
+      }),
+      isCatchingUp: vi.fn(() => false),
+      inSpawnPhase: () => false,
+      myPlayer: () => null,
+      update: vi.fn(),
+    };
+    const runner = new ClientGameRunner(
+      makeLobbyConfig(true),
+      "c0000001",
+      eventBus,
+      renderer as never,
+      { initialize: vi.fn(), destroy: vi.fn() } as never,
+      transport as never,
+      worker as never,
+      gameView as never,
+      { playBackgroundMusic: vi.fn(), dispose: vi.fn() } as never,
+      { goToPlayer: () => false } as never,
+    );
+    startedRunners.push(runner);
+    return { runner, eventBus, worker, transport, renderer };
+  }
+
+  it("calling start() twice does not duplicate GameHealthIndicators, eventBus listeners, or worker.start()", () => {
+    const { runner, eventBus, worker } = makeRunner(true);
+    const onSpy = vi.spyOn(eventBus, "on");
+
+    runner.start();
+    expect(worker.start).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(1);
+    const subscriptionCount = onSpy.mock.calls.length;
+    expect(subscriptionCount).toBeGreaterThan(0);
+
+    runner.start();
+    expect(worker.start).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(1);
+    expect(onSpy).toHaveBeenCalledTimes(subscriptionCount);
+
+    runner.stop();
+    runner.start();
+    expect(worker.start).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(0);
+    expect(onSpy).toHaveBeenCalledTimes(subscriptionCount);
+  });
+
+  it("calling start() after an unstarted stop() is a no-op", () => {
+    const { runner, eventBus, worker } = makeRunner(true);
+    const onSpy = vi.spyOn(eventBus, "on");
+
+    runner.stop();
+    runner.start();
+
+    expect(worker.start).not.toHaveBeenCalled();
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(0);
+    expect(onSpy).not.toHaveBeenCalled();
+  });
+
+  it("calling stop() before 20s cancels connectionCheckTimeout and unsubscribes eventBus listeners", () => {
+    vi.useFakeTimers();
+    const { runner, eventBus, transport, renderer } = makeRunner(false);
+    const onSpy = vi.spyOn(eventBus, "on");
+    const offSpy = vi.spyOn(eventBus, "off");
+
+    runner.start();
+    expect(onSpy.mock.calls.length).toBeGreaterThan(0);
+    vi.advanceTimersByTime(10_000);
+
+    runner.stop();
+    expect(offSpy).toHaveBeenCalledTimes(onSpy.mock.calls.length);
+
+    eventBus.emit(new MouseUpEvent(10, 10));
+    expect(
+      renderer.transformHandler.screenToWorldCoordinates,
+    ).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(30_000);
+    expect(transport.reconnect).not.toHaveBeenCalled();
   });
 });

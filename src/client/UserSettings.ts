@@ -236,6 +236,8 @@ export const ACTIVE_LOADOUT_KEY = "settings.activeLoadout";
 export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
 export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
 export const FAVORITE_EMOJIS_KEY = "settings.favoriteEmojis";
+// Players in the Steam app can turn off the sale banners (account settings).
+export const HIDE_SALE_BANNERS_KEY = "settings.hideSaleBanners";
 const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
   player: PLAYER_STATS_COLUMNS_KEY,
   team: TEAM_STATS_COLUMNS_KEY,
@@ -445,6 +447,15 @@ export class UserSettings {
 
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
+  }
+
+  /** Whether the player turned the sale banners off. */
+  hideSaleBanners(): boolean {
+    return this.getBool(HIDE_SALE_BANNERS_KEY, false);
+  }
+
+  setHideSaleBanners(hidden: boolean): void {
+    this.setBool(HIDE_SALE_BANNERS_KEY, hidden);
   }
 
   mapLayers() {

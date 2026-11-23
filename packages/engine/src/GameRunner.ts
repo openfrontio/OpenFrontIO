@@ -159,6 +159,9 @@ export async function createGameRunnerFromSnapshot(
     miniGameMap: gameMap.miniGameMap,
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
   });
+  if (gameStart.scenario !== undefined) {
+    assignScenarioNations(game, gameStart);
+  }
   // No init(): the snapshot already holds every execution init() adds.
   return new GameRunner(
     game,
@@ -170,6 +173,46 @@ export async function createGameRunnerFromSnapshot(
     ),
     callBack,
   );
+}
+
+/**
+ * Hands each scenario nation to its player (docs/ScenarioEditor.md,
+ * "Starting a game from a bundle"). Every assignment is checked against the
+ * restored game and the start info before any takeover, so a bad start
+ * fails whole, and the same way on every client.
+ */
+function assignScenarioNations(game: Game, gameStart: GameStartInfo): void {
+  const assignments = gameStart.scenario!.assignments;
+  const players = new Set(gameStart.players.map((p) => p.clientID));
+  const nations = new Set<string>();
+  const clients = new Set<ClientID>();
+  for (const { clientID, nationID } of assignments) {
+    const nation = game.hasPlayer(nationID) ? game.player(nationID) : null;
+    if (nation === null || nation.type() !== PlayerType.Nation) {
+      throw new Error(`scenario: no nation ${nationID}`);
+    }
+    if (!nation.playable()) {
+      throw new Error(`scenario: nation ${nationID} is not playable`);
+    }
+    if (nations.has(nationID)) {
+      throw new Error(`scenario: nation ${nationID} is assigned twice`);
+    }
+    if (!players.has(clientID)) {
+      throw new Error(`scenario: client ${clientID} is not a player`);
+    }
+    if (clients.has(clientID)) {
+      throw new Error(`scenario: client ${clientID} has two nations`);
+    }
+    nations.add(nationID);
+    clients.add(clientID);
+  }
+  // The spawn phase is over, so a player without a nation has nowhere to be.
+  if (clients.size !== players.size) {
+    throw new Error("scenario: a player has no nation");
+  }
+  for (const { clientID, nationID } of assignments) {
+    game.takeoverPlayer(nationID, clientID);
+  }
 }
 
 export class GameRunner {

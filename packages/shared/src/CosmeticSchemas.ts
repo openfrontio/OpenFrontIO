@@ -674,6 +674,9 @@ export const CosmeticsSchema = z.object({
   // Price to put a listed lobby in the public queue (host modal's Queue
   // button). Optional like tribeNames; the button hides when absent.
   lobbyQueue: z.object({ priceHard: z.number() }).optional(),
+  // Price to boost a scheduled public lobby to the front of its queue (join
+  // modal's Boost button). The button hides when absent.
+  mapBoost: z.object({ priceHard: z.number() }).optional(),
   // Every sale running when the catalog was served, for the store banner.
   // Optional: an older cosmetics.json has none.
   promotions: PromotionSchema.array().optional(),

@@ -187,12 +187,13 @@ describe("LobbyPresets logic and schema", () => {
   });
 
   it("enforces integer and range bounds on numeric config options", () => {
-    // bots: 0-400 int
+    // bots: 0-1000 int
     expect(
       LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: -1 }).success,
     ).toBe(false);
     expect(
-      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 401 }).success,
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 1001 })
+        .success,
     ).toBe(false);
     expect(
       LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 10.5 })
@@ -202,7 +203,8 @@ describe("LobbyPresets logic and schema", () => {
       LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 0 }).success,
     ).toBe(true);
     expect(
-      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 400 }).success,
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 1000 })
+        .success,
     ).toBe(true);
 
     // nations: 0-400 int or "default" or "disabled"

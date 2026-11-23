@@ -2736,6 +2736,8 @@ export const maps: readonly MapInfo[] = [
     categories: ["oceania", "fictional"],
     defaultNationCount: 27,
     themes: ["under_ocean", "oceania"],
+    author: "Can/The Banana Moon",
+    descriptionKey: "map_description.zealandia",
     location: { lat: -28, lon: 161 },
   },
 ];

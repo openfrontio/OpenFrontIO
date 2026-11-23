@@ -171,7 +171,8 @@ export class MyCardTab extends LitElement {
 
   private items(slot: Exclude<Slot, "flag">): CardItem[] {
     const section = this.cosmetics?.[SECTION[slot].key] as
-      Record<string, CardItem> | undefined;
+      | Record<string, CardItem>
+      | undefined;
     return Object.values(section ?? {}).filter((item) =>
       isOfferedCardItem(SECTION[slot].type, item),
     );
@@ -399,7 +400,8 @@ export class MyCardTab extends LitElement {
   private renderGetCard(): TemplateResult | typeof nothing {
     if (this.ownsCard) return nothing;
     const card = Object.values(this.cosmetics?.playerCards ?? {})[0] as
-      CardItem | undefined;
+      | CardItem
+      | undefined;
     return html`<div
       data-my-card-get-card
       class="flex flex-col items-center justify-between gap-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-4 sm:flex-row"
