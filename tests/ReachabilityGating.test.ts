@@ -302,6 +302,7 @@ describe("the multiplayer entry points while the backend is unreachable", () => 
     selector = await mountSelector();
     await announce(false, true);
     clickEveryButton();
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
     expect(joinOpen).not.toHaveBeenCalled();
 
     await announce(true);
@@ -419,6 +420,7 @@ describe("a refused multiplayer click on the web", () => {
   it("does not probe again inside the cooldown, but still says why", async () => {
     await mountGated();
     clickEveryButton();
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
     await vi.waitFor(() => expect(attemptInFlight()).toBe(false));
     const after = fetchMock.mock.calls.length;
     messages.length = 0;
@@ -434,6 +436,7 @@ describe("a refused multiplayer click on the web", () => {
   it("probes again once the cooldown has elapsed", async () => {
     await mountGated();
     clickEveryButton();
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
     await vi.waitFor(() => expect(attemptInFlight()).toBe(false));
     const after = fetchMock.mock.calls.length;
 
@@ -456,6 +459,7 @@ describe("a refused multiplayer click on the web", () => {
     );
 
     clickEveryButton();
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
     await vi.waitFor(() => expect(backendUnreachableConfirmed()).toBe(false));
     await selector.updateComplete;
 

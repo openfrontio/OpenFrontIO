@@ -11,8 +11,15 @@ import {
   refreshStaleCosmetics,
 } from "../Cosmetics";
 import { COSMETICS_CHANGED } from "../Experiments";
+import {
+  HIDE_SALE_BANNERS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+} from "../UserSettings";
 import { translateText } from "../Utils";
-import { runningSales } from "./SaleBanner";
+import { runningSales, visibleBannerSales } from "./SaleBanner";
+
+// Re-render when the sale banner setting changes.
+const SALE_BANNER_SETTING_EVENT = `${USER_SETTINGS_CHANGED_EVENT}:${HIDE_SALE_BANNERS_KEY}`;
 
 export type { NewsItem };
 
@@ -90,6 +97,7 @@ export class NewsBox extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
+    globalThis.addEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
     void this.loadNews();
     void this.loadSales();
   }
@@ -105,6 +113,7 @@ export class NewsBox extends LitElement {
     // without fetching again.
     this.showSales(fresh, 0);
   };
+  private rerender = (): void => this.requestUpdate();
 
   /**
    * Fetches the catalog for its running sales, and keeps it current for as long
@@ -217,6 +226,7 @@ export class NewsBox extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
+    globalThis.removeEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
     this.stopCycle();
     this.clearSaleTimer();
   }
@@ -256,7 +266,9 @@ export class NewsBox extends LitElement {
   render() {
     // A running sale takes the box for as long as it runs: no rotation and
     // no dismiss, so it's there every time the player looks.
-    const sales = runningSales(this.cosmetics, this.announcedSales);
+    const sales = visibleBannerSales(
+      runningSales(this.cosmetics, this.announcedSales),
+    );
     if (sales.length > 0) {
       return html`<sale-banner
         linked

@@ -5,6 +5,8 @@
   "translation_key": "map.zealandia",
   "location": { "lat": -28, "lon": 161 },
   "categories": ["oceania", "fictional"],
+  "author": "Can/The Banana Moon",
+  "description": "Often called the 8th continent by geologists and online media. Zealandia is a submerged continental mass which broke away from Gondwana 80M years ago and sank over time due to tectonic forces; only about 6% of Zealandia still rises above sea level, primarily making up New Zealand and New Caledonia.",
   "nations": [
     {
       "coordinates": [378, 1075],

@@ -16,6 +16,7 @@ import {
   TurnstileError,
   type TurnstileApi,
   type TurnstileRenderOptions,
+  type TurnstileToken,
 } from "../../src/client/TurnstileToken";
 
 function fakeTurnstile() {
@@ -236,10 +237,52 @@ describe("requestTurnstileToken runs exactly one challenge", () => {
     expect(fake.remove).toHaveBeenCalledWith("widget-1");
     expect(container.childElementCount).toBe(0);
   });
+
+  it("synchronously clears timer, removes widget, and rejects on AbortSignal", async () => {
+    vi.useFakeTimers();
+    const fake = fakeTurnstile();
+    const controller = new AbortController();
+    const timerCountBefore = vi.getTimerCount();
+
+    const promise = requestTurnstileToken(fake.api, {
+      sitekey: "site-key",
+      container,
+      signal: controller.signal,
+    });
+
+    expect(fake.render).toHaveBeenCalledTimes(1);
+    expect(container.childElementCount).toBe(1);
+
+    controller.abort();
+
+    expect(vi.getTimerCount()).toBe(timerCountBefore);
+    expect(fake.remove).toHaveBeenCalledWith("widget-1");
+    expect(container.childElementCount).toBe(0);
+
+    vi.advanceTimersByTime(TURNSTILE_TOKEN_TIMEOUT_MS * 2);
+
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("immediately rejects and cleans host if signal is already aborted", async () => {
+    const fake = fakeTurnstile();
+    const controller = new AbortController();
+    controller.abort();
+
+    const promise = requestTurnstileToken(fake.api, {
+      sitekey: "site-key",
+      container,
+      signal: controller.signal,
+    });
+
+    expect(container.childElementCount).toBe(0);
+    expect(fake.render).not.toHaveBeenCalled();
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+  });
 });
 
 describe("resolveTurnstileToken picks the token a join uses", () => {
-  const makeOnError = () => vi.fn((_code: string) => undefined);
+  const makeOnError = () => vi.fn((_code?: string) => undefined);
   let onError: ReturnType<typeof makeOnError>;
 
   beforeEach(() => {
@@ -338,5 +381,233 @@ describe("resolveTurnstileToken picks the token a join uses", () => {
       resolveTurnstileToken({ prefetch: null, requestFresh, onError }),
     ).resolves.toBe("fresh");
     expect(requestFresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries requestFresh exactly once on TURNSTILE_TIMEOUT_CODE and succeeds", async () => {
+    const requestFresh = vi
+      .fn<() => Promise<TurnstileToken>>()
+      .mockRejectedValueOnce(new TurnstileError(TURNSTILE_TIMEOUT_CODE))
+      .mockResolvedValueOnce({ token: "retried", createdAt: 0 });
+
+    await expect(
+      resolveTurnstileToken({
+        prefetch: null,
+        requestFresh,
+        onError,
+      }),
+    ).resolves.toBe("retried");
+    expect(requestFresh).toHaveBeenCalledTimes(2);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("invokes onError if both attempts fail with TURNSTILE_TIMEOUT_CODE", async () => {
+    const requestFresh = vi
+      .fn<() => Promise<TurnstileToken>>()
+      .mockRejectedValueOnce(new TurnstileError(TURNSTILE_TIMEOUT_CODE))
+      .mockRejectedValueOnce(new TurnstileError(TURNSTILE_TIMEOUT_CODE));
+
+    await expect(
+      resolveTurnstileToken({
+        prefetch: null,
+        requestFresh,
+        onError,
+      }),
+    ).rejects.toMatchObject({ code: TURNSTILE_TIMEOUT_CODE });
+    expect(requestFresh).toHaveBeenCalledTimes(2);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(TURNSTILE_TIMEOUT_CODE);
+  });
+
+  it("does not retry if requestFresh fails with a non-timeout error", async () => {
+    const requestFresh = vi
+      .fn<() => Promise<TurnstileToken>>()
+      .mockRejectedValueOnce(new TurnstileError("300030"));
+
+    await expect(
+      resolveTurnstileToken({
+        prefetch: null,
+        requestFresh,
+        onError,
+      }),
+    ).rejects.toMatchObject({ code: "300030" });
+    expect(requestFresh).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith("300030");
+  });
+
+  it("skips retry, suppresses onError, and returns null when aborted", async () => {
+    const controller = new AbortController();
+    const requestFresh = vi.fn(
+      (signal?: AbortSignal) =>
+        new Promise<TurnstileToken>((_, reject) => {
+          signal?.addEventListener("abort", () => {
+            const err = new Error("The operation was aborted");
+            err.name = "AbortError";
+            reject(err);
+          });
+        }),
+    );
+
+    const promise = resolveTurnstileToken({
+      prefetch: null,
+      requestFresh,
+      signal: controller.signal,
+      onError,
+    });
+
+    controller.abort();
+
+    await expect(promise).resolves.toBeNull();
+    expect(requestFresh).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("returns null immediately and skips requestFresh if signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const requestFresh = fresh();
+
+    const result = await resolveTurnstileToken({
+      prefetch: null,
+      requestFresh,
+      signal: controller.signal,
+      onError,
+    });
+
+    expect(result).toBeNull();
+    expect(requestFresh).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("skips retry and suppresses onError if aborted after first timeout", async () => {
+    const controller = new AbortController();
+    let secondAttemptStarted!: () => void;
+    const secondAttemptStartedPromise = new Promise<void>((resolve) => {
+      secondAttemptStarted = resolve;
+    });
+
+    const requestFresh = vi
+      .fn<(signal?: AbortSignal) => Promise<TurnstileToken>>()
+      .mockRejectedValueOnce(new TurnstileError(TURNSTILE_TIMEOUT_CODE))
+      .mockImplementationOnce(
+        (signal?: AbortSignal) =>
+          new Promise<TurnstileToken>((_, reject) => {
+            secondAttemptStarted();
+            signal?.addEventListener("abort", () => {
+              const err = new Error("The operation was aborted");
+              err.name = "AbortError";
+              reject(err);
+            });
+          }),
+      );
+
+    const promise = resolveTurnstileToken({
+      prefetch: null,
+      requestFresh,
+      signal: controller.signal,
+      onError,
+    });
+
+    await secondAttemptStartedPromise;
+    controller.abort();
+
+    await expect(promise).resolves.toBeNull();
+    expect(requestFresh).toHaveBeenCalledTimes(2);
+    expect(requestFresh).toHaveBeenNthCalledWith(2, controller.signal);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("returns null and suppresses onError if aborted before initial requestFresh resolves", async () => {
+    const controller = new AbortController();
+    let resolveFresh!: (token: TurnstileToken) => void;
+    const requestFresh = vi.fn(
+      (_signal?: AbortSignal) =>
+        new Promise<TurnstileToken>((resolve) => {
+          resolveFresh = resolve;
+        }),
+    );
+
+    const promise = resolveTurnstileToken({
+      prefetch: null,
+      requestFresh,
+      signal: controller.signal,
+      onError,
+    });
+
+    controller.abort();
+    resolveFresh({ token: "late-token", createdAt: 0 });
+
+    await expect(promise).resolves.toBeNull();
+    expect(requestFresh).toHaveBeenCalledTimes(1);
+    expect(requestFresh).toHaveBeenCalledWith(controller.signal);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("returns null and suppresses onError if aborted before retry requestFresh resolves", async () => {
+    const controller = new AbortController();
+    let resolveRetry!: (token: TurnstileToken) => void;
+    let retryStarted!: () => void;
+    const retryStartedPromise = new Promise<void>((resolve) => {
+      retryStarted = resolve;
+    });
+
+    const requestFresh = vi
+      .fn<(signal?: AbortSignal) => Promise<TurnstileToken>>()
+      .mockRejectedValueOnce(new TurnstileError(TURNSTILE_TIMEOUT_CODE))
+      .mockImplementationOnce(
+        () =>
+          new Promise<TurnstileToken>((resolve) => {
+            retryStarted();
+            resolveRetry = resolve;
+          }),
+      );
+
+    const promise = resolveTurnstileToken({
+      prefetch: null,
+      requestFresh,
+      signal: controller.signal,
+      onError,
+    });
+
+    await retryStartedPromise;
+    controller.abort();
+    resolveRetry({ token: "late-retry-token", createdAt: 0 });
+
+    await expect(promise).resolves.toBeNull();
+    expect(requestFresh).toHaveBeenCalledTimes(2);
+    expect(requestFresh).toHaveBeenNthCalledWith(2, controller.signal);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("wraps non-TurnstileError failures in TurnstileError after calling onError", async () => {
+    const requestFresh = vi.fn(async () => {
+      throw new Error("render failed");
+    });
+
+    await expect(
+      resolveTurnstileToken({
+        prefetch: null,
+        requestFresh,
+        onError,
+      }),
+    ).rejects.toBeInstanceOf(TurnstileError);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith("unknown");
+  });
+
+  it("forces fresh fetch when gamePortal is on portal", async () => {
+    const requestFresh = fresh("portal-token");
+
+    await expect(
+      resolveTurnstileToken({
+        prefetch: Promise.resolve({ token: "pre", createdAt: 0 }),
+        requestFresh,
+        gamePortal: { isOnGamePortal: () => true },
+        onError,
+        now: () => 0,
+      }),
+    ).resolves.toBe("portal-token");
+    expect(requestFresh).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
   });
 });

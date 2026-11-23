@@ -2,14 +2,18 @@ import { GameMode, GameType, maps } from "@openfront/engine-api/game/GameTypes";
 import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
+import { boostWouldMoveLobby } from "@openfront/shared/LobbyBoost";
 import {
   ClientInfo,
   GameInfo,
   GameRecordSchema,
   LobbyInfoEvent,
   PublicGameInfo,
+  PublicGames,
+  ScheduledPublicGameType,
+  ScheduledPublicGameTypeSchema,
 } from "@openfront/shared/WireSchemas";
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -19,14 +23,19 @@ import {
   getSecondsUntilServerTimestamp,
   getServerNow,
   renderDuration,
+  showToast,
   translateText,
 } from "../client/Utils";
-import { getApiBase } from "./Api";
+import { boostLobby, getApiBase, getUserMe } from "./Api";
 import { BaseModal } from "./components/BaseModal";
+import "./components/ConfirmDialog";
+import "./components/InsufficientCurrencyDialog";
+import "./components/PlutoniumIcon";
 import { GameStartAlertController } from "./components/GameStartAlertController";
 import { hasMapDetails, renderMapDetails } from "./components/map/MapDetails";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
+import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
 import { gamePortal } from "./GamePortal";
 import { SendSpectateEvent } from "./LobbyEvents";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -67,6 +76,24 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
+  // Boosting: a player pays plutonium to move the scheduled public lobby
+  // they joined to the front of its queue. `scheduledQueue` is that queue
+  // (null for any other kind of lobby), and `boosted` is null until the
+  // lobby has said either way.
+  @state() private scheduledQueue: ScheduledPublicGameType | null = null;
+  @state() private boosted: boolean | null = null;
+  // Every public queue, to tell whether a boost would move this lobby up.
+  @state() private publicQueues: PublicGames["games"] = {};
+  // Boost price from cosmetics.json; the Boost button hides without it.
+  @state() private boostPriceHard: number | null = null;
+  @state() private boostRequestInFlight = false;
+  // This player's boost charge failed without a clear answer. The server
+  // holds the lobby for their retry, so the button stays wherever the lobby
+  // now is in its queue.
+  @state() private boostRetryHeld = false;
+  @state() private showBoostConfirm = false;
+  @state() private insufficientInfo: InsufficientCurrency | null = null;
+  private hardBalance = 0;
   // Clock offset for the hosted list's countdowns, kept apart from
   // serverTimeOffset (the joined lobby's).
   private hostedServerTimeOffset = 0;
@@ -84,6 +111,7 @@ export class JoinLobbyModal extends BaseModal {
     // Re-assigned on every broadcast (~2/s), which also keeps the row
     // countdowns ticking.
     this.hostedLobbies = lobbies.games?.hosted ?? [];
+    this.publicQueues = lobbies.games ?? {};
     this.hostedLobbiesLoaded = true;
   });
 
@@ -143,12 +171,14 @@ export class JoinLobbyModal extends BaseModal {
       : undefined;
     const invite = canShare ? inviteFriendsButton() : undefined;
     return modalHeader({
-      // titleContent (not title) so the bell can sit at the right edge of the
+      // titleContent (not title) so boost and the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.
       titleContent: html`<span class="${DEFAULT_TITLE_CLASS}"
           >${translateText("public_lobby.title")}</span
         >
-        ${this.gameStartAlert.renderBell()}`,
+        <div class="ml-auto flex items-center gap-2">
+          ${this.renderQueuePosition()}${this.renderBoost()}${this.gameStartAlert.renderBell()}
+        </div>`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
       rightContent: invite
@@ -189,6 +219,94 @@ export class JoinLobbyModal extends BaseModal {
         </button>
       </div>
     `;
+  }
+
+  // Where a scheduled public lobby stands in its queue, 1 being the one that
+  // starts next. Null when it isn't in a queue (or isn't listed yet).
+  private queuePosition(): number | null {
+    if (this.scheduledQueue === null || this.isConnecting) return null;
+    const index = (this.publicQueues[this.scheduledQueue] ?? []).findIndex(
+      (l) => l.gameID === this.currentLobbyId,
+    );
+    return index < 0 ? null : index + 1;
+  }
+
+  private renderQueuePosition() {
+    const position = this.queuePosition();
+    if (position === null) return nothing;
+    return html`<span
+      class="text-[10px] font-bold uppercase tracking-widest text-white/60 shrink-0 tabular-nums"
+      >${translateText("public_lobby.queue_position", { position })}</span
+    >`;
+  }
+
+  // Scheduled public lobbies still waiting in the queue: pay plutonium to
+  // move the lobby right behind the one that's counting down. One boost per
+  // lobby; the server refuses the rest (and re-checks all of this).
+  private renderBoost() {
+    if (this.scheduledQueue === null || this.isConnecting) return nothing;
+    if (this.boosted) {
+      return html`<span
+        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-green-500/15 text-green-400 border border-green-500/30 shrink-0"
+        title=${translateText("public_lobby.boosted_tooltip")}
+        >${translateText("public_lobby.boosted")}</span
+      >`;
+    }
+    if (
+      this.boosted === null ||
+      this.boostPriceHard === null ||
+      (!this.boostRetryHeld &&
+        (this.lobbyStartAt !== null ||
+          !boostWouldMoveLobby(
+            this.publicQueues[this.scheduledQueue] ?? [],
+            this.currentLobbyId,
+            // A custom lobby in a scheduled queue is one its host paid to queue.
+            (l) => l.boosted === true || l.custom === true,
+          )))
+    ) {
+      return nothing;
+    }
+    return html`<button
+      class="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-all shrink-0 disabled:opacity-50"
+      title=${translateText("public_lobby.boost_tooltip")}
+      ?disabled=${this.boostRequestInFlight}
+      @click=${() => (this.showBoostConfirm = true)}
+    >
+      ${translateText("public_lobby.boost")}
+      <plutonium-icon .size=${12}></plutonium-icon>
+      <span class="tabular-nums">${this.boostPriceHard}</span>
+    </button>`;
+  }
+
+  private async handleBoost() {
+    const price = this.boostPriceHard;
+    const lobbyId = this.currentLobbyId;
+    if (this.boostRequestInFlight || price === null || !lobbyId) return;
+    this.boostRequestInFlight = true;
+    const result = await boostLobby(lobbyId);
+    // On success the button stays disabled until the lobby's next update
+    // reports the boost and replaces it.
+    if (result.ok || this.currentLobbyId !== lobbyId) return;
+    this.boostRequestInFlight = false;
+    if (result.status === 402) {
+      this.insufficientInfo = {
+        currency: translateText("cosmetics.hard"),
+        shortfall: Math.max(1, price - this.hardBalance),
+        item: translateText("public_lobby.boost_item"),
+        canTopUp: true,
+      };
+      return;
+    }
+    this.boostRetryHeld = result.status !== 409 && result.status !== 403;
+    showToast(
+      translateText(
+        result.status === 409
+          ? "public_lobby.boost_unavailable"
+          : "public_lobby.boost_failed",
+      ),
+      "red",
+      3000,
+    );
   }
 
   protected renderBody() {
@@ -306,6 +424,27 @@ export class JoinLobbyModal extends BaseModal {
             </div>
           </div>
         `}
+        ${
+          this.showBoostConfirm && this.boostPriceHard !== null
+            ? html`<confirm-dialog
+                .heading=${translateText("public_lobby.boost_confirm_title")}
+                .message=${translateText("public_lobby.boost_confirm_body", {
+                  price: this.boostPriceHard,
+                })}
+                variant="warning"
+                .confirmText=${translateText("public_lobby.boost_confirm")}
+                @cancel=${() => (this.showBoostConfirm = false)}
+                @confirm=${() => {
+                  this.showBoostConfirm = false;
+                  void this.handleBoost();
+                }}
+              ></confirm-dialog>`
+            : ""
+        }
+        <insufficient-currency-dialog
+          .info=${this.insufficientInfo}
+          @close=${() => (this.insufficientInfo = null)}
+        ></insufficient-currency-dialog>
       </div>
     `;
   }
@@ -536,6 +675,13 @@ export class JoinLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = true;
     this.hostedLobbiesLoaded = false;
     void this.hostedLobbySocket.start();
+    void getUserMe().then((userMe) => {
+      this.hardBalance =
+        userMe === false ? 0 : (userMe.player.currency?.hard ?? 0);
+    });
+    void fetchCosmetics().then((cosmetics) => {
+      this.boostPriceHard = cosmetics?.mapBoost?.priceHard ?? null;
+    });
     const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
     const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
     if (lobbyId) {
@@ -601,6 +747,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
+    this.resetBoost();
     this.gameStartAlert.reset();
     this.isConnecting = true;
     this.handledJoinTimeout = false;
@@ -660,8 +807,19 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
+    this.resetBoost();
+    this.publicQueues = {};
     this.gameStartAlert.reset();
     this.isConnecting = true;
+  }
+
+  private resetBoost() {
+    this.scheduledQueue = null;
+    this.boosted = null;
+    this.boostRequestInFlight = false;
+    this.boostRetryHeld = false;
+    this.showBoostConfirm = false;
+    this.insufficientInfo = null;
   }
 
   disconnectedCallback() {
@@ -804,6 +962,25 @@ export class JoinLobbyModal extends BaseModal {
       "lobbyCreatorClientID" in lobby
         ? (lobby.lobbyCreatorClientID ?? null)
         : null;
+
+    const queue = ScheduledPublicGameTypeSchema.safeParse(lobby.publicGameType);
+    this.scheduledQueue =
+      queue.success && lobby.gameConfig?.gameType === GameType.Public
+        ? queue.data
+        : null;
+    const boostedBy = "boostedBy" in lobby ? lobby.boostedBy : undefined;
+    const boosted =
+      boostedBy !== undefined || ("boosted" in lobby && lobby.boosted === true);
+    // Announced only when it happens while we watch, not on joining a lobby
+    // that was already boosted.
+    const booster = this.players.find((p) => p.clientID === boostedBy);
+    if (boosted && this.boosted === false && booster !== undefined) {
+      showToast(
+        translateText("public_lobby.boosted_by", { name: booster.username }),
+        "green",
+      );
+    }
+    this.boosted = boosted;
   }
 
   private startLobbyUpdates() {
@@ -1085,6 +1262,7 @@ export class JoinLobbyModal extends BaseModal {
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
+          cancelable: true,
         }),
       );
 
@@ -1153,6 +1331,7 @@ export class JoinLobbyModal extends BaseModal {
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
+        cancelable: true,
       }),
     );
     return "success";
