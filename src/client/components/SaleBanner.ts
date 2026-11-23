@@ -3,8 +3,33 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateCosmetic } from "../Cosmetics";
+import { isSteamShell } from "../DesktopShell";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 import "./SaleCountdown";
+
+/**
+ * The sales a banner shows: all of them, or none when the player, in the Steam
+ * app, has turned the sale banners off in account settings (sales and flash
+ * deals alike). The switch only exists in the Steam app, so the setting is
+ * ignored anywhere else: on the web or the other apps, banners always show.
+ */
+export function bannerSales(
+  sales: Promotion[],
+  inSteamApp: boolean,
+  hideBanners: boolean,
+): Promotion[] {
+  return inSteamApp && hideBanners ? [] : sales;
+}
+
+/** {@link bannerSales} for this client and its saved setting. */
+export function visibleBannerSales(sales: Promotion[]): Promotion[] {
+  return bannerSales(
+    sales,
+    isSteamShell(),
+    new UserSettings().hideSaleBanners(),
+  );
+}
 
 /** The catalog's sales that haven't ended yet, of `only` if given. */
 export function runningSales(

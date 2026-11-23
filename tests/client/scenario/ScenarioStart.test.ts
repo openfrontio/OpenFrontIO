@@ -33,6 +33,7 @@ import {
 } from "../../../src/client/scenario/EditorEngine";
 import {
   loadScenarioBundle,
+  ScenarioBundleError,
   useScenarioMap,
 } from "../../../src/client/scenario/ScenarioBundle";
 import {
@@ -43,9 +44,13 @@ import { exportScenario } from "../../../src/client/scenario/ScenarioExport";
 import { replayDocument } from "../../../src/client/scenario/ScenarioReplay";
 import { scenarioGameStart } from "../../../src/client/scenario/ScenarioStart";
 import { terrainMapFileLoader } from "../../../src/client/TerrainMapFileLoader";
+import { UnreadableSnapshotError } from "../../../src/client/WorkerClient";
 
 // The page reads a snapshot's header on a worker of its own; here the
-// engine reads it in place.
+// engine reads it in place, unless a test stands in for the worker.
+const worker = vi.hoisted(() => ({
+  readHeader: null as ((snapshot: Uint8Array) => Promise<unknown>) | null,
+}));
 vi.mock("../../../src/client/WorkerClient", async (importOriginal) => {
   const { readSnapshotHeader } =
     await import("@openfront/engine/snapshot/GameSnapshot");
@@ -54,7 +59,9 @@ vi.mock("../../../src/client/WorkerClient", async (importOriginal) => {
       typeof import("../../../src/client/WorkerClient")
     >()),
     readSnapshotHeader: async (snapshot: Uint8Array) =>
-      readSnapshotHeader(snapshot),
+      worker.readHeader
+        ? worker.readHeader(snapshot)
+        : readSnapshotHeader(snapshot),
   };
 });
 
@@ -279,6 +286,31 @@ test.each([
   },
   30_000,
 );
+
+test("only a snapshot the worker can't decode reads as a newer build's", async () => {
+  const gzipped = await scenarioBundle();
+  const { header } = await loadScenarioBundle(gzipped);
+  const player = { username: "Alice", clanTag: null };
+  try {
+    worker.readHeader = () =>
+      Promise.reject(new UnreadableSnapshotError("snapshot format 9"));
+    const unreadable = await scenarioGameStart(
+      gzipped,
+      header.nations[0].id,
+      player,
+    ).catch((e: unknown) => e);
+    expect(unreadable).toBeInstanceOf(ScenarioBundleError);
+    expect((unreadable as ScenarioBundleError).problem).toBe("format");
+
+    const timeout = new Error("Timed out reading the snapshot");
+    worker.readHeader = () => Promise.reject(timeout);
+    await expect(
+      scenarioGameStart(gzipped, header.nations[0].id, player),
+    ).rejects.toBe(timeout);
+  } finally {
+    worker.readHeader = null;
+  }
+}, 30_000);
 
 test("the start path makes a singleplayer join on the chosen nation", async () => {
   const gzipped = await scenarioBundle();

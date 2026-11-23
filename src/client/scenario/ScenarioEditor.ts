@@ -18,7 +18,6 @@ import { Config } from "@openfront/engine-lib/configuration/Config";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { EventBus } from "@openfront/shared/EventBus";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
-import { generateID } from "@openfront/shared/SharedUtil";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
@@ -74,6 +73,16 @@ import {
 import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
 import { exportScenario } from "./ScenarioExport";
+import {
+  createScenario,
+  listMyScenarios,
+  loadScenarioDocument,
+  moveDraftToAccount,
+  type MyScenario,
+  publishScenarioVersion,
+  type ScenarioApiError,
+  ScenarioSaver,
+} from "./ScenariosApi";
 import { scenarioGameStart } from "./ScenarioStart";
 import {
   type BrushStroke,
@@ -92,6 +101,23 @@ type NationFields = Omit<Extract<Edit, { type: "set_nation" }>, "type" | "id">;
 
 /** The flags a nation can take, as the flag picker lists them. */
 const FLAGS = Countries.filter((c) => c.code !== "xx" && c.restricted !== true);
+
+const API_ERRORS: Record<ScenarioApiError, string> = {
+  unauthorized: "scenario_editor.error_unauthorized",
+  entitlement: "scenario_editor.error_entitlement",
+  limit: "scenario_editor.error_limit",
+  conflict: "scenario_editor.error_conflict",
+  rejected: "scenario_editor.error_rejected",
+  not_found: "scenario_editor.draft_not_found",
+  request_failed: "scenario_editor.error_request_failed",
+};
+
+function apiErrorText(error: ScenarioApiError): string {
+  return translateText(API_ERRORS[error]);
+}
+
+/** A new scenario's width and height until the author picks others. */
+const DEFAULT_SIDE = 1000;
 
 /** Copies of the files' maps: the client and the worker each take theirs. */
 function copyMapFiles(files: MapFiles): MapFiles {
@@ -118,10 +144,17 @@ export class ScenarioEditor extends LitElement {
 
   @state() private status: "start" | "loading" | "ready" | "error" = "start";
   @state() private error = "";
-  @state() private drafts: DraftInfo[] = [];
+  /** The account's scenarios. */
+  @state() private drafts: MyScenario[] = [];
+  /** Why the account's scenarios couldn't be listed. */
+  @state() private listError = "";
+  /** Drafts kept in this browser before they were saved to the API. */
+  @state() private localDrafts: DraftInfo[] = [];
+  /** The local draft being moved to the account. */
+  @state() private moving: string | null = null;
   @state() private name = "";
-  @state() private width = 1000;
-  @state() private height = 1000;
+  @state() private width = DEFAULT_SIDE;
+  @state() private height = DEFAULT_SIDE;
   @state() private stockMap = "";
   /** The picked stock map's size, once its manifest is in. */
   @state() private stockSize: { width: number; height: number } | null = null;
@@ -138,12 +171,21 @@ export class ScenarioEditor extends LitElement {
   @state() private nationId: string | null = null;
   /** The Play button's menu: the nations to play as, or why there are none. */
   @state() private playMenu = false;
-  /** A test game is being exported and started. */
+  /**
+   * A test game is being exported and started, or a version exported and
+   * published: the export reads the document, which mustn't change meanwhile.
+   */
   @state() private starting = false;
+  @state() private publishing = false;
+  /** The version this session last published. */
+  @state() private publishedVersion: number | null = null;
 
   @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
   private editor: DocumentEditor | null = null;
+  /** The document the session started from: saved until it has an editor. */
+  private sessionDoc: ScenarioDocument | null = null;
+  private saver: ScenarioSaver | null = null;
   private session: Session | null = null;
   private camera: ReplayCamera | null = null;
   private gestures: CameraGestures | null = null;
@@ -176,6 +218,14 @@ export class ScenarioEditor extends LitElement {
     window.addEventListener("keydown", (e) => this.onKey(e), {
       signal: this.abort.signal,
     });
+    // Saves wait a few seconds after an edit: leaving before one asks first.
+    window.addEventListener(
+      "beforeunload",
+      (e) => {
+        if (this.saver?.pending()) e.preventDefault();
+      },
+      { signal: this.abort.signal },
+    );
     if (this.draftId !== null) {
       void this.openDraft(this.draftId);
     } else {
@@ -186,33 +236,85 @@ export class ScenarioEditor extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.abort.abort();
+    void this.saver?.flush();
     this.endSession();
   }
 
   private async listDrafts(): Promise<void> {
-    try {
-      this.drafts = await scenarioDrafts.list();
-    } catch (e) {
-      console.error("scenario editor: listing drafts failed:", e);
+    const [mine, local] = await Promise.all([
+      listMyScenarios(),
+      scenarioDrafts.list().catch((e: unknown) => {
+        console.error("scenario editor: listing local drafts failed:", e);
+        return [];
+      }),
+    ]);
+    if (typeof mine === "string") {
+      this.drafts = [];
+      this.listError = apiErrorText(mine);
+    } else {
+      this.drafts = mine;
+      this.listError = "";
     }
+    this.localDrafts = local;
+  }
+
+  /** Moves a draft from this browser to the account, then lists both again. */
+  private async moveDraft(id: string): Promise<void> {
+    if (this.moving !== null) return;
+    this.moving = id;
+    try {
+      const moved = await moveDraftToAccount(id);
+      if (typeof moved === "string") void showInGameAlert(apiErrorText(moved));
+    } catch (e) {
+      console.error("scenario editor: moving the draft failed:", e);
+      void showInGameAlert(translateText("scenario_editor.move_failed"));
+    } finally {
+      this.moving = null;
+    }
+    await this.listDrafts();
   }
 
   private async openDraft(id: string): Promise<void> {
     this.status = "loading";
     try {
-      const doc = await scenarioDrafts.load(id);
+      const loaded = await loadScenarioDocument(id);
       // Removed meanwhile (a lobby join): leave the URL and engine alone.
       if (this.abort.signal.aborted) return;
-      if (doc === undefined) {
-        this.fail(translateText("scenario_editor.draft_not_found"));
+      if (typeof loaded === "string") {
+        this.fail(apiErrorText(loaded));
+        return;
+      }
+      const doc = loaded ?? (await this.blankDraft(id));
+      if (this.abort.signal.aborted) return;
+      if (typeof doc === "string") {
+        this.fail(apiErrorText(doc));
         return;
       }
       this.setDraft(id);
-      await this.startSession(doc);
+      const session = this.startSession(doc);
+      if (loaded === null) this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: opening the draft failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
     }
+  }
+
+  /**
+   * A blank document for a draft whose first save never landed (the tab
+   * closed first), under the draft's name and description.
+   */
+  private async blankDraft(
+    id: string,
+  ): Promise<ScenarioDocument | ScenarioApiError> {
+    // Not a fallback name: saving the blank would rename the draft.
+    const mine = await listMyScenarios();
+    if (typeof mine === "string") return mine;
+    const scenario = mine.find((s) => s.id === id);
+    if (scenario === undefined) return "not_found";
+    // Not the create form's size, which may be half typed.
+    const doc = newScenarioDocument(scenario.name, DEFAULT_SIDE, DEFAULT_SIDE);
+    return { ...doc, meta: { ...doc.meta, description: scenario.description } };
   }
 
   private async createBlank(): Promise<void> {
@@ -232,18 +334,26 @@ export class ScenarioEditor extends LitElement {
     );
   }
 
-  /** Saves a new draft, names it in the URL and opens it. */
+  /**
+   * Creates a new draft on the API, names it in the URL and opens it. Its
+   * document saves as edits do, so a save that fails can be retried.
+   */
   private async create(
     begin: () => Promise<{ doc: ScenarioDocument; files?: MapFiles }>,
   ): Promise<void> {
     this.status = "loading";
     try {
       const { doc, files } = await begin();
-      const id = generateID();
-      await scenarioDrafts.save(id, doc);
+      const created = await createScenario(doc.meta);
       if (this.abort.signal.aborted) return;
-      this.setDraft(id);
-      await this.startSession(doc, files);
+      if (typeof created === "string") {
+        this.fail(apiErrorText(created));
+        return;
+      }
+      this.setDraft(created.id);
+      const session = this.startSession(doc, files);
+      this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: creating the draft failed:", e);
       this.fail(translateText("scenario_editor.create_failed"));
@@ -256,6 +366,11 @@ export class ScenarioEditor extends LitElement {
 
   private setDraft(id: string): void {
     this.draftId = id;
+    this.saver = new ScenarioSaver(
+      id,
+      () => this.editor?.doc ?? this.sessionDoc,
+      () => this.requestUpdate(),
+    );
     history.replaceState(
       history.state,
       "",
@@ -297,9 +412,10 @@ export class ScenarioEditor extends LitElement {
     this.status = "loading";
     try {
       const resized = resizeScenarioDocument(doc, this.width, this.height);
-      await scenarioDrafts.save(id, resized);
-      if (this.abort.signal.aborted) return;
-      await this.startSession(resized);
+      const session = this.startSession(resized);
+      // Saved from sessionDoc if the editor closes before the session starts.
+      this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: resizing failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
@@ -320,12 +436,7 @@ export class ScenarioEditor extends LitElement {
   }
 
   private saveDraft(): void {
-    const editor = this.editor;
-    const id = this.draftId;
-    if (editor === null || id === null) return;
-    void scenarioDrafts.save(id, editor.doc).catch((e: unknown) => {
-      console.error("scenario editor: saving the draft failed:", e);
-    });
+    this.saver?.changed();
   }
 
   // ---- Nations ----
@@ -421,13 +532,20 @@ export class ScenarioEditor extends LitElement {
     const editor = this.editor;
     const worker = this.session?.worker ?? null;
     const id = this.draftId;
-    if (editor === null || worker === null || id === null) return;
+    const saver = this.saver;
+    if (editor === null || worker === null || id === null || saver === null) {
+      return;
+    }
     if (this.status !== "ready" || this.starting) return;
     this.endStroke();
     this.playMenu = false;
     this.starting = true;
     try {
-      await scenarioDrafts.save(id, editor.doc);
+      const unsaved = await saver.flush();
+      if (unsaved !== null) {
+        void showInGameAlert(apiErrorText(unsaved));
+        return;
+      }
       const bundle = await exportScenario(
         editor.doc,
         (c) => worker.editorCommand(c),
@@ -460,6 +578,64 @@ export class ScenarioEditor extends LitElement {
     }
   }
 
+  // ---- Publish ----
+
+  /**
+   * Saves the draft, then exports it and publishes it as the next version.
+   * The API numbers versions from 1 and takes only the next one, which the
+   * bundle's header names.
+   */
+  private async publish(): Promise<void> {
+    const editor = this.editor;
+    const worker = this.session?.worker ?? null;
+    const id = this.draftId;
+    const saver = this.saver;
+    if (editor === null || worker === null || id === null || saver === null) {
+      return;
+    }
+    if (this.status !== "ready" || this.starting) return;
+    this.endStroke();
+    this.playMenu = false;
+    this.starting = true;
+    this.publishing = true;
+    try {
+      const unsaved = await saver.flush();
+      if (unsaved !== null) {
+        void showInGameAlert(apiErrorText(unsaved));
+        return;
+      }
+      const mine = await listMyScenarios();
+      if (typeof mine === "string") {
+        void showInGameAlert(apiErrorText(mine));
+        return;
+      }
+      const scenario = mine.find((s) => s.id === id);
+      if (scenario === undefined) {
+        void showInGameAlert(apiErrorText("not_found"));
+        return;
+      }
+      const version = (scenario.latestVersion ?? 0) + 1;
+      const bundle = await exportScenario(
+        editor.doc,
+        (c) => worker.editorCommand(c),
+        { scenario: { id, version }, gitCommit: ClientEnv.gitCommit() },
+      );
+      const published = await publishScenarioVersion(id, bundle);
+      if (this.abort.signal.aborted) return;
+      if (typeof published === "string") {
+        void showInGameAlert(apiErrorText(published));
+        return;
+      }
+      this.publishedVersion = published.version;
+    } catch (e) {
+      console.error("scenario editor: publishing failed:", e);
+      void showInGameAlert(translateText("scenario_editor.publish_failed"));
+    } finally {
+      this.starting = false;
+      this.publishing = false;
+    }
+  }
+
   // ---- The engine and the view ----
 
   /**
@@ -473,6 +649,7 @@ export class ScenarioEditor extends LitElement {
   ): Promise<void> {
     this.endSession();
     this.status = "loading";
+    this.sessionDoc = doc;
     this.doc = null;
     this.editor = null;
     this.width = doc.width;
@@ -985,6 +1162,11 @@ export class ScenarioEditor extends LitElement {
         ${translateText("scenario_editor.title")}
       </h1>
       ${
+        this.listError !== ""
+          ? html`<p class="mb-4 text-sm text-red-400">${this.listError}</p>`
+          : nothing
+      }
+      ${
         this.drafts.length > 0
           ? html`
               <h2 class="mb-2 font-semibold">
@@ -1000,8 +1182,48 @@ export class ScenarioEditor extends LitElement {
                       >
                         ${d.name}
                         <span class="text-sm text-zinc-400">
-                          ${new Date(d.savedAt).toLocaleString()}
+                          ${
+                            d.latestVersion === null
+                              ? translateText("scenario_editor.unpublished")
+                              : translateText("scenario_editor.version", {
+                                  version: d.latestVersion,
+                                })
+                          }
                         </span>
+                      </button>
+                    </li>
+                  `,
+                )}
+              </ul>
+            `
+          : nothing
+      }
+      ${
+        this.localDrafts.length > 0
+          ? html`
+              <h2 class="mb-1 font-semibold">
+                ${translateText("scenario_editor.local_drafts")}
+              </h2>
+              <p class="mb-2 text-sm text-zinc-400">
+                ${translateText("scenario_editor.local_drafts_hint")}
+              </p>
+              <ul class="mb-4 flex flex-col gap-1">
+                ${this.localDrafts.map(
+                  (d) => html`
+                    <li
+                      class="flex items-center gap-2 rounded bg-zinc-800 px-3 py-2"
+                    >
+                      <span class="min-w-0 flex-1 truncate">${d.name}</span>
+                      <button
+                        class=${button}
+                        ?disabled=${this.moving !== null}
+                        @click=${() => void this.moveDraft(d.id)}
+                      >
+                        ${translateText(
+                          this.moving === d.id
+                            ? "scenario_editor.moving"
+                            : "scenario_editor.move_to_account",
+                        )}
                       </button>
                     </li>
                   `,
@@ -1094,14 +1316,37 @@ export class ScenarioEditor extends LitElement {
         >
           ${translateText("scenario_editor.resize")}
         </button>
+        ${this.renderSaveState()}
         <button
-          class="${button} ml-auto"
+          class=${button}
           aria-expanded=${this.playMenu}
           ?disabled=${this.starting}
           @click=${() => this.onPlay()}
         >
           ${translateText(
-            this.starting ? "scenario_editor.starting" : "scenario_editor.play",
+            this.starting && !this.publishing
+              ? "scenario_editor.starting"
+              : "scenario_editor.play",
+          )}
+        </button>
+        ${
+          this.publishedVersion !== null
+            ? html`<span class="text-sm text-green-400">
+                ${translateText("scenario_editor.published", {
+                  version: this.publishedVersion,
+                })}
+              </span>`
+            : nothing
+        }
+        <button
+          class=${button}
+          ?disabled=${this.starting}
+          @click=${() => void this.publish()}
+        >
+          ${translateText(
+            this.publishing
+              ? "scenario_editor.publishing"
+              : "scenario_editor.publish",
           )}
         </button>
         <a class=${button} href=${homeHref()}>
@@ -1110,6 +1355,33 @@ export class ScenarioEditor extends LitElement {
       </div>
       ${this.playMenu ? this.renderPlayMenu() : nothing}
     `;
+  }
+
+  /** Whether the draft is saved, and why not if a save failed. */
+  private renderSaveState() {
+    const saver = this.saver;
+    if (saver === null) return nothing;
+    const error = saver.error;
+    if (error !== null) {
+      return html`
+        <span class="ml-auto text-sm text-red-400">
+          ${translateText("scenario_editor.save_failed", {
+            error: apiErrorText(error),
+          })}
+        </span>
+        <button
+          class="rounded bg-zinc-700 px-3 py-1 hover:bg-zinc-600"
+          @click=${() => void saver.flush()}
+        >
+          ${translateText("scenario_editor.retry")}
+        </button>
+      `;
+    }
+    return html`<span class="ml-auto text-sm text-zinc-400">
+      ${translateText(
+        saver.pending() ? "scenario_editor.saving" : "scenario_editor.saved",
+      )}
+    </span>`;
   }
 
   /** The playable nations to test play as, or why there are none. */
