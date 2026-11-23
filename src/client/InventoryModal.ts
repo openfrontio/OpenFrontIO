@@ -237,6 +237,10 @@ export class InventoryModal extends BaseModal {
    * (Main broadcasts it) loads the Inventory again. */
   private onSessionChange = () => {
     this.ownershipLoadId++;
+    // The profile held is the old session's: nothing reads it as the new
+    // one's until that one's arrives.
+    this.userMeResponse = false;
+    this.ownershipState = "loading";
     if (this.cardGuard !== null) {
       this.cardGuard.resolve(false);
       this.cardGuard = null;
@@ -252,8 +256,16 @@ export class InventoryModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
-    document.addEventListener("session-reauth", this.onSessionChange);
-    document.addEventListener("session-cleared", this.onSessionChange);
+    // Capture on window: heard before any listener on document, so a load
+    // the change itself starts (Main re-broadcasts the signed-out profile
+    // from its own session-cleared listener) comes after the bump below and
+    // is never discarded by it.
+    window.addEventListener("session-reauth", this.onSessionChange, {
+      capture: true,
+    });
+    window.addEventListener("session-cleared", this.onSessionChange, {
+      capture: true,
+    });
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.addEventListener(
@@ -272,8 +284,12 @@ export class InventoryModal extends BaseModal {
     );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
-    document.removeEventListener("session-reauth", this.onSessionChange);
-    document.removeEventListener("session-cleared", this.onSessionChange);
+    window.removeEventListener("session-reauth", this.onSessionChange, {
+      capture: true,
+    });
+    window.removeEventListener("session-cleared", this.onSessionChange, {
+      capture: true,
+    });
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
