@@ -434,7 +434,7 @@ export class Config {
   // Weighted tiles of a player's territory (inner circle 1, outer ring 0.5)
   // a nuke must cover before it breaks the alliance.
   nukeAllianceBreakThreshold(unitType: UnitType): number {
-    return unitType === UnitType.HydrogenBomb ? 500 : 150;
+    return unitType === UnitType.HydrogenBomb ? 1000 : 150;
   }
 
   samRange(level: number): number {

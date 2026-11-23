@@ -680,8 +680,8 @@ describe("NukeExecution alliance break threshold", () => {
       new PlayerInfo("ally", PlayerType.Human, "c2", "ally_id"),
     ]);
     (g.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
-      inner: 30,
-      outer: 30,
+      inner: 50,
+      outer: 50,
     }));
     const launcher = g.player("launcher_id");
     const ally = g.player("ally_id");
@@ -704,7 +704,7 @@ describe("NukeExecution alliance break threshold", () => {
 
   test.each([
     [UnitType.AtomBomb, 150],
-    [UnitType.HydrogenBomb, 500],
+    [UnitType.HydrogenBomb, 1000],
   ] as const)("%s keeps the alliance at %i allied tiles", async (type, n) => {
     const { launcher, ally } = await allianceWithTiles(type, n);
     expect(launcher.isAlliedWith(ally)).toBe(true);
@@ -713,7 +713,7 @@ describe("NukeExecution alliance break threshold", () => {
 
   test.each([
     [UnitType.AtomBomb, 151],
-    [UnitType.HydrogenBomb, 501],
+    [UnitType.HydrogenBomb, 1001],
   ] as const)("%s breaks the alliance at %i allied tiles", async (type, n) => {
     const { launcher, ally } = await allianceWithTiles(type, n);
     expect(launcher.isAlliedWith(ally)).toBe(false);
