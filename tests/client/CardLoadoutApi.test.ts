@@ -18,7 +18,6 @@ vi.mock("../../src/client/Cosmetics", () => ({
 }));
 
 import {
-  cardRefsFromLoadout,
   saveCardLoadout,
   saveTauntsMuted,
 } from "../../src/client/CardLoadoutApi";
@@ -72,6 +71,17 @@ describe("saveCardLoadout", () => {
   it("a failed save broadcasts nothing", async () => {
     fetchMock.mockResolvedValue(new Response("", { status: 500 }));
     await saveCardLoadout(LOADOUT);
+    expect(fresh.broadcast).not.toHaveBeenCalled();
+  });
+
+  it("sends nothing when no longer wanted once the token is read", async () => {
+    // Reading the token can wait on a JWT refresh; a sign-out meanwhile
+    // must not send this loadout under the next session's token.
+    expect(await saveCardLoadout(LOADOUT, () => false)).toEqual({
+      ok: false,
+      error: "cancelled",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(fresh.broadcast).not.toHaveBeenCalled();
   });
 
@@ -151,28 +161,5 @@ describe("saveTauntsMuted", () => {
   it("failure gives false", async () => {
     fetchMock.mockResolvedValue(new Response("", { status: 500 }));
     expect(await saveTauntsMuted(true)).toBe(false);
-  });
-});
-
-describe("cardRefsFromLoadout", () => {
-  it("is the saved loadout as /users/@me carries it, keeping known values", () => {
-    expect(
-      cardRefsFromLoadout(
-        {
-          background: "bg_x",
-          title: null,
-          taunt: "salute",
-          trackers: ["wins", "conquests"],
-        },
-        { trackers: [{ stat: "wins", value: 12 }] },
-      ),
-    ).toEqual({
-      background: "bg_x",
-      taunt: "salute",
-      trackers: [
-        { stat: "wins", value: 12 },
-        { stat: "conquests", value: 0 },
-      ],
-    });
   });
 });

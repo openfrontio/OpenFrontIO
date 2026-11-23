@@ -30,10 +30,14 @@ const CARD = {
   ],
 };
 
-function me(card: unknown, flares: string[] = []): UserMeResponse {
+function me(
+  card: unknown,
+  flares: string[] = [],
+  publicId = "p1",
+): UserMeResponse {
   return {
     user: {},
-    player: { publicId: "p1", flares, card },
+    player: { publicId, flares, card },
   } as unknown as UserMeResponse;
 }
 
@@ -214,12 +218,15 @@ describe("CardEditor", () => {
     const saving = editor.save();
     expect(editor.saveState).toBe("saving");
     expect(await saving).toBe(true);
-    expect(api.save).toHaveBeenCalledWith({
-      background: "bg_pacific",
-      title: "warmonger",
-      taunt: "salute",
-      trackers: ["wins", "nukes_launched", "games_played"],
-    });
+    expect(api.save).toHaveBeenCalledWith(
+      {
+        background: "bg_pacific",
+        title: "warmonger",
+        taunt: "salute",
+        trackers: ["wins", "nukes_launched", "games_played"],
+      },
+      expect.any(Function),
+    );
     expect(editor.saveState).toBe("saved");
     expect(editor.changeCount()).toBe(0);
     vi.advanceTimersByTime(SAVED_SHOWN_MS);
@@ -297,6 +304,36 @@ describe("CardEditor", () => {
     editor.pick({ kind: "tracker", index: 2 }, "games_played");
     editor.settle();
     expect(editor.changeCount()).toBe(0);
+  });
+
+  it("a sign-out while the token is read stops the PUT", async () => {
+    // saveCardLoadout asks the guard once it holds a token.
+    let guard: (() => boolean) | undefined;
+    api.save.mockImplementationOnce((_body: unknown, stillWanted) => {
+      guard = stillWanted as () => boolean;
+      return new Promise(() => {});
+    });
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    void editor.save();
+    expect(guard!()).toBe(true);
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    expect(guard!()).toBe(false);
+  });
+
+  it("a save answered after a sign-out isn't taken as the saved card", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const saving = editor.save();
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    finish({ ok: true, loadout: {} });
+    expect(await saving).toBe(false);
+    expect(editor.saved.rows.tracker[2]).toBe("best_elo");
+    expect(editor.saveState).toBe("idle");
   });
 
   it("closing mid-save: the save lands and the draft follows it", async () => {
@@ -500,6 +537,96 @@ describe("CardEditor", () => {
     expect(editor.changes()).toEqual([
       { slot: { kind: "background" }, from: "bg_pacific", to: "bg_storm" },
     ]);
+  });
+
+  /** Account B's card: owns what A picked, so nothing but the owner
+   * check stops A's draft being saved onto it. */
+  const B_CARD = {
+    background: "bg_pacific",
+    trackers: [{ stat: "games_played", value: 7 }],
+  };
+  const B_FLARES = [
+    "cardBackground:bg_pacific",
+    "cardBackground:bg_storm",
+    ...["wins", "nukes_launched", "best_elo", "games_played"].map(
+      (s) => `cardTracker:${s}`,
+    ),
+  ];
+
+  it("another account's profile drops this account's unsaved changes", async () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    editor.seed(me(B_CARD, B_FLARES, "account-b"));
+    expect(editor.changeCount()).toBe(0);
+    expect(editor.canSave()).toBe(false);
+    expect(editor.draft.rows.tracker).toEqual(["games_played", null, null]);
+    expect(await editor.save()).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+  });
+
+  it("a profile with no player (signed out) counts as another account", () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    editor.seed(null);
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("another account mid-save: A's save isn't taken, and B's card has no changes", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    editor.seed(me(B_CARD, B_FLARES, "account-b"));
+    expect(editor.saveState).toBe("idle");
+    finish({ ok: true, loadout: {} });
+    expect(await saving).toBe(false);
+    expect(editor.saved.background).toBe("bg_pacific");
+    expect(editor.saved.rows.tracker).toEqual(["games_played", null, null]);
+    expect(editor.changeCount()).toBe(0);
+    expect(editor.canSave()).toBe(false);
+    expect(editor.saveState).toBe("idle");
+    expect(api.save).toHaveBeenCalledTimes(1);
+  });
+
+  it("another account's profile mid-save, with no session event: the save still isn't taken", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.seed(me(B_CARD, B_FLARES, "account-b"));
+    finish({ ok: true, loadout: {} });
+    expect(await saving).toBe(false);
+    expect(editor.saved.background).toBe("bg_pacific");
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("after a session change, the old account's profile never re-seeds the editor", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    const a = me(CARD, B_FLARES, "account-a");
+    editor.seed(a);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    editor.dropAccount();
+    // The tab re-renders with the modal's profile, still A's.
+    editor.seed(a);
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    expect(editor.canSave()).toBe(false);
+    expect(await editor.save()).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+    // B's profile arrives: B's card, and B can save.
+    editor.seed(me(B_CARD, B_FLARES, "account-b"));
+    expect(editor.changeCount()).toBe(0);
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(editor.canSave()).toBe(true);
   });
 
   it("closing mid-save that then fails leaves no Retry behind", async () => {

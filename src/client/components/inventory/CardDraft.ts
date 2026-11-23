@@ -289,6 +289,18 @@ export const SAVED_SHOWN_MS = 2000;
 /**
  * The tab's state, held by the Inventory. Listeners hear every change.
  */
+// Bumped at sign-out (any path: Auth's clearLocalSession announces it) and
+// at a portal account change, which swaps the session without one. A save
+// started under one session is never sent, nor taken, under the next.
+let sessionEpoch = 0;
+if (typeof document !== "undefined") {
+  const bump = () => {
+    sessionEpoch++;
+  };
+  document.addEventListener("session-cleared", bump);
+  document.addEventListener("session-reauth", bump);
+}
+
 export class CardEditor {
   saved: CardDraft = draftFromCard(null);
   draft: CardDraft = draftFromCard(null);
@@ -316,6 +328,17 @@ export class CardEditor {
   private sending: CardDraft | null = null;
   /** The save in flight, for a Save clicked while it runs to wait on. */
   private inFlight: Promise<boolean> | null = null;
+  /** Bumped when the card turns out to be another account's: a save
+   * started before never lands on the next one's card. */
+  private account = 0;
+  /** Every profile seeded so far. After a session change none of them is
+   * taken again: one still in hand (the modal's, until the new session's
+   * /users/@me) is the old account's. */
+  private seen = new WeakSet<UserMeResponse>();
+  /** A session change happened and no newer profile has come since: Save
+   * stays off, so nothing goes out under the new session from the old
+   * account's card. */
+  private awaitingProfile = false;
   private listeners = new Set<() => void>();
 
   subscribe(listener: () => void): () => void {
@@ -330,10 +353,20 @@ export class CardEditor {
   /**
    * Takes the stored card from a new /users/@me. Unsaved changes stay (a
    * purchase broadcasts a fresh profile while they're pending); with none,
-   * the draft follows the stored card.
+   * the draft follows the stored card. A profile of another account (or
+   * none: signed out) drops them, whatever else is going on.
    */
   seed(userMe: UserMeResponse | null): void {
     if (userMe === this.seededFrom) return;
+    if (userMe !== null) {
+      if (this.awaitingProfile && this.seen.has(userMe)) return;
+      this.seen.add(userMe);
+      this.awaitingProfile = false;
+    }
+    const owner = userMe?.player.publicId ?? null;
+    const sameAccount =
+      owner !== null && owner === (this.seededFrom?.player.publicId ?? null);
+    if (!sameAccount) this.resetAccount();
     this.seededFrom = userMe;
     const card = userMe?.player.card ?? null;
     const hadChanges = this.changeCount() > 0;
@@ -344,6 +377,30 @@ export class CardEditor {
     );
     this.flares = userMe?.player.flares ?? [];
     if (!hadChanges) this.draft = cloneDraft(this.saved);
+    this.emit();
+  }
+
+  /**
+   * The session changed (signed out, or another account): unsaved changes
+   * and a save in flight belong to a card that's no longer this one. The
+   * draft goes back to the saved card, nothing is left to Retry, and the
+   * next /users/@me is taken whoever it's for.
+   */
+  dropAccount(): void {
+    this.resetAccount();
+    this.awaitingProfile = true;
+    this.emit();
+  }
+
+  /** Another account's card from here: nothing of the last one's stays. */
+  private resetAccount(): void {
+    this.account++;
+    this.clearSavedTimer();
+    this.seededFrom = null;
+    this.draft = cloneDraft(this.saved);
+    this.droppedTo = null;
+    this.sending = null;
+    this.saveState = "idle";
     this.emit();
   }
 
@@ -426,6 +483,7 @@ export class CardEditor {
 
   canSave(): boolean {
     return (
+      !this.awaitingProfile &&
       this.changeCount() > 0 &&
       this.unownedInChanges().length === 0 &&
       this.saveState !== "saving"
@@ -459,8 +517,26 @@ export class CardEditor {
     this.saveState = "saving";
     this.emit();
     const body = loadoutBody(sent, this.held);
-    const result = await saveCardLoadout(body);
+    // Asked again once the token is read: that can wait on a JWT refresh,
+    // and a sign-out meanwhile must not send this card under the next
+    // session's token.
+    const epoch = sessionEpoch;
+    const account = this.account;
+    const result = await saveCardLoadout(body, () => sessionEpoch === epoch);
+    // Another account's card by now: dropAccount() has reset the editor,
+    // and anything since is that account's.
+    if (this.account !== account) return false;
     this.sending = null;
+    if (sessionEpoch !== epoch) {
+      // Signed out, or into another account, while it saved: whatever it
+      // stored belongs to a session that's gone, so it isn't taken as the
+      // saved card, and there's nothing to Retry. The next /users/@me
+      // seeds the editor.
+      this.droppedTo = null;
+      this.saveState = "idle";
+      this.emit();
+      return false;
+    }
     if (!result.ok) {
       // Dropped meanwhile: the draft goes back to the card the server kept,
       // with any edit made since, and no Retry is left over.

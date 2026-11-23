@@ -18,6 +18,7 @@ import {
   peekPendingPurchase,
 } from "../../src/client/components/inventory/PendingEquip";
 import {
+  broadcastFreshUserMe,
   checkInPlacePurchase,
   fetchCosmetics,
 } from "../../src/client/Cosmetics";
@@ -101,6 +102,11 @@ function owner(flares: string[] = OWNER): UserMeResponse {
     },
   } as unknown as UserMeResponse;
 }
+
+type CardEditorLike = {
+  isSeededWith(userMe: UserMeResponse): boolean;
+  canSave(): boolean;
+};
 
 async function settle(modal: InventoryModal) {
   for (let i = 0; i < 5; i++) {
@@ -206,6 +212,7 @@ describe("Inventory: unsaved card changes guard", () => {
       expect.objectContaining({
         trackers: ["wins", "nukes_launched", "games_played"],
       }),
+      expect.any(Function),
     );
     expect(onCardTab()).toBe(false);
   });
@@ -344,6 +351,95 @@ describe("Inventory: unsaved card changes guard", () => {
       "cardBackground:bg_storm",
     );
   });
+
+  it("Get Plutonium from a page path changes only the hash, as the Store links do", async () => {
+    history.replaceState(null, "", "/store");
+    try {
+      modal.open({ tab: "card" });
+      await settle(modal);
+      (await plutoniumShort()).dispatchEvent(new CustomEvent("confirm"));
+      await settle(modal);
+      expect(window.location.pathname).toBe("/store");
+      expect(window.location.hash).toBe("#modal=store&tab=packs");
+      expect(peekPendingPurchase("guard-test-player")).toBe(
+        "cardBackground:bg_storm",
+      );
+    } finally {
+      history.replaceState(null, "", "/");
+    }
+  });
+
+  it("after session-reauth, an edit on the old profile can't be saved before the new one arrives", async () => {
+    vi.mocked(saveCardLoadout).mockResolvedValue({
+      ok: true,
+      loadout: {} as never,
+    });
+    modal.open({ tab: "card" });
+    await settle(modal);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    await settle(modal);
+    await click("[data-card-slot-row='tracker:2'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
+    q<HTMLButtonElement>("[data-card-save]")?.click();
+    await settle(modal);
+    expect(saveCardLoadout).not.toHaveBeenCalled();
+  });
+
+  it("a /users/@me started before session-reauth never seeds the card editor", async () => {
+    let answer!: (v: UserMeResponse) => void;
+    vi.mocked(getUserMe).mockReturnValueOnce(new Promise((r) => (answer = r)));
+    modal.open({ tab: "card" });
+    await settle(modal);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    // The old account's request lands after the switch, as a new object.
+    const late = owner();
+    answer(late);
+    await settle(modal);
+    const editor = (modal as unknown as { cardEditor: CardEditorLike })
+      .cardEditor;
+    expect(editor.isSeededWith(late)).toBe(false);
+    expect(editor.canSave()).toBe(false);
+    // The new session's profile (here the same account again) is taken.
+    const fresh = owner();
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(editor.isSeededWith(fresh)).toBe(true);
+    await click("[data-card-slot-row='tracker:2'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
+    expect(editor.canSave()).toBe(true);
+  });
+
+  it("a purchase's profile refresh from before session-reauth never seeds the card editor", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    // A purchase under A refreshes the profile; the account switches
+    // before it lands.
+    let answer!: (v: UserMeResponse) => void;
+    vi.mocked(getUserMe).mockReturnValueOnce(new Promise((r) => (answer = r)));
+    const refreshing = broadcastFreshUserMe();
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    const late = owner();
+    answer(late);
+    await refreshing;
+    await settle(modal);
+    const editor = (modal as unknown as { cardEditor: CardEditorLike })
+      .cardEditor;
+    expect(editor.isSeededWith(late)).toBe(false);
+    expect(editor.canSave()).toBe(false);
+  });
+
+  for (const event of ["session-reauth", "session-cleared"]) {
+    it(`${event} with the card tab open drops the unsaved changes`, async () => {
+      await openWithChange();
+      expect(q("[data-card-change-count]")).not.toBeNull();
+      document.dispatchEvent(new CustomEvent(event));
+      await settle(modal);
+      expect(q("[data-card-change-count]")).toBeNull();
+      expect(saveCardLoadout).not.toHaveBeenCalled();
+    });
+  }
 
   it("a Save that fails stays, with the changes", async () => {
     vi.mocked(saveCardLoadout).mockResolvedValue({

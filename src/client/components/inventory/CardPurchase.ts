@@ -1,3 +1,4 @@
+import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import {
   checkInPlacePurchase,
   type InsufficientCurrency,
@@ -39,6 +40,12 @@ function outsideGame(info: InsufficientCurrency): InsufficientCurrency {
   return { ...info, leavesGame: false };
 }
 
+/** Where these purchases come from, for the Store's attribution. */
+const CARD_TAB_PLACEMENT: StorePlacement = {
+  kind: "inventory",
+  subTab: "card",
+};
+
 /** Signed out: the Account page, unless the caller routes it (the
  * Inventory asks about unsaved card changes first). */
 const toAccount = () => window.showPage?.("page-account");
@@ -66,7 +73,11 @@ export async function buyCardItem(
   method: "hard" | "soft",
   signIn: () => void = toAccount,
 ): Promise<PurchaseResult> {
-  const outcome = await purchaseCosmeticInPlace(resolved, method, undefined);
+  const outcome = await purchaseCosmeticInPlace(
+    resolved,
+    method,
+    CARD_TAB_PLACEMENT,
+  );
   switch (outcome.kind) {
     case "owned":
       if (outcome.notice) await showInGameAlert(outcome.notice);

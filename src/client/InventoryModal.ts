@@ -32,6 +32,7 @@ import { EFFECT_SLOTS } from "./components/inventory/EffectSlots";
 import "./components/inventory/InventoryEffectList";
 import type { EffectRow } from "./components/inventory/InventoryEffectList";
 import "./components/inventory/InventoryItemTile";
+import type { InventoryItemTile } from "./components/inventory/InventoryItemTile";
 import "./components/inventory/InventoryYourLook";
 import type {
   YourLookEffect,
@@ -103,6 +104,22 @@ const IN_GAME_TABS: readonly InventoryCategory[] = [
   "effects",
 ];
 const CARD_TAB = "card";
+
+/** The In game category an item is listed under, for the purchase's
+ * StorePlacement. */
+function inventoryCategoryOf(item: ResolvedCosmetic): InventoryCategory {
+  switch (item.type) {
+    case "pattern":
+    case "skin":
+      return "skins";
+    case "flag":
+      return "flags";
+    case "crown":
+      return "crowns";
+    default:
+      return "effects";
+  }
+}
 
 function countryFlag(name: string, code: string): Flag {
   return {
@@ -213,6 +230,20 @@ export class InventoryModal extends BaseModal {
     void this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
   };
 
+  /** Signed out, or into another account: the card being edited isn't
+   * this session's any more, so its unsaved changes (and an open guard
+   * asking about them) go. A profile load already running was fetched for
+   * the old session: it's discarded, and the new session's /users/@me
+   * (Main broadcasts it) loads the Inventory again. */
+  private onSessionChange = () => {
+    this.ownershipLoadId++;
+    if (this.cardGuard !== null) {
+      this.cardGuard.resolve(false);
+      this.cardGuard = null;
+    }
+    this.cardEditor.dropAccount();
+  };
+
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
     this.previewingCosmetic = customEvent.detail;
@@ -221,6 +252,8 @@ export class InventoryModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
+    document.addEventListener("session-reauth", this.onSessionChange);
+    document.addEventListener("session-cleared", this.onSessionChange);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.addEventListener(
@@ -239,6 +272,8 @@ export class InventoryModal extends BaseModal {
     );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
+    document.removeEventListener("session-reauth", this.onSessionChange);
+    document.removeEventListener("session-cleared", this.onSessionChange);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
@@ -1227,7 +1262,8 @@ export class InventoryModal extends BaseModal {
         @change-flag=${() => this.setActiveTab("flags")}
         @open-store=${(event: CustomEvent<{ item?: string }>) =>
           this.openStore(event.detail.item ?? "card")}
-        @top-up=${(event: CustomEvent<{ go: () => void }>) => this.topUp(event)}
+        @top-up=${(event: CustomEvent<{ remember: () => void }>) =>
+          this.topUp(event)}
         @sign-in=${() =>
           this.leaveThen(() => window.showPage?.("page-account"))}
       ></inventory-card-tab>`;
@@ -1426,13 +1462,16 @@ export class InventoryModal extends BaseModal {
   }
 
   /** "Get Plutonium" from a card Buy's shortfall box leaves for the packs:
-   * like the Store links, ask about unsaved card changes first. */
-  private topUp(event: CustomEvent<{ go: () => void }>) {
+   * like the Store links, ask about unsaved card changes first, then change
+   * only the hash (never a full navigation from a page path, which would
+   * unload a card save still in flight). */
+  private topUp(event: CustomEvent<{ remember: () => void }>) {
     event.preventDefault();
-    const { go } = event.detail;
+    const { remember } = event.detail;
     this.leaveThen(() => {
+      remember();
       this.close();
-      go();
+      window.location.hash = "modal=store&tab=packs";
     });
   }
 
@@ -1643,7 +1682,10 @@ export class InventoryModal extends BaseModal {
           )
         : null;
     try {
-      return await purchaseCosmetic(resolved, method, undefined);
+      return await purchaseCosmetic(resolved, method, {
+        kind: "inventory",
+        subTab: inventoryCategoryOf(resolved),
+      });
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would
@@ -1655,10 +1697,23 @@ export class InventoryModal extends BaseModal {
     }
   }
 
-  private equipBought() {
+  private async equipBought() {
     const item = this.buying;
     this.closeBuy();
-    if (item !== null) this.equip(item);
+    if (item === null) return;
+    this.equip(item);
+    // Equipping re-sorts the grid equipped-first, and its tiles aren't
+    // keyed, so the tile the closing dialog gave focus back to may now show
+    // another item: move focus to the one just equipped.
+    await this.updateComplete;
+    [...this.querySelectorAll<InventoryItemTile>("inventory-item-tile")]
+      .find(
+        (tile) =>
+          tile.resolved.key === item.key ||
+          tile.variants.some((variant) => variant.key === item.key),
+      )
+      ?.querySelector<HTMLElement>("[data-tile-main]")
+      ?.focus();
   }
 
   /** The dialog's item from the catalogue now shown: a refetch may have

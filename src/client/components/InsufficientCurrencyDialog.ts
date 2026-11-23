@@ -21,8 +21,9 @@ import { rememberPendingPurchase } from "./inventory/PendingEquip";
  * Elsewhere it is a plain confirm. One from an in-place purchase outside a
  * game (the Inventory's Player card tab) remembers the item too. Either
  * way, "Get Plutonium" first fires a cancelable, bubbling `top-up` event:
- * a parent that cancels it goes on later by calling `detail.go()` (the
- * Inventory does, once its unsaved card guard allows).
+ * a parent that cancels it goes on later by calling `detail.go()`, or
+ * navigates itself after `detail.remember()` (the Inventory does, once its
+ * unsaved card guard allows).
  */
 @customElement("insufficient-currency-dialog")
 export class InsufficientCurrencyDialog extends LitElement {
@@ -111,15 +112,18 @@ export class InsufficientCurrencyDialog extends LitElement {
 
   private leaveForTopUp(info: InsufficientCurrency) {
     this.close();
-    const go = () => {
+    const remember = () => {
       if (info.player && info.itemKey) {
         rememberPendingPurchase(info.player, info.itemKey);
       }
+    };
+    const go = () => {
+      remember();
       // Home path (not just hash) so it also works from in-game (win modal).
       window.location.href = "/#modal=store&tab=packs";
     };
     const event = new CustomEvent("top-up", {
-      detail: { go },
+      detail: { go, remember },
       bubbles: true,
       composed: true,
       cancelable: true,

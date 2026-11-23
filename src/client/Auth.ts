@@ -889,8 +889,9 @@ async function doSteamLogin(ticket: string): Promise<void> {
 let __reauthPromise: Promise<UserAuth> | null = null;
 export async function reauthAfterPortalChange(): Promise<UserAuth> {
   __reauthPromise ??= (async () => {
-    // Before the old token goes: whatever is queued for the old account (the
-    // card save queue) must not go out under the new one.
+    // Before the old token goes: whatever is in flight for the old account
+    // (a player card save from the Inventory) must not go out under the
+    // new one, nor be taken as the new one's.
     document.dispatchEvent(new CustomEvent("session-reauth"));
     try {
       if (__refreshPromise) {
