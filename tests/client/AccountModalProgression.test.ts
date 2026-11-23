@@ -320,7 +320,8 @@ describe("AccountModal — Progression tab", () => {
     modal.open({ tab: "card" });
     const myCard = () =>
       modal.querySelector("my-card-tab") as
-        (HTMLElement & { userMe: UserMeResponse | null }) | null;
+        | (HTMLElement & { userMe: UserMeResponse | null })
+        | null;
     await settle(() => expect(myCard()).not.toBeNull());
     const saved = {
       ...me,
@@ -1186,7 +1187,8 @@ describe("AccountModal — Progression tab", () => {
       const header = () => modal.querySelector("[data-account-card-header]");
       await settle(() => {
         const card = header()?.querySelector("player-card") as
-          (HTMLElement & { view: { badge: { level: number } | null } }) | null;
+          | (HTMLElement & { view: { badge: { level: number } | null } })
+          | null;
         expect(card?.view.badge?.level).toBe(49);
         expect(header()?.textContent).toContain("progression.level");
         expect(
