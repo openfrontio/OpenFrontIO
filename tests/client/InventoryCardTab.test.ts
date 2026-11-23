@@ -9,6 +9,11 @@ const api = vi.hoisted(() => ({ save: vi.fn() }));
 vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
 }));
+// Signed in as the fixture player (Auth's currentPublicId).
+vi.mock("../../src/client/Auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Auth")>()),
+  currentPublicId: () => "p1",
+}));
 const shop = vi.hoisted(() => ({
   buy: vi.fn(),
   check: vi.fn(),

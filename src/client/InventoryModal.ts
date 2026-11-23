@@ -237,6 +237,10 @@ export class InventoryModal extends BaseModal {
    * (Main broadcasts it) loads the Inventory again. */
   private onSessionChange = () => {
     this.ownershipLoadId++;
+    // The profile held is the old session's: nothing reads it as the new
+    // one's until that one's arrives.
+    this.userMeResponse = false;
+    this.ownershipState = "loading";
     if (this.cardGuard !== null) {
       this.cardGuard.resolve(false);
       this.cardGuard = null;

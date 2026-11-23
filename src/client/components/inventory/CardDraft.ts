@@ -4,6 +4,7 @@ import {
   MAX_CARD_TRACKERS,
   type TrackerStat,
 } from "@openfront/shared/PlayerCardSchemas";
+import { currentPublicId } from "../../Auth";
 import { type CardLoadoutBody, saveCardLoadout } from "../../CardLoadoutApi";
 import type { CardItem, CardItemType } from "../card/CardItems";
 
@@ -302,6 +303,17 @@ if (typeof document !== "undefined") {
 }
 
 export class CardEditor {
+  /**
+   * `sessionAccount` is the publicId the session is signed in as (Auth's
+   * currentPublicId). Only that account's profile is seeded, and Save is
+   * only on while the card held is that account's: whatever route a
+   * profile takes in, another account's card never goes out under this
+   * session's token.
+   */
+  constructor(
+    private readonly sessionAccount: () => string | null = currentPublicId,
+  ) {}
+
   saved: CardDraft = draftFromCard(null);
   draft: CardDraft = draftFromCard(null);
   saveState: CardSaveState = "idle";
@@ -358,6 +370,14 @@ export class CardEditor {
    */
   seed(userMe: UserMeResponse | null): void {
     if (userMe === this.seededFrom) return;
+    if (userMe !== null && userMe.player.publicId !== this.sessionAccount()) {
+      // Not the session's account: never seeded. A card still held from
+      // another account goes too, and the editor waits empty for this one's.
+      if (this.seededFrom !== null && !this.holdsSessionAccount()) {
+        this.clearToEmpty();
+      }
+      return;
+    }
     if (userMe !== null) {
       if (this.awaitingProfile && this.seen.has(userMe)) return;
       this.seen.add(userMe);
@@ -389,6 +409,23 @@ export class CardEditor {
   dropAccount(): void {
     this.resetAccount();
     this.awaitingProfile = true;
+    this.emit();
+  }
+
+  /** The card held is the session's account's. */
+  private holdsSessionAccount(): boolean {
+    const held = this.seededFrom?.player.publicId;
+    return held !== undefined && held === this.sessionAccount();
+  }
+
+  /** No card: what a profile not yet seeded shows. */
+  private clearToEmpty(): void {
+    this.resetAccount();
+    this.saved = draftFromCard(null);
+    this.draft = draftFromCard(null);
+    this.held = { title: null, taunt: null };
+    this.values = new Map();
+    this.flares = [];
     this.emit();
   }
 
@@ -484,6 +521,7 @@ export class CardEditor {
   canSave(): boolean {
     return (
       !this.awaitingProfile &&
+      this.holdsSessionAccount() &&
       this.changeCount() > 0 &&
       this.unownedInChanges().length === 0 &&
       this.saveState !== "saving"
@@ -522,7 +560,13 @@ export class CardEditor {
     // session's token.
     const epoch = sessionEpoch;
     const account = this.account;
-    const result = await saveCardLoadout(body, () => sessionEpoch === epoch);
+    const owner = this.seededFrom?.player.publicId ?? null;
+    // Asked once the token is read, right before the PUT: still the session
+    // it started under, and still signed in as this card's account.
+    const result = await saveCardLoadout(
+      body,
+      () => sessionEpoch === epoch && this.sessionAccount() === owner,
+    );
     // Another account's card by now: dropAccount() has reset the editor,
     // and anything since is that account's.
     if (this.account !== account) return false;

@@ -29,9 +29,14 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),
   getUserMe: vi.fn(),
 }));
+// The account the session is signed in as (Auth's currentPublicId).
+const session = vi.hoisted(() => ({
+  id: "guard-test-player" as string | null,
+}));
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
   userAuth: vi.fn(),
+  currentPublicId: () => session.id,
 }));
 vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: vi.fn(),
@@ -131,6 +136,7 @@ describe("Inventory: unsaved card changes guard", () => {
   afterAll(() => vi.unstubAllGlobals());
 
   beforeEach(() => {
+    session.id = "guard-test-player";
     localStorage.clear();
     vi.mocked(fetchCosmetics).mockResolvedValue(catalog());
     vi.mocked(userAuth).mockResolvedValue({
@@ -378,8 +384,9 @@ describe("Inventory: unsaved card changes guard", () => {
     await settle(modal);
     document.dispatchEvent(new CustomEvent("session-reauth"));
     await settle(modal);
-    await click("[data-card-slot-row='tracker:2'] [data-card-row-open]");
-    await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
+    // The old profile is no longer shown to edit, and Save stays off.
+    expect(q("[data-card-slot-row='tracker:2']")).toBeNull();
+    expect(cardEditor().canSave()).toBe(false);
     q<HTMLButtonElement>("[data-card-save]")?.click();
     await settle(modal);
     expect(saveCardLoadout).not.toHaveBeenCalled();
@@ -428,6 +435,36 @@ describe("Inventory: unsaved card changes guard", () => {
       .cardEditor;
     expect(editor.isSeededWith(late)).toBe(false);
     expect(editor.canSave()).toBe(false);
+  });
+
+  const cardEditor = () =>
+    (modal as unknown as { cardEditor: CardEditorLike }).cardEditor;
+
+  it("the card tab opened after a switch never seeds the old account's profile", async () => {
+    const a = owner();
+    vi.mocked(getUserMe).mockResolvedValue(a);
+    modal.open({ tab: "skins" });
+    await settle(modal);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    session.id = "account-b";
+    await click("[data-inventory-top-tab='card']");
+    expect(cardEditor().isSeededWith(a)).toBe(false);
+    expect(cardEditor().canSave()).toBe(false);
+  });
+
+  it("a broadcast of the old account's profile after a switch is ignored", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    session.id = "account-b";
+    const late = owner();
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: late }));
+    await settle(modal);
+    expect(cardEditor().isSeededWith(late)).toBe(false);
+    expect(cardEditor().canSave()).toBe(false);
+    q<HTMLButtonElement>("[data-card-save]")?.click();
+    await settle(modal);
+    expect(saveCardLoadout).not.toHaveBeenCalled();
   });
 
   for (const event of ["session-reauth", "session-cleared"]) {
