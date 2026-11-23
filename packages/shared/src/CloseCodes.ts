@@ -37,6 +37,7 @@ export const CloseReason = {
   InvalidToken: "close_reason.invalid_token",
   Banned: "close_reason.banned",
   TurnstileFailed: "close_reason.turnstile_failed",
+  TurnstilePassRequired: "close_reason.turnstile_pass_required",
   LoginRequired: "close_reason.login_required",
   AccountLookupFailed: "close_reason.account_lookup_failed",
   Forbidden: "close_reason.forbidden",

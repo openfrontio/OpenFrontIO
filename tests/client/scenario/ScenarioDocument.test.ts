@@ -4,12 +4,16 @@
  */
 
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { ID } from "@openfront/engine-api/Schemas";
 import {
   decodeOwnership,
   encodeOwnership,
   IMPASSABLE,
   isScenarioSize,
   land,
+  MAX_NATIONS,
+  MAX_WARSHIPS,
+  newNation,
   newScenarioDocument,
   SCENARIO_FORMAT,
   ScenarioDocumentSchema,
@@ -209,6 +213,197 @@ describe("ScenarioDocumentSchema", () => {
   });
 });
 
+describe("alliances", () => {
+  /** stored() with a third nation, with no land, to ally. */
+  function withThird(): StoredScenarioDocument {
+    const s = stored();
+    s.nations.push({
+      id: "AAAANAT1",
+      name: "Third",
+      flag: null,
+      troops: 0,
+      gold: 0,
+      playable: false,
+    });
+    return s;
+  }
+
+  test("a document from before alliances loads with none, and saves without the field", () => {
+    const s = stored();
+    expect("alliances" in s).toBe(false);
+    const doc = ScenarioDocumentSchema.parse(s);
+    expect(doc.alliances).toEqual([]);
+    expect("alliances" in serializeScenarioDocument(doc)).toBe(false);
+  });
+
+  test("are kept as pairs in order, the lesser id first, and round-trip", () => {
+    const s = withThird();
+    s.alliances = [
+      ["WESTNAT1", "EASTNAT1"],
+      ["EASTNAT1", "AAAANAT1"],
+      ["WESTNAT1", "AAAANAT1"],
+    ];
+    const doc = ScenarioDocumentSchema.parse(s);
+    const sorted = [
+      ["AAAANAT1", "EASTNAT1"],
+      ["AAAANAT1", "WESTNAT1"],
+      ["EASTNAT1", "WESTNAT1"],
+    ];
+    expect(doc.alliances).toEqual(sorted);
+    expect(serializeScenarioDocument(doc).alliances).toEqual(sorted);
+    expect(
+      ScenarioDocumentSchema.parse(
+        JSON.parse(JSON.stringify(serializeScenarioDocument(doc))),
+      ),
+    ).toEqual(doc);
+  });
+
+  test("rejects a pair with nobody, a nation with itself, or a pair twice", () => {
+    rejects((s) => (s.alliances = [["WESTNAT1", "NOBODY01"]]), /no nation/);
+    rejects(
+      (s) => (s.alliances = [["WESTNAT1", "WESTNAT1"]]),
+      /can't ally with itself/,
+    );
+    rejects(
+      (s) =>
+        (s.alliances = [
+          ["WESTNAT1", "EASTNAT1"],
+          ["EASTNAT1", "WESTNAT1"],
+        ]),
+      /already allies/,
+    );
+    rejects(
+      (s) =>
+        (s.alliances = [
+          ["WESTNAT1", "EASTNAT1", "WESTNAT1"],
+        ] as unknown as StoredScenarioDocument["alliances"]),
+      /expected array to have <=2 items/,
+    );
+  });
+
+  test("loads every pair of the most nations a document holds", () => {
+    const s = stored();
+    for (let i = s.nations.length; i < MAX_NATIONS; i++) {
+      s.nations.push({
+        id: `N${String(i).padStart(7, "0")}`,
+        name: `Nation ${i}`,
+        flag: null,
+        troops: 0,
+        gold: 0,
+        playable: false,
+      });
+    }
+    const ids = s.nations.map((n) => n.id).reverse();
+    s.alliances = ids.flatMap((a, i) =>
+      ids.slice(i + 1).map((b): [string, string] => [a, b]),
+    );
+    const doc = ScenarioDocumentSchema.parse(s);
+    expect(doc.alliances).toHaveLength((MAX_NATIONS * (MAX_NATIONS - 1)) / 2);
+    expect(doc.alliances[0]).toEqual(["EASTNAT1", "N0000002"]);
+  });
+
+  test("rejects alliances when the settings disable them", () => {
+    rejects((s) => {
+      s.alliances = [["WESTNAT1", "EASTNAT1"]];
+      s.config.customAllianceDuration = 0;
+    }, /alliances are disabled/);
+    // With none, such settings are fine.
+    const s = stored();
+    s.config.customAllianceDuration = 0;
+    expect(ScenarioDocumentSchema.safeParse(s).success).toBe(true);
+  });
+});
+
+describe("warships", () => {
+  test("a document from before warships loads with none, and saves without the field", () => {
+    const s = stored();
+    expect("warships" in s).toBe(false);
+    const doc = ScenarioDocumentSchema.parse(s);
+    expect(doc.warships).toEqual([]);
+    expect("warships" in serializeScenarioDocument(doc)).toBe(false);
+  });
+
+  test("are kept in tile order, on any water, and round-trip", () => {
+    const s = stored();
+    s.warships = [
+      { nation: "EASTNAT1", tile: 50 * W + 95 },
+      { nation: "WESTNAT1", tile: 3 },
+      { nation: "WESTNAT1", tile: 20 * W + 5 },
+    ];
+    const doc = ScenarioDocumentSchema.parse(s);
+    const sorted = [
+      { nation: "WESTNAT1", tile: 3 },
+      { nation: "WESTNAT1", tile: 20 * W + 5 },
+      { nation: "EASTNAT1", tile: 50 * W + 95 },
+    ];
+    expect(doc.warships).toEqual(sorted);
+    expect(serializeScenarioDocument(doc).warships).toEqual(sorted);
+    expect(
+      ScenarioDocumentSchema.parse(
+        JSON.parse(JSON.stringify(serializeScenarioDocument(doc))),
+      ),
+    ).toEqual(doc);
+  });
+
+  test("rejects one for nobody, off the map, on land, or two on a tile", () => {
+    rejects(
+      (s) => (s.warships = [{ nation: "NOBODY01", tile: 3 }]),
+      /no nation/,
+    );
+    rejects(
+      (s) => (s.warships = [{ nation: "WESTNAT1", tile: W * H }]),
+      /not on the map/,
+    );
+    rejects(
+      (s) => (s.warships = [{ nation: "WESTNAT1", tile: 10 }]),
+      /needs water, tile 10/,
+    );
+    rejects(
+      (s) => (s.warships = [{ nation: "WESTNAT1", tile: 50 }]),
+      /needs water, tile 50/,
+    );
+    rejects(
+      (s) =>
+        (s.warships = [
+          { nation: "WESTNAT1", tile: 3 },
+          { nation: "EASTNAT1", tile: 3 },
+        ]),
+      /tile 3 already has a warship/,
+    );
+  });
+
+  test("rejects warships when the settings disable them, and more than MAX_WARSHIPS", () => {
+    rejects((s) => {
+      s.warships = [{ nation: "WESTNAT1", tile: 3 }];
+      s.config.disabledUnits = [UnitType.Warship];
+    }, /Warship is disabled/);
+    // With none, such settings are fine.
+    const s = stored();
+    s.config.disabledUnits = [UnitType.Warship];
+    expect(ScenarioDocumentSchema.safeParse(s).success).toBe(true);
+    rejects(
+      (s) =>
+        (s.warships = Array.from({ length: MAX_WARSHIPS + 1 }, (_, i) => ({
+          nation: "WESTNAT1",
+          tile: (i % 10) + Math.floor(i / 10) * W,
+        }))),
+      /<=1000/,
+    );
+  });
+
+  test("loads the most a document holds", () => {
+    const s = stored();
+    // Columns 0-9 are water; reversed, so the load sorts them.
+    s.warships = Array.from({ length: MAX_WARSHIPS }, (_, i) => ({
+      nation: "WESTNAT1",
+      tile: (i % 10) + Math.floor(i / 10) * W,
+    })).reverse();
+    const doc = ScenarioDocumentSchema.parse(s);
+    expect(doc.warships).toHaveLength(MAX_WARSHIPS);
+    expect(doc.warships[0].tile).toBe(0);
+  });
+});
+
 describe("ownership run-length encoding", () => {
   test("round-trips", () => {
     const owners = new Uint16Array(5000);
@@ -239,4 +434,25 @@ test("isScenarioSize takes what the schema takes", () => {
   expect(isScenarioSize(100, 96)).toBe(false);
   expect(isScenarioSize(100.5, 100)).toBe(false);
   expect(isScenarioSize(Number.NaN, 100)).toBe(false);
+});
+
+describe("newNation", () => {
+  test("takes the first free name and a new valid id", () => {
+    const doc = newScenarioDocument("Nations", W, H);
+    const name = (n: number) => `Nation ${n}`;
+    const first = newNation(doc, name);
+    expect(first).toMatchObject({ name: "Nation 1", flag: null, gold: 0 });
+    expect(ID.safeParse(first.id).success).toBe(true);
+    doc.nations.push(first, { ...newNation(doc, name), name: "Nation 3" });
+    expect(newNation(doc, name).name).toBe("Nation 2");
+    doc.nations.push(newNation(doc, name));
+    const fourth = newNation(doc, name);
+    expect(fourth.name).toBe("Nation 4");
+    expect(new Set([...doc.nations.map((n) => n.id), fourth.id]).size).toBe(4);
+    // It passes the document's schema, as add_nation checks.
+    doc.nations.push(fourth);
+    expect(() =>
+      ScenarioDocumentSchema.parse(serializeScenarioDocument(doc)),
+    ).not.toThrow();
+  });
 });

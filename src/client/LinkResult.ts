@@ -20,6 +20,10 @@ const LINK_RESULT_KEYS: Record<string, string> = {
   google: "account_modal.link_google_success",
   already_linked: "account_modal.link_google_already_linked",
 
+  // Apple. Its refusals are reported in place (see linkApple), never through
+  // a redirect, so only the success comes back this way.
+  apple: "account_modal.link_apple_success",
+
   // Steam
   steam: "account_modal.link_steam_success",
   account_already_has_steam:

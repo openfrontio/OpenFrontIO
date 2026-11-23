@@ -14,7 +14,7 @@ import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { shareGame } from "../../utilities/ShareGame";
-import { homeHref, showToast, translateText } from "../../Utils";
+import { exitGame, showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -281,7 +281,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     await gamePortal.requestMidgameAd();
     await gamePortal.gameplayStop();
     // redirect to the home page
-    window.location.href = homeHref();
+    exitGame();
   }
 
   private onSettingsButtonClick() {

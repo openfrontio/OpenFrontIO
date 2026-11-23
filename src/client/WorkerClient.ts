@@ -51,6 +51,9 @@ const READ_SNAPSHOT_HEADER_TIMEOUT_MS = 30_000;
  * can start one. The bytes are copied, not transferred, so the caller can
  * still start the game from them.
  */
+/** readSnapshotHeader's worker read the bytes and found no snapshot it decodes. */
+export class UnreadableSnapshotError extends Error {}
+
 export async function readSnapshotHeader(
   snapshot: Uint8Array,
 ): Promise<SnapshotHeader> {
@@ -65,7 +68,9 @@ export async function readSnapshotHeader(
         if (e.data.type !== "read_snapshot_header_result") return;
         clearTimeout(timer);
         if (e.data.header === null) {
-          reject(new Error(e.data.error ?? "Not a game snapshot"));
+          reject(
+            new UnreadableSnapshotError(e.data.error ?? "Not a game snapshot"),
+          );
         } else {
           resolve(e.data.header);
         }
@@ -214,10 +219,11 @@ export class WorkerClient {
 
   /**
    * Applies one command in an editor engine. Its updates reach the
-   * callback given to start() before this resolves. Rejects if the engine
-   * refused it, having changed nothing.
+   * callback given to start() before this resolves, with the map files
+   * if the command was `export_terrain`. Rejects if the engine refused it,
+   * having changed nothing.
    */
-  editorCommand(command: EditorCommand): Promise<void> {
+  editorCommand(command: EditorCommand): Promise<MapFiles | undefined> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -227,7 +233,7 @@ export class WorkerClient {
       this.messageHandlers.set(messageId, (message) => {
         if (message.type !== "editor_command_result") return;
         if (message.error !== undefined) reject(new Error(message.error));
-        else resolve();
+        else resolve(message.map);
       });
       this.worker!.postMessage({
         type: "editor_command",

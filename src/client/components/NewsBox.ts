@@ -10,8 +10,19 @@ import {
   invalidateCosmetics,
   refreshStaleCosmetics,
 } from "../Cosmetics";
+import {
+  HIDE_SALE_BANNERS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+} from "../UserSettings";
 import { translateText } from "../Utils";
-import { runningSales } from "./SaleBanner";
+import { runningSales, visibleBannerSales } from "./SaleBanner";
+import {
+  showSteamAwardsBanner,
+  STEAM_AWARDS_NOMINATIONS_END,
+} from "./SteamAwardsBanner";
+
+// Re-render when the sale banner setting changes.
+const SALE_BANNER_SETTING_EVENT = `${USER_SETTINGS_CHANGED_EVENT}:${HIDE_SALE_BANNERS_KEY}`;
 
 export type { NewsItem };
 
@@ -78,6 +89,8 @@ export class NewsBox extends LitElement {
   private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
     null;
   private cycleTimer: ReturnType<typeof setInterval> | null = null;
+  // Drops the Steam Awards banner when nominations close.
+  private awardsTimer: ReturnType<typeof setTimeout> | null = null;
 
   createRenderRoot() {
     return this;
@@ -85,9 +98,18 @@ export class NewsBox extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    globalThis.addEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
     void this.loadNews();
     void this.loadSales();
+    const untilAwardsEnd = STEAM_AWARDS_NOMINATIONS_END - Date.now();
+    // setTimeout overflows past ~24.8 days; a page open that long re-renders
+    // on its own long before then.
+    if (untilAwardsEnd > 0 && untilAwardsEnd < 2 ** 31 - 1) {
+      this.awardsTimer = setTimeout(this.rerender, untilAwardsEnd);
+    }
   }
+
+  private rerender = (): void => this.requestUpdate();
 
   /**
    * Fetches the catalog for its running sales, and keeps it current for as long
@@ -193,8 +215,11 @@ export class NewsBox extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    globalThis.removeEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
     this.stopCycle();
     this.clearSaleTimer();
+    if (this.awardsTimer !== null) clearTimeout(this.awardsTimer);
+    this.awardsTimer = null;
   }
 
   private startCycle() {
@@ -230,17 +255,36 @@ export class NewsBox extends LitElement {
   }
 
   render() {
+    // In the Steam app, while Steam Awards nominations are open, a banner
+    // asking players to nominate the game takes the news's place. A running
+    // sale's banner stays, under it.
+    if (!showSteamAwardsBanner()) return this.renderBox();
+    const sales = this.renderSales();
+    return html`<div class="flex flex-col gap-1.5">
+      <steam-awards-banner></steam-awards-banner>
+      ${sales}
+    </div>`;
+  }
+
+  /** The running sales' banner, or nothing when none is running. */
+  private renderSales() {
+    const sales = visibleBannerSales(
+      runningSales(this.cosmetics, this.announcedSales),
+    );
+    if (sales.length === 0) return nothing;
+    return html`<sale-banner
+      linked
+      .sales=${sales}
+      .cosmetics=${this.cosmetics}
+      @open-sale=${() => this.openSale()}
+    ></sale-banner>`;
+  }
+
+  private renderBox() {
     // A running sale takes the box for as long as it runs: no rotation and
     // no dismiss, so it's there every time the player looks.
-    const sales = runningSales(this.cosmetics, this.announcedSales);
-    if (sales.length > 0) {
-      return html`<sale-banner
-        linked
-        .sales=${sales}
-        .cosmetics=${this.cosmetics}
-        @open-sale=${() => this.openSale()}
-      ></sale-banner>`;
-    }
+    const sales = this.renderSales();
+    if (sales !== nothing) return sales;
     if (this.items.length === 0) return nothing;
 
     const item = this.items[this.activeIndex];

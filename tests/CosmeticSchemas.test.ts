@@ -1391,6 +1391,26 @@ describe("CosmeticsSchema lobbyQueue pricing", () => {
   });
 });
 
+describe("CosmeticsSchema mapBoost pricing", () => {
+  it("parses the mapBoost config block", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      mapBoost: { priceHard: 3 },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.mapBoost?.priceHard).toBe(3);
+  });
+
+  it("parses a cosmetics.json without mapBoost (older API)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.mapBoost).toBeUndefined();
+  });
+});
+
 describe("Cosmetic pack schemas", () => {
   const base = { patterns: {}, flags: {} };
   const starter = {

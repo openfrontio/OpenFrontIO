@@ -132,9 +132,11 @@ describe("MatchmakingModal.checkGame", () => {
   it("polls the configured game server for the matched game", async () => {
     const modal = new MatchmakingModal();
     const internals = modal as unknown as {
+      isModalOpen: boolean;
       gameID: string | null;
       checkGame(): Promise<void>;
     };
+    internals.isModalOpen = true;
     internals.gameID = "game-1";
     await internals.checkGame();
     expect(lastUrl()).toBe(

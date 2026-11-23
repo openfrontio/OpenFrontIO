@@ -5,7 +5,11 @@ import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { EventBus } from "@openfront/shared/EventBus";
+import {
+  EventBus,
+  type EventConstructor,
+  type GameEvent,
+} from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
@@ -20,6 +24,9 @@ import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
+// Safari before 17 has no popovers; the gold gain pop falls back to sitting
+// inside the gold box there.
+const supportsPopover = "showPopover" in HTMLElement.prototype;
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -80,10 +87,31 @@ export class ControlPanel extends LitElement implements Controller {
   private _nearbyPlayerIDs: Set<number> = new Set();
   private _borderRefreshCounter: number = 0;
   private _borderTilesPromise: Promise<void> | null = null;
+  private _borderGeneration = 0;
   // Track last attack tick per target player (for 15-second threshold)
   private _lastAttackTickByTarget: Map<number, number> = new Map();
   private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
   private static readonly ATTACK_THRESHOLD_TICKS = 15 * 10; // 15 seconds
+
+  private eventUnsubscribers: Array<() => void> = [];
+  private initGeneration = 0;
+
+  private onBus<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ): void {
+    const bus = this.eventBus;
+    if (!bus) return;
+    bus.on(eventType, handler);
+    this.eventUnsubscribers.push(() => bus.off?.(eventType, handler));
+  }
+
+  private unsubscribeBus(): void {
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -100,16 +128,18 @@ export class ControlPanel extends LitElement implements Controller {
     });
   }
 
-  init() {
+  init(): () => void {
+    this.unsubscribeBus();
+    const gen = ++this.initGeneration;
     this.attackRatio = new UserSettings().attackRatio();
     this.uiState.attackRatio = this.attackRatio;
-    this.eventBus.on(TutorialHighlightEvent, (e) => {
+    this.onBus(TutorialHighlightEvent, (e) => {
       this._tutorialHighlight = e.target;
     });
-    this.eventBus.on(OnboardingLowTroopsEvent, (e) => {
+    this.onBus(OnboardingLowTroopsEvent, (e) => {
       this._lowTroopsAlert = e.low;
     });
-    this.eventBus.on(AttackRatioEvent, (event) => {
+    this.onBus(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
 
       if (newAttackRatio < 0.01) {
@@ -128,6 +158,11 @@ export class ControlPanel extends LitElement implements Controller {
       this.attackRatio = newAttackRatio;
       this.onAttackRatioChange(this.attackRatio);
     });
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
   }
 
   tick() {
@@ -218,6 +253,46 @@ export class ControlPanel extends LitElement implements Controller {
     }, 2000);
   }
 
+  // A popover, so it's drawn in the top layer: the events display and the
+  // tutorial panel sit above this panel (so the portrait unit bar doesn't
+  // cover them) and would otherwise hide it. `updated` pins it to the gold
+  // box's top-right corner, and the span keeps its old offsets from there.
+  private renderGoldGainPop(textSize: "text-sm" | "text-xs") {
+    if (this._goldGain === null) return "";
+    const pop = html`<span
+      class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 ${textSize} font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+      >+${renderNumber(this._goldGain)}</span
+    >`;
+    return keyed(
+      this._goldGainPulseId,
+      supportsPopover
+        ? html`<div
+            popover="manual"
+            data-gold-gain-pop
+            class="fixed inset-auto size-0 m-0 p-0 border-0 bg-transparent overflow-visible pointer-events-none"
+          >
+            ${pop}
+          </div>`
+        : pop,
+    );
+  }
+
+  updated() {
+    for (const pop of this.querySelectorAll<HTMLElement>(
+      "[data-gold-gain-pop]",
+    )) {
+      if (pop.matches(":popover-open")) continue;
+      const goldBox = pop.parentElement!;
+      const box = goldBox.getBoundingClientRect();
+      // The other layout's gold box, which is display: none.
+      if (box.width === 0) continue;
+      // Inside the border, where the span's absolute offsets used to start.
+      pop.style.left = `${box.right - goldBox.clientLeft}px`;
+      pop.style.top = `${box.top + goldBox.clientTop}px`;
+      pop.showPopover();
+    }
+  }
+
   private trackOutgoingAttacks(player: PlayerView) {
     const currentTick = this.game.ticks();
     for (const attack of player.outgoingAttacks()) {
@@ -242,20 +317,29 @@ export class ControlPanel extends LitElement implements Controller {
       return;
     }
     this._borderRefreshCounter = 0;
-    this._borderTilesPromise = player.borderTiles().then((bt) => {
-      this._borderTilesPromise = null;
-      const myID = player.smallID();
-      const nearby = new Set<number>();
-      for (const tile of bt.borderTiles) {
-        for (const neighbor of this.game.neighbors(tile as TileRef)) {
-          const ownerID = this.game.ownerID(neighbor);
-          if (ownerID !== 0 && ownerID !== myID) {
-            nearby.add(ownerID);
+    const gen = this._borderGeneration;
+    this._borderTilesPromise = player
+      .borderTiles()
+      .then((bt) => {
+        if (gen !== this._borderGeneration) return;
+        this._borderTilesPromise = null;
+        const myID = player.smallID();
+        const nearby = new Set<number>();
+        for (const tile of bt.borderTiles) {
+          for (const neighbor of this.game.neighbors(tile as TileRef)) {
+            const ownerID = this.game.ownerID(neighbor);
+            if (ownerID !== 0 && ownerID !== myID) {
+              nearby.add(ownerID);
+            }
           }
         }
-      }
-      this._nearbyPlayerIDs = nearby;
-    });
+        this._nearbyPlayerIDs = nearby;
+      })
+      .catch(() => {
+        if (gen === this._borderGeneration) {
+          this._borderTilesPromise = null;
+        }
+      });
   }
 
   private computeNotification(
@@ -372,6 +456,30 @@ export class ControlPanel extends LitElement implements Controller {
   setVisibile(visible: boolean) {
     this._isVisible = visible;
     this.requestUpdate();
+  }
+
+  setVisible(visible: boolean) {
+    this.setVisibile(visible);
+  }
+
+  dispose(): void {
+    this.initGeneration++;
+    this.unsubscribeBus();
+    if (this._goldGainTimeoutId !== null) {
+      clearTimeout(this._goldGainTimeoutId);
+      this._goldGainTimeoutId = null;
+    }
+    this._nearbyPlayerIDs.clear();
+    this._lastAttackTickByTarget.clear();
+    this._notification = null;
+    this._goldGain = null;
+    this._tutorialHighlight = null;
+    this._lowTroopsAlert = false;
+    this._ratioPopupOpen = false;
+    this._borderRefreshCounter = 0;
+    this._borderGeneration++;
+    this._borderTilesPromise = null;
+    this.setVisible(false);
   }
 
   private handleRatioSliderInput(e: Event) {
@@ -619,17 +727,7 @@ export class ControlPanel extends LitElement implements Controller {
           )}"
           translate="no"
         >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
+          ${this.renderGoldGainPop("text-sm")}
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
           <span class="tabular-nums">${renderNumber(this._gold)}</span>
         </div>
@@ -700,17 +798,7 @@ export class ControlPanel extends LitElement implements Controller {
           )}"
           translate="no"
         >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
+          ${this.renderGoldGainPop("text-xs")}
           <img src=${goldCoinIcon} width="13" height="13" />
           <span class="px-0.5">${renderNumber(this._gold)}</span>
         </div>

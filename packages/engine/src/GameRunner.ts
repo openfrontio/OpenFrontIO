@@ -47,6 +47,7 @@ import { Executor } from "./execution/ExecutionManager";
 import { PlayerExecution } from "./execution/PlayerExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
+import { WarshipExecution } from "./execution/WarshipExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import { Game, Player } from "./game/Game";
 import { createGame } from "./game/GameImpl";
@@ -159,6 +160,9 @@ export async function createGameRunnerFromSnapshot(
     miniGameMap: gameMap.miniGameMap,
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
   });
+  if (gameStart.scenario !== undefined) {
+    assignScenarioNations(game, gameStart);
+  }
   // No init(): the snapshot already holds every execution init() adds.
   return new GameRunner(
     game,
@@ -170,6 +174,46 @@ export async function createGameRunnerFromSnapshot(
     ),
     callBack,
   );
+}
+
+/**
+ * Hands each scenario nation to its player (docs/ScenarioEditor.md,
+ * "Starting a game from a bundle"). Every assignment is checked against the
+ * restored game and the start info before any takeover, so a bad start
+ * fails whole, and the same way on every client.
+ */
+function assignScenarioNations(game: Game, gameStart: GameStartInfo): void {
+  const assignments = gameStart.scenario!.assignments;
+  const players = new Set(gameStart.players.map((p) => p.clientID));
+  const nations = new Set<string>();
+  const clients = new Set<ClientID>();
+  for (const { clientID, nationID } of assignments) {
+    const nation = game.hasPlayer(nationID) ? game.player(nationID) : null;
+    if (nation === null || nation.type() !== PlayerType.Nation) {
+      throw new Error(`scenario: no nation ${nationID}`);
+    }
+    if (!nation.playable()) {
+      throw new Error(`scenario: nation ${nationID} is not playable`);
+    }
+    if (nations.has(nationID)) {
+      throw new Error(`scenario: nation ${nationID} is assigned twice`);
+    }
+    if (!players.has(clientID)) {
+      throw new Error(`scenario: client ${clientID} is not a player`);
+    }
+    if (clients.has(clientID)) {
+      throw new Error(`scenario: client ${clientID} has two nations`);
+    }
+    nations.add(nationID);
+    clients.add(clientID);
+  }
+  // The spawn phase is over, so a player without a nation has nowhere to be.
+  if (clients.size !== players.size) {
+    throw new Error("scenario: a player has no nation");
+  }
+  for (const { clientID, nationID } of assignments) {
+    game.takeoverPlayer(nationID, clientID);
+  }
 }
 
 export class GameRunner {
@@ -360,9 +404,9 @@ export class GameRunner {
       throw new Error("the game is already finalized");
     }
     // In the order a new game adds them: init()'s, then each spawn's, then
-    // each structure's as it's built. Every nation gets its AI, whatever
-    // the config's nations setting: they are the author's. One with no land
-    // is dead and stops on its first tick.
+    // each structure's and warship's as it's built. Every nation gets its
+    // AI, whatever the config's nations setting: they are the author's. One
+    // with no land is dead and stops on its first tick.
     this.game.addExecution(...this.execManager.nationExecutions());
     this.addRunningGameExecutions();
     for (const nation of this.game.nations()) {
@@ -373,13 +417,27 @@ export class GameRunner {
       for (const tile of player.tiles()) {
         if (spawnTile === undefined || tile < spawnTile) spawnTile = tile;
       }
-      if (spawnTile === undefined) continue;
+      // One with no land is dead, and the dead have no allies or units
+      // (see PlayerExecution's removeOnDeath); its only units are warships,
+      // as a structure stands on its nation's land.
+      if (spawnTile === undefined) {
+        player.removeAllAlliances();
+        for (const warship of player.units(UnitType.Warship)) {
+          warship.delete(false);
+        }
+        continue;
+      }
       player.setSpawnTile(spawnTile);
       this.game.stats().recordSpawnTile(player, spawnTile);
       this.game.addExecution(new PlayerExecution(player));
     }
     for (const structure of this.game.units(Structures.types)) {
       this.game.addExecution(structureExecution(structure));
+    }
+    // And every warship the one it gets when built, patrolling around its
+    // tile.
+    for (const warship of this.game.units(UnitType.Warship)) {
+      this.game.addExecution(new WarshipExecution(warship));
     }
     this.game.endSpawnPhase();
   }

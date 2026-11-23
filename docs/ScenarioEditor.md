@@ -1,13 +1,14 @@
 # Scenario editor
 
 Status: design, 2026-11-19. The engine's editor mode, the document model
-(with undo and local drafts) and the editor page are built. The tools, PNG
-import and test play are not.
+(with undo and local drafts), the editor page, the terrain, territory and
+units tools, the nations panel, bundle export and loading
+and test play are built. The settings tool and PNG import are not.
 
 ## What it is
 
 A scenario is a custom map plus a starting position: terrain, nations, who
-owns which land, structures, troops, gold and game settings. A player with
+owns which land, structures, warships, troops, gold and game settings. A player with
 the editor builds one, publishes it, and anyone it is shared with can play
 it, alone or in a private lobby where the host decides which human plays
 which nation.
@@ -25,6 +26,7 @@ In:
 - Custom terrain: paint it, import a heightmap PNG, or start from a stock map.
 - Nations: add, remove, name, flag, starting troops and gold.
 - Territory painting and structure placement.
+- Starting warships: a nation's warship on a water tile, patrolling there.
 - Game settings (the existing `GameConfig` options).
 - Test play from the editor.
 - Save drafts and publish to the API. Play published scenarios in
@@ -34,7 +36,8 @@ In:
 
 Out, for now:
 
-- Mobile units (warships, trade ships, transports in flight). Structures only.
+- Mobile units other than warships (trade ships, transports in flight,
+  missiles).
 - Team games. Scenarios are free-for-all.
 - Compact map size. Scenarios always run at normal size.
 - Triggers, scripted events, victory conditions other than the normal one.
@@ -74,6 +77,8 @@ ScenarioDocument
   nations[]         id (stable), name, flag, troops, gold, playable
   ownership         nation index per tile, run-length encoded
   structures[]      type, tile, nation, level
+  alliances[]       pairs of nation ids allied at the start (optional)
+  warships[]        nation, tile (optional)
   config            GameConfig fields the author chose
 ```
 
@@ -91,6 +96,21 @@ The stored form is JSON (`src/client/scenario/ScenarioDocument.ts`):
   owned.
 - `structures` is kept in tile order, one per tile. A structure stands on its
   nation's land, a port on a shore, and none is a type the config disables.
+- `alliances` is optional: `[a, b]` pairs of nation ids, the lesser id first
+  (plain string order), kept in order of the pairs, each pair once and never
+  a nation with itself. It is left out when there are none, and a document
+  without it has none. Parsing puts pairs and the list in order, and
+  rejects an id no nation has and alliances when `customAllianceDuration`
+  is 0 (alliances off). Removing a nation removes its pairs.
+- `warships` is optional: `{ nation, tile }` objects, kept in tile order, at
+  most one per tile and at most 1000 (`MAX_WARSHIPS`: each runs a warship's
+  execution every tick of the game). It is left out when there are none,
+  and a document without it has none. A warship's tile is any water, ocean
+  or lake: in play a warship may sail on any water its port reaches, and
+  the document has no ocean (the engine derives it, see "Terrain"). Parsing
+  rejects an id no nation has, a tile that isn't water, and any warship
+  when `disabledUnits` has Warship. Removing a nation removes its warships,
+  and a tile that stops being water loses its warship.
 - `config` is `difficulty`, `donateGold`, `donateTroops`, `infiniteGold`,
   `infiniteTroops`, `instantBuild`, and optionally `disabledUnits`,
   `maxTimerValue`, `goldMultiplier`, `customAllianceDuration`, `waterNukes`,
@@ -100,6 +120,13 @@ The stored form is JSON (`src/client/scenario/ScenarioDocument.ts`):
 
 Parsing checks all of this and gives the editor its working form, with the
 terrain and owners as typed arrays.
+
+`alliances` and `warships` came after the first documents and did not
+change `format`: they are optional, so every format 1 document still
+parses, unchanged. A new `format` is for a change an older document or
+build would read wrongly. The cost is that a build from before alliances
+or warships drops them, as zod drops a key it doesn't know, if it saves a
+document that has them.
 
 The document stores only what the author decided. Shoreline flags, ocean
 versus lake, water depth and the downscaled maps are all derived by the
@@ -134,6 +161,16 @@ ScenarioBundle
 
 The bundle is gzipped as a whole. For scale: a late-game World snapshot is
 about 2.7 MB raw, and terrain is one byte per tile and compresses well.
+
+Before gzip, each section is a frame: a little-endian u32 length, then the
+bytes (`ScenarioBundle.ts`). The header and the manifest are JSON. The header
+comes first in every format, so any build can read its `format` and refuse
+one it doesn't know. The thumbnail is drawn from the 4x map as the map
+generator draws a stock map's; Safari can't encode webp, so it can't export.
+The hash is SHA-256 over every frame after the header, so the header can
+carry it. The header's nations are only for showing before play; the
+snapshot's own nations are what play. zbin is not used: it has no version and
+is tied to the build.
 
 The map files in the bundle are the finished terrain, so the snapshot's
 terrain diff is empty. Shipping a blank map and letting the diff carry the
@@ -173,7 +210,7 @@ Opening a scenario builds an engine from the document:
    document's width and height.
 2. Replay the document (`replayDocument`): write the terrain and end the
    stroke, then add each nation with its troops, gold and land, then place
-   the structures.
+   the structures, then the warships, then make the alliances.
 
 Replay takes a function that sends one command, so the same code drives a
 worker or, in tests, a `GameRunner`. For export's second engine it skips
@@ -186,8 +223,27 @@ advancing a tick, so the renderer and borrowed HUD layers show it the normal
 way. Terrain edits arrive as ordinary tile updates, which already carry the
 terrain byte; this is how water-nuke craters reach the screen today.
 
-Terrain, territory and structures are tools in the same view. There is no
-separate terrain mode and no engine to throw away when switching.
+Terrain, territory and units (structures and warships) are tools in the
+same view. There is no separate terrain mode and no engine to throw away
+when switching.
+
+The units tool places a unit of the picked type, a structure or a warship;
+a click on or near a unit of any type removes the nearest, and a drag pans.
+A structure goes, at the picked level, to the nation that owns the clicked
+tile. It keeps the document's rules (one per tile, on its nation's
+land, a port on a shore, no type the config disables, a defense post at
+level 1) and nothing more: the in-game spacing between structures
+(`structureMinDist`) is a build rule for players, not a scenario rule, so an
+author may place structures closer than a player could build them.
+
+A warship goes on the clicked water tile, for the nation picked in the
+nations panel. With no nation picked, on land, with warships disabled or at
+`MAX_WARSHIPS` it places nothing and says why. Warships
+render as in game, from the engine's unit updates.
+
+The nations panel lists, under the picked nation, every other nation with a
+checkbox for an alliance between the two at the start; each change is one
+undo step. The list is hidden when the settings turn alliances off.
 
 Changing the map's width or height is the one edit the engine cannot take
 live. It rebuilds the engine from the document.
@@ -206,13 +262,16 @@ command to the engine.
   neither the document nor the engine.
 - The document makes the engine's side effects itself and records them in
   the inverse. A tile that changes between water, land and impassable loses
-  its owner and its structure. A port that loses its shore goes. Land given
+  its owner, its structure and its warship. A port that loses its shore
+  goes. Land given
   to another nation loses the old owner's structure.
 - Undoing `add_nation` is `remove_nation`. Undoing `remove_nation` adds the
-  nation back at its place in the list and gives back its land and
-  structures. The engine keeps a removed nation's player, so adding the id
-  again brings back that player, with its small id, as a new nation starts.
-  `set_nation` then restores its troops, gold and playable.
+  nation back at its place in the list and gives back its land, structures,
+  warships and alliances. The engine keeps a removed nation's player, so adding the
+  id again brings back that player, with its small id, as a new nation
+  starts. `set_nation` then restores its troops, gold and playable.
+- Undoing `add_alliance` is `remove_alliance`, and the other way round,
+  and the same for `place_warship` and `remove_warship`.
 
 Undo history is not saved with a draft.
 
@@ -304,7 +363,8 @@ value, `Custom`, that means "the files came with the game start". The
 snapshot's terrain hash still guarantees the files match.
 
 The client's `GameMapLoader` gets a way to answer for `Custom` from a loaded
-bundle instead of from `resources/maps`.
+bundle instead of from `resources/maps`: `FetchGameMapLoader.setCustomMap`,
+which `useScenarioMap` calls with the bundle's files and its thumbnail.
 
 ### Editor mode in the worker
 
@@ -331,8 +391,26 @@ Commands:
 | `end_terrain_edit`                    | Run the full terrain pass (see "Terrain")                          |
 | `set_owner`                           | Give a batch of tiles to a nation, or to nobody                    |
 | `place_structure`, `remove_structure` | Structure of a type and level at a tile                            |
+| `place_warship`, `remove_warship`     | A nation's warship at a water tile                                 |
+| `add_alliance`, `remove_alliance`     | Two nations allied from the start, or not                          |
 | `export_terrain`                      | Run the full terrain pass and write out the map files (below)      |
 | `finalize`                            | Prepare for export (below)                                         |
+
+`add_alliance` makes the alliance an accepted request makes
+(`Game.createAlliance`, which `acceptAllianceRequest` also uses), at tick
+0, with the pair's first nation as the requestor. So in play it is an
+ordinary alliance: it lasts the config's alliance duration from the start,
+and can be renewed or broken. `remove_alliance` takes one back with no
+update or stat, as if it had never been made; only the editor needs it.
+`remove_nation` ends the nation's alliances the same way.
+
+`place_warship` builds the warship a player's port would, free (the
+nation's gold is left as it was, as for structures) and on its tile rather
+than at a port, with that tile as its patrol tile. It refuses a tile that
+isn't water, a tile with a warship, and warships the config disables.
+`remove_warship` deletes it with no message, and not as a loss. A `set_terrain` that
+turns a warship's water into land or impassable deletes it, and
+`remove_nation` deletes the nation's warships with its structures.
 
 ### Finalising for export
 
@@ -354,7 +432,10 @@ be undone. Instead:
    `Custom` map whose manifest is the one the engine started on with the
    three sizes' tile counts redone.
 2. Start a second engine on those map files, replay everything except
-   terrain from the copy, send `finalize`, snapshot, and discard it.
+   terrain from the copy, send `finalize`, snapshot, and discard it. In the
+   browser that engine is a second worker (`exportScenario`). It starts on
+   the editor's start info with the document's settings, which the snapshot
+   keeps, and the snapshot records the build's commit, as the header does.
 
 The second engine is what makes the snapshot's terrain diff empty.
 
@@ -368,8 +449,11 @@ in. The terrain test checks this (see "Order of work").
   setting (a nation with no land is dead and stops on its first tick),
 - gives every nation with land what spawning gives it: a spawn tile (its
   lowest tile) and its player execution (troop and gold growth, structure
-  capture, death),
+  capture, death), and ends the alliances and deletes the warships of a
+  nation with none, as death does in play (an author who wants a landless
+  nation's fleet must give it land),
 - gives every structure the execution it would have had if built in play,
+  and every warship its warship execution, patrolling around its tile,
 - adds what `GameRunner.init()` adds for a running game (win check, rail
   clusters, doomsday clock if enabled),
 - ends the spawn phase.
@@ -493,9 +577,13 @@ covers every way of saving or sharing one.
 
 A bundle is another player's upload that the client decodes and restores.
 Clients cap its inflated size (as `SavedGamesApi` does for shared saves),
-validate every section against its schema, and verify the hash. Snapshot
-restore already validates each record with zod; that path gets a hostile
-input review before scenarios are shareable.
+validate every section against its schema, and verify the hash. The cap is
+21/16 bytes a tile for the map files plus 5 for the snapshot, about 166 MB on
+a 25M-tile map; export refuses a bundle over it. Measured on exported maps, a
+snapshot's tile lists take one byte a tile owned in one block and four with
+every tile a random one of 400 nations'. Snapshot restore already validates
+each record with zod; that path gets a hostile input review before scenarios
+are shareable.
 
 ## Order of work
 

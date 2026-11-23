@@ -3,8 +3,8 @@
  * (docs/ScenarioEditor.md, "Undo"). Each edit changes the document, sends
  * the engine the matching commands and records its inverse. The document
  * makes the same side effects the engine does (a tile that stops being land
- * loses its owner and structure, a port that loses its shore goes), so the
- * two stay alike.
+ * loses its owner and structure, one that stops being water its warship, a
+ * port that loses its shore goes), so the two stay alike.
  */
 
 import {
@@ -13,7 +13,10 @@ import {
 } from "@openfront/engine-api/EditorCommands";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import {
+  addAlliance,
   addStructure,
+  addWarship,
+  allianceIndex,
   checkTile,
   isAuthoredTerrain,
   isOwnable,
@@ -25,7 +28,10 @@ import {
   ScenarioNationSchema,
   type ScenarioStructure,
   ScenarioStructureSchema,
+  type ScenarioWarship,
+  ScenarioWarshipSchema,
   structureAt,
+  warshipAt,
   WATER,
   IMPASSABLE,
 } from "./ScenarioDocument";
@@ -34,7 +40,7 @@ import { type SendCommand, sendTerrain } from "./ScenarioReplay";
 export type Edit =
   /** At `index` in the nation list, or at its end. */
   | { type: "add_nation"; nation: ScenarioNation; index?: number }
-  /** Takes its land and structures with it. */
+  /** Takes its land, structures, warships and alliances with it. */
   | { type: "remove_nation"; id: string }
   /** Changes only the fields given. */
   | {
@@ -49,6 +55,11 @@ export type Edit =
   | { type: "set_owner"; tiles: number[]; owner: string | null }
   | { type: "place_structure"; structure: ScenarioStructure }
   | { type: "remove_structure"; tile: number }
+  | { type: "place_warship"; warship: ScenarioWarship }
+  | { type: "remove_warship"; tile: number }
+  /** Two nations allied from the start, by id, in either order. */
+  | { type: "add_alliance"; nations: [string, string] }
+  | { type: "remove_alliance"; nations: [string, string] }
   /** `terrain[i]` for `tiles[i]`; the last value given for a tile wins. */
   | {
       type: "set_terrain";
@@ -181,6 +192,10 @@ export class DocumentEditor {
         }
         const structures = doc.structures.filter((s) => s.nation === edit.id);
         doc.structures = doc.structures.filter((s) => s.nation !== edit.id);
+        const warships = this.removeWarships((w) => w.nation === edit.id);
+        // The engine's remove_nation ends its alliances too.
+        const alliances = doc.alliances.filter((p) => p.includes(edit.id));
+        doc.alliances = doc.alliances.filter((p) => !p.includes(edit.id));
         const [nation] = doc.nations.splice(index, 1);
         this.send({ type: "remove_nation", id: edit.id });
         return [
@@ -191,6 +206,11 @@ export class DocumentEditor {
           ...structures.map((structure): Edit => ({
             type: "place_structure",
             structure,
+          })),
+          ...warships,
+          ...alliances.map((nations): Edit => ({
+            type: "add_alliance",
+            nations,
           })),
         ];
       }
@@ -237,6 +257,20 @@ export class DocumentEditor {
         this.send({ type: "place_structure", unit, ...rest });
         return [{ type: "remove_structure", tile: structure.tile }];
       }
+      case "add_alliance": {
+        const nations = addAlliance(doc, ...edit.nations);
+        this.send({ type: "add_alliance", nations });
+        return [{ type: "remove_alliance", nations }];
+      }
+      case "remove_alliance": {
+        const i = allianceIndex(doc, ...edit.nations);
+        if (i === -1) {
+          throw new Error(`${edit.nations.join(" and ")} are not allies`);
+        }
+        const [nations] = doc.alliances.splice(i, 1);
+        this.send({ type: "remove_alliance", nations });
+        return [{ type: "add_alliance", nations }];
+      }
       case "remove_structure": {
         checkTile(doc, edit.tile);
         const structure = structureAt(doc, edit.tile);
@@ -246,6 +280,22 @@ export class DocumentEditor {
         doc.structures = doc.structures.filter((s) => s !== structure);
         this.send({ type: "remove_structure", tile: edit.tile });
         return [{ type: "place_structure", structure }];
+      }
+      case "place_warship": {
+        const warship = ScenarioWarshipSchema.parse(edit.warship);
+        addWarship(doc, warship);
+        this.send({ type: "place_warship", ...warship });
+        return [{ type: "remove_warship", tile: warship.tile }];
+      }
+      case "remove_warship": {
+        checkTile(doc, edit.tile);
+        const warship = warshipAt(doc, edit.tile);
+        if (warship === undefined) {
+          throw new Error(`tile ${edit.tile} has no warship`);
+        }
+        doc.warships = doc.warships.filter((w) => w !== warship);
+        this.send({ type: "remove_warship", tile: edit.tile });
+        return [{ type: "place_warship", warship }];
       }
       case "set_terrain": {
         if (edit.tiles.length !== edit.terrain.length) {
@@ -264,7 +314,7 @@ export class DocumentEditor {
         const tiles = [...terrain.keys()];
         const previous = tiles.map((t) => doc.terrain[t]);
         // A tile that changes between water, land and impassable loses its
-        // owner and its structure.
+        // owner, its structure and its warship.
         const before = new Map<number, number[]>();
         const kindChanged = new Set<number>();
         for (const [t, value] of terrain) {
@@ -276,7 +326,10 @@ export class DocumentEditor {
           before.get(owner)!.push(t);
           doc.owners[t] = 0;
         }
-        const lost = this.removeStructures((s) => kindChanged.has(s.tile));
+        const lost = [
+          ...this.removeStructures((s) => kindChanged.has(s.tile)),
+          ...this.removeWarships((w) => kindChanged.has(w.tile)),
+        ];
         // A port needs a shore, which an edit beside it can take away. The
         // engine checks after each set_terrain, so the document writes the
         // terrain in the same batches sendTerrain sends, checking after each.
@@ -307,6 +360,13 @@ export class DocumentEditor {
     const removed = this.doc.structures.filter(remove);
     this.doc.structures = this.doc.structures.filter((s) => !remove(s));
     return removed.map((structure) => ({ type: "place_structure", structure }));
+  }
+
+  /** Removes the matching warships; returns the edits that put them back. */
+  private removeWarships(remove: (w: ScenarioWarship) => boolean): Edit[] {
+    const removed = this.doc.warships.filter(remove);
+    this.doc.warships = this.doc.warships.filter((w) => !remove(w));
+    return removed.map((warship) => ({ type: "place_warship", warship }));
   }
 
   /** set_owner edits giving tiles back to their owners by index. */
