@@ -226,7 +226,6 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(onCardTab()).toBe(false);
   });
 
-  /** Clicks the bar's Save card with the PUT held until `finish`. */
   // What a save of openWithChange's change stores.
   const STORED = {
     background: "bg_pacific",
@@ -284,6 +283,7 @@ describe("Inventory: unsaved card changes guard", () => {
     );
   });
 
+  /** Clicks the bar's Save card with the PUT held until `finish`. */
   async function saveHeld() {
     let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
     vi.mocked(saveCardLoadout).mockReturnValueOnce(
