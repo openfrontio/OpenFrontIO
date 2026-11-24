@@ -481,11 +481,48 @@ describe("Inventory In game tab", () => {
           "skins",
         ),
       ).toBe(tilesWithItems.length);
-      // Colour swatches are full-size touch targets.
-      for (const swatch of modal.querySelectorAll("[data-variant-key]")) {
+      // One swatch per colour, the default look included; each a full-size
+      // touch target.
+      const swatches = [
+        ...tile(modal, "pattern:plain").querySelectorAll<HTMLElement>(
+          "[data-variant-key]",
+        ),
+      ];
+      expect(
+        swatches.map((swatch) => swatch.dataset.variantKey).sort(),
+      ).toEqual(["pattern:plain", "pattern:plain:blue", "pattern:plain:red"]);
+      for (const swatch of swatches) {
         expect(swatch.className).toMatch(/(^| )h-11( |$)/);
         expect(swatch.className).toMatch(/(^| )w-11( |$)/);
       }
+    });
+
+    it("a pattern with one colour still offers its default look", async () => {
+      const catalog = makeCatalog() as unknown as {
+        patterns: Record<string, Record<string, unknown>>;
+        colorPalettes: Record<string, unknown>;
+      };
+      catalog.patterns.plain.colorPalettes = [
+        { name: "red", isArchived: false },
+      ];
+      catalog.colorPalettes = {
+        red: { name: "red", primaryColor: "#f00", secondaryColor: "#000" },
+      };
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        catalog as unknown as Cosmetics,
+      );
+      await open("skins", makeUser([...OWNED, "pattern:plain:red"]));
+      const plainTile = tile(modal, "pattern:plain");
+      const fallback = plainTile.querySelector<HTMLButtonElement>(
+        '[data-variant-key="pattern:plain"]',
+      );
+      expect(fallback).not.toBeNull();
+      expect(fallback!.getAttribute("aria-label")).toBe(
+        "territory_patterns.pattern.default",
+      );
+      expect(
+        plainTile.querySelector('[data-variant-key="pattern:plain:red"]'),
+      ).not.toBeNull();
     });
 
     it("on phones, says what was equipped in its own status line", async () => {

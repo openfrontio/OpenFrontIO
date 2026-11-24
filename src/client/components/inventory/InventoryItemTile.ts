@@ -204,7 +204,13 @@ export class InventoryItemTile
   }
 
   private renderSwatches() {
-    const variants = this.variants.filter((v) => v.colorPalette !== null);
+    // Every colour of the group, the pattern's own default look (no palette)
+    // included, as the Store card shows them.
+    const variants = this.variants.filter(
+      (v) =>
+        v.colorPalette !== null ||
+        (v.type === "pattern" && v.cosmetic !== null),
+    );
     if (variants.length < 2) return nothing;
     const activeKey = this.active.key;
     return html`<div
@@ -212,11 +218,12 @@ export class InventoryItemTile
       class="-mt-1 flex flex-wrap justify-center pb-1"
     >
       ${variants.map((variant) => {
-        const palette = variant.colorPalette!;
-        const label = translateCosmetic(
-          "territory_patterns.color_palette",
-          palette.name,
-        );
+        const palette = variant.colorPalette;
+        const label = palette
+          ? translateCosmetic("territory_patterns.color_palette", palette.name)
+          : translateText("territory_patterns.pattern.default");
+        const primary = palette?.primaryColor ?? "#ffffff";
+        const secondary = palette?.secondaryColor ?? "#000000";
         const isActive = variant.key === activeKey;
         return html`<button
           type="button"
@@ -235,7 +242,7 @@ export class InventoryItemTile
             class="h-5 w-5 rounded-full border border-white/30 ${
               isActive ? "ring-2 ring-white" : ""
             }"
-            style="background:${palette.primaryColor};box-shadow:inset -6px -6px 0 ${palette.secondaryColor}"
+            style="background:${primary};box-shadow:inset -6px -6px 0 ${secondary}"
           ></span>
         </button>`;
       })}
