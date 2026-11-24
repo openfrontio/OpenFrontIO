@@ -73,6 +73,35 @@ describe("initGL", () => {
     }
   });
 
+  it.each([
+    // Firefox ignores failIfMajorPerformanceCaveat by default and passes the
+    // WARP name through its renderer sanitizer.
+    "ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0), or similar",
+    // Chrome's unsanitized ANGLE string for WARP.
+    "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    // Firefox's sanitized llvmpipe.
+    "llvmpipe, or similar",
+  ])("reports software for the software renderer %s", (renderer) => {
+    stubGetContext({ accelerated: fakeContext(renderer), probe: null });
+
+    const res = initGL(document.createElement("canvas"));
+
+    expect(res.status).toBe("software");
+    expect(res.gl).toBeNull();
+  });
+
+  it("does not gate a renderer masked by resistFingerprinting", () => {
+    // RFP reports "Mozilla" for every GPU, so it can't be classified; its
+    // MAX_TEXTURE_SIZE cap is what surfaces it (as "limited").
+    const accel = fakeContext("Mozilla", 2048);
+    stubGetContext({ accelerated: accel, probe: null });
+
+    const res = initGL(document.createElement("canvas"));
+
+    expect(res.status).toBe("limited");
+    expect(res.gl).toBe(accel);
+  });
+
   it("requests the accelerated context with the caller's attrs plus the caveat flag", () => {
     const spy = stubGetContext({ accelerated: fakeContext(), probe: null });
 

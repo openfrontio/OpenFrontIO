@@ -33,8 +33,13 @@ export type GLResult =
 const REQUIRED_TEXTURE_SIZE = getPaletteSize();
 
 // Renderer strings reported by software WebGL backends. Mirrors the detection
-// in utilities/Diagnostic.ts.
-const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software/i;
+// in utilities/Diagnostic.ts. "Basic Render Driver" is D3D11 WARP, which
+// Firefox on Windows falls back to and reports unbucketed, e.g. "ANGLE
+// (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0), or
+// similar". A renderer masked by resistFingerprinting ("Mozilla") is left
+// alone: it hides real GPUs too, and the same setting caps MAX_TEXTURE_SIZE
+// at 2048, which already lands the player on the "limited" warning.
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software|basic render driver/i;
 
 /**
  * Acquire a GPU-accelerated WebGL2 context on `canvas`.
@@ -57,8 +62,10 @@ export function initGL(
     // failIfMajorPerformanceCaveat does NOT reliably reject a software context
     // when hardware acceleration is turned off in browser settings (as opposed
     // to a blocklisted driver) — Chrome still hands back a SwiftShader context.
-    // So inspect the renderer and gate if it's software; the game is unplayable
-    // (~1fps) on it either way.
+    // Firefox ignores the attribute entirely by default
+    // (webgl.disable-fail-if-major-performance-caveat), so there this check is
+    // the only gate. Inspect the renderer and gate if it's software; the game
+    // is unplayable (~1fps) on it either way.
     const renderer = readRenderer(accel);
     if (SOFTWARE_RENDERER.test(renderer)) {
       return { gl: null, status: "software", renderer };
