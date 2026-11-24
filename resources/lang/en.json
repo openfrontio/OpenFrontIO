@@ -1428,6 +1428,7 @@
     "share_link": "Share Link"
   },
   "game_settings": {
+    "advanced_settings": "Advanced settings",
     "bots": "Tribes: ",
     "bots_high_warning": "High tribe counts (>400) may cause lag on lower-end devices.",
     "compact_map": "Compact Map",
