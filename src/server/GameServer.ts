@@ -1361,8 +1361,8 @@ export class GameServer {
   // not proof they may hold a seat now.
   private setSpectator(client: Client, spectator: boolean): void {
     if (client.spectator === spectator) return;
+    if (this.stage === "started" || this.ended) return;
     if (!spectator) {
-      if (this.stage === "started" || this.ended) return;
       if (!this.passesAllowlist(client)) return;
       if (!this.passesTrustGate(client)) return;
       if (this.poolTargetForClient(client) !== null) return;
@@ -1370,6 +1370,9 @@ export class GameServer {
       if (max !== undefined && this.playerCount() >= max) return;
     }
     client.spectator = spectator;
+    if (!spectator) {
+      this.markFullIfAutoStarting();
+    }
     // The lobby list is derived from this flag, so everyone's view of who is
     // playing has to be refreshed rather than waiting out the next tick.
     this.broadcastLobbyInfo();
