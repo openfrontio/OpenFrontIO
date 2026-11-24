@@ -47,7 +47,6 @@ import {
   activeSale,
   isNew,
   newUntilMs,
-  currentPrice,
   fetchCosmetics,
   cosmeticsCacheIsStale,
   getCachedCosmetics,
@@ -58,7 +57,6 @@ import {
   ownedPackItems,
   purchaseCosmetic,
   resolveCosmetics,
-  saleHasEnded,
   ResolvedCosmetic,
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
@@ -68,6 +66,7 @@ import {
   reportPendingSteamAuthorizations,
   sellsOnlyThroughPlay,
 } from "./Payments";
+import { type PricedItem, shownPrice } from "./ShownPrice";
 import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
@@ -532,8 +531,8 @@ export class StoreModal extends BaseModal {
     const pack = resolved.cosmetic as Pack;
     return (
       this.playPrice(resolved) !== null ||
-      currentPrice(pack, "hard") !== undefined ||
-      currentPrice(pack, "soft") !== undefined
+      shownPrice(pack, "hard") !== null ||
+      shownPrice(pack, "soft") !== null
     );
   }
 
@@ -971,7 +970,7 @@ export class StoreModal extends BaseModal {
       priceSoft?: number;
       listPriceHard?: number;
       listPriceSoft?: number;
-      promotion?: { endsAt: string };
+      promotion?: PricedItem["promotion"];
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
@@ -1000,11 +999,11 @@ export class StoreModal extends BaseModal {
     const dollarPrice = playPrice ?? subscriptionDollarPrice;
     // The price as the server charges it now: once the item's own sale has
     // ended that is its list price, whatever the catalog in hand says.
-    const saleEnded = priced !== null && saleHasEnded(priced);
-    const priceHard =
-      isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
-    const priceSoft =
-      isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
+    // Read through the same shownPrice as the Inventory; the button also
+    // gets the promotion, so it switches to the list price when the sale
+    // ends while the Store is open.
+    const hard = isPurchasable && priced ? shownPrice(priced, "hard") : null;
+    const soft = isPurchasable && priced ? shownPrice(priced, "soft") : null;
     // Resolved when clicked, from the card holding the button, so a purchase
     // from the flash hero is placed as flash.
     // Analytics must never break a purchase: a throw means no placement.
@@ -1043,18 +1042,11 @@ export class StoreModal extends BaseModal {
       .product=${product}
       .dollarPrice=${dollarPrice}
       .inlineCheckout=${inlineCheckout}
-      .priceHard=${priceHard ?? null}
-      .priceSoft=${priceSoft ?? null}
-      .listPriceHard=${
-        priceHard !== undefined && !saleEnded
-          ? (priced?.listPriceHard ?? null)
-          : null
-      }
-      .listPriceSoft=${
-        priceSoft !== undefined && !saleEnded
-          ? (priced?.listPriceSoft ?? null)
-          : null
-      }
+      .priceHard=${hard?.price ?? null}
+      .priceSoft=${soft?.price ?? null}
+      .listPriceHard=${hard?.listPrice ?? null}
+      .listPriceSoft=${soft?.listPrice ?? null}
+      .promotion=${priced?.promotion ?? null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
       .dollarLabelKey=${
@@ -1070,12 +1062,8 @@ export class StoreModal extends BaseModal {
       .onPurchaseDollar=${
         product || dollarPrice ? () => purchase("dollar") : undefined
       }
-      .onPurchaseHard=${
-        priceHard !== undefined ? () => purchase("hard") : undefined
-      }
-      .onPurchaseSoft=${
-        priceSoft !== undefined ? () => purchase("soft") : undefined
-      }
+      .onPurchaseHard=${hard !== null ? () => purchase("hard") : undefined}
+      .onPurchaseSoft=${soft !== null ? () => purchase("soft") : undefined}
     ></purchase-button>`;
   }
 

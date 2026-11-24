@@ -1745,6 +1745,17 @@ export const StorePlacementSubTabSchema = z.enum([
   "card",
 ]);
 export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+// The Inventory's tabs: its In game categories, and its Player card tab.
+export const StorePlacementInventorySubTabSchema = z.enum([
+  "skins",
+  "flags",
+  "crowns",
+  "effects",
+  "card",
+]);
+export type StorePlacementInventorySubTab = z.infer<
+  typeof StorePlacementInventorySubTabSchema
+>;
 // The Featured tab's sections. Featured is a kind of its own, not a tab: the
 // section says which slot an item was seen or bought in. The client never
 // sends `{ kind: "tab", tab: "featured" }`. Mirrors the API's copy.
@@ -1769,6 +1780,11 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("post_game") }),
   // "Get {name}'s look" on the eliminated-by screen.
   z.object({ kind: z.literal("card_loadout") }),
+  // The Inventory's buy dialog.
+  z.object({
+    kind: z.literal("inventory"),
+    subTab: StorePlacementInventorySubTabSchema,
+  }),
   z.object({
     kind: z.literal("featured"),
     section: StorePlacementFeaturedSectionSchema,

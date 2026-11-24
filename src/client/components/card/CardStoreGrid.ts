@@ -163,10 +163,11 @@ export class CardStoreGrid extends LitElement {
                   >${translateText("my_card.owned")}</span
                 >`
               : html`<purchase-button
-                  .priceHard=${prices.priceHard}
-                  .priceSoft=${prices.priceSoft}
-                  .listPriceHard=${prices.listPriceHard}
-                  .listPriceSoft=${prices.listPriceSoft}
+                  .priceHard=${prices.hard?.price ?? null}
+                  .priceSoft=${prices.soft?.price ?? null}
+                  .listPriceHard=${prices.hard?.listPrice ?? null}
+                  .listPriceSoft=${prices.soft?.listPrice ?? null}
+                  .promotion=${prices.promotion ?? null}
                   .rarity=${String(item.rarity)}
                   .itemName=${cardItemName(type, item)}
                   .onPurchaseHard=${() => this.buy(type, item, "hard")}

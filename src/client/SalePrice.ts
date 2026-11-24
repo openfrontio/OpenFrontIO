@@ -1,3 +1,5 @@
+import { shownPrice } from "./ShownPrice";
+
 // Sale-aware prices, shared by the store and the player card surfaces. Kept
 // apart from Cosmetics.ts so a component can read prices without pulling in
 // the whole purchase flow.
@@ -19,18 +21,5 @@ export function currentPrice(
   },
   currency: "hard" | "soft",
 ): number | undefined {
-  const price = currency === "hard" ? item.priceHard : item.priceSoft;
-  const listPrice =
-    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
-  return saleHasEnded(item) ? (listPrice ?? price) : price;
-}
-
-/** Whether the item's own sale has ended (its endsAt has passed). */
-export function saleHasEnded(item: {
-  promotion?: { endsAt: string };
-}): boolean {
-  return (
-    item.promotion !== undefined &&
-    new Date(item.promotion.endsAt).getTime() <= Date.now()
-  );
+  return shownPrice(item, currency)?.price;
 }

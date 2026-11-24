@@ -16,6 +16,7 @@ import type { PlayerCardView } from "../../components/card/PlayerCardModel";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import type { PricedItem } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 
 // "Get {name}'s look": on the eliminated-by screen, up to three things the
@@ -33,6 +34,9 @@ export interface LoadoutItem {
   priceSoft?: number;
   listPriceHard?: number;
   listPriceSoft?: number;
+  /** For <purchase-button>, which switches to the list price the moment the
+   * sale ends. */
+  promotion?: PricedItem["promotion"];
   unlockLabel?: string;
 }
 
@@ -47,9 +51,9 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
   }
   const prices = cardPrices(item);
   const priceHard =
-    (prices.priceHard ?? 0) > 0 ? (prices.priceHard ?? undefined) : undefined;
+    (prices.hard?.price ?? 0) > 0 ? prices.hard?.price : undefined;
   const priceSoft =
-    (prices.priceSoft ?? 0) > 0 ? (prices.priceSoft ?? undefined) : undefined;
+    (prices.soft?.price ?? 0) > 0 ? prices.soft?.price : undefined;
   if (priceHard === undefined && priceSoft === undefined) return null;
   return {
     type,
@@ -57,8 +61,9 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
     state: "buy",
     priceHard,
     priceSoft,
-    listPriceHard: prices.listPriceHard ?? undefined,
-    listPriceSoft: prices.listPriceSoft ?? undefined,
+    listPriceHard: prices.hard?.listPrice ?? undefined,
+    listPriceSoft: prices.soft?.listPrice ?? undefined,
+    promotion: prices.promotion,
   };
 }
 
@@ -221,6 +226,7 @@ export class LoadoutRow extends LitElement {
               .priceSoft=${entry.priceSoft ?? null}
               .listPriceHard=${entry.listPriceHard ?? null}
               .listPriceSoft=${entry.listPriceSoft ?? null}
+              .promotion=${entry.promotion ?? null}
               .rarity=${String(entry.item.rarity)}
               .itemName=${cardItemName(entry.type, entry.item)}
               .onPurchaseHard=${() => this.buy(entry, "hard")}

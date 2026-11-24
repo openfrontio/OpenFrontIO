@@ -194,6 +194,39 @@ describe("<card-store-grid>", () => {
     expect(wins.textContent).toContain("my_card.owned");
   });
 
+  it("a sale that ends while on screen switches to the list price", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    try {
+      grid = document.createElement(
+        "card-store-grid",
+      ) as unknown as CardStoreGrid;
+      grid.cosmetics = {
+        ...COSMETICS,
+        cardBackgrounds: {
+          bg_ending: onSale(
+            "bg_ending",
+            new Date(Date.now() + 5_000).toISOString(),
+          ),
+        },
+      } as unknown as Cosmetics;
+      document.body.appendChild(grid as unknown as Node);
+      await grid.updateComplete;
+      const button = (grid as unknown as Element).querySelector(
+        "[data-card-store-item='cardBackground:bg_ending'] purchase-button",
+      )!;
+      expect(button.querySelector("[data-sale-tag]")).not.toBeNull();
+      expect(button.textContent).toContain("400");
+      vi.advanceTimersByTime(5_010);
+      await (button as unknown as { updateComplete: Promise<unknown> })
+        .updateComplete;
+      expect(button.querySelector("[data-sale-tag]")).toBeNull();
+      expect(button.textContent).toContain("600");
+      expect(button.textContent).not.toContain("400");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("a sale that has ended shows the list price, not struck through", async () => {
     grid = document.createElement(
       "card-store-grid",
