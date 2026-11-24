@@ -218,6 +218,14 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
  * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
  * mutually exclusive, so they share one slot.
  */
+/** A flag key in its current form: a bare country code ("us"), as saved
+ * before the country: prefix, becomes "country:us". */
+export function normalizedFlagKey(flag: string): string {
+  return flag.startsWith("flag:") || flag.startsWith("country:")
+    ? flag
+    : `country:${flag}`;
+}
+
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
@@ -739,8 +747,8 @@ export class UserSettings {
     let flag = this.getCached(FLAG_KEY);
     if (!flag) return null;
     // Migrate bare country codes to country: prefix
-    if (!flag.startsWith("flag:") && !flag.startsWith("country:")) {
-      flag = `country:${flag}`;
+    if (normalizedFlagKey(flag) !== flag) {
+      flag = normalizedFlagKey(flag);
       // Silent migration: don't emit change event for FlagInput
       this.setCached(FLAG_KEY, flag, false);
     }

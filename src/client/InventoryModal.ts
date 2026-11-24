@@ -74,6 +74,7 @@ import {
   EFFECTS_KEY,
   FLAG_KEY,
   MAX_LOADOUTS,
+  normalizedFlagKey,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -134,7 +135,10 @@ function sameLoadout(a: CosmeticLoadout, b: CosmeticLoadout): boolean {
   const effectsB = Object.entries(b.effects).sort();
   return (
     a.pattern === b.pattern &&
-    a.flag === b.flag &&
+    // A loadout saved before the country: prefix holds a bare code that
+    // getFlag has since migrated in the live look.
+    (a.flag === null ? null : normalizedFlagKey(a.flag)) ===
+      (b.flag === null ? null : normalizedFlagKey(b.flag)) &&
     a.crown === b.crown &&
     JSON.stringify(effectsA) === JSON.stringify(effectsB)
   );

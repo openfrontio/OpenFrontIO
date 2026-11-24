@@ -643,6 +643,16 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
     });
 
+    it("a loadout saved with a legacy country flag isn't edited once the flag migrates", async () => {
+      const settings = new UserSettings();
+      settings.setFlag("us"); // saved before the country: prefix
+      settings.addLoadout(); // 01 holds "us"
+      expect(settings.getLoadout("01")?.flag).toBe("us");
+      expect(settings.getFlag()).toBe("country:us"); // migrates the live key
+      await open("crowns");
+      expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
+    });
+
     it("shows <name> · edited with Update when the look differs", async () => {
       const settings = new UserSettings();
       settings.addLoadout(); // 01, active, nothing equipped
