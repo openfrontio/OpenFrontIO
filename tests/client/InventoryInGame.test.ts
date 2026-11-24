@@ -588,7 +588,8 @@ describe("Inventory In game tab", () => {
         hard.querySelector("[data-tile-list-price]")!.textContent,
       ).toContain("400");
       const soft = sale.querySelector('[data-tile-price="soft"]')!;
-      expect(soft.textContent).toContain("1,800");
+      // In the runtime's locale ("1.800" under de-DE), as the tile shows it.
+      expect(soft.textContent).toContain((1800).toLocaleString());
       expect(
         sale.querySelector("[data-tile-sale-label]")!.textContent,
       ).toContain("Winter sale");
@@ -800,6 +801,39 @@ describe("Inventory In game tab", () => {
       expect(
         rows[1].querySelector("[data-effect-row-item]")!.textContent,
       ).toContain("inventory.effect_default");
+    });
+
+    it("each Change and Close button names its effect type", async () => {
+      const lang = document.createElement("lang-selector");
+      const translations = {
+        "inventory.effect_change": "Change",
+        "common.close": "Close",
+        "inventory.effect_change_slot": "Change {slot}",
+        "inventory.effect_close_slot": "Close {slot}",
+        "inventory.effect_slot.transportShipTrail": "Ship trail",
+      };
+      Object.assign(lang, {
+        translations,
+        defaultTranslations: translations,
+        currentLang: "en",
+      });
+      document.body.appendChild(lang);
+      try {
+        await open("effects");
+        const button = () =>
+          modal.querySelector<HTMLButtonElement>(
+            '[data-effect-row="transportShipTrail"] [data-effect-row-change]',
+          )!;
+        // The visible word stays; the name says which type it opens.
+        expect(button().textContent!.trim()).toBe("Change");
+        expect(button().getAttribute("aria-label")).toBe("Change Ship trail");
+        button().click();
+        await settle(modal);
+        expect(button().textContent!.trim()).toBe("Close");
+        expect(button().getAttribute("aria-label")).toBe("Close Ship trail");
+      } finally {
+        lang.remove();
+      }
     });
 
     it("Change opens that type's grid inline, and equipping works there", async () => {
