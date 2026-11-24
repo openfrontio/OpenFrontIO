@@ -13,6 +13,7 @@ import {
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { type PricedItem, shownPrice } from "../../ShownPrice";
 import { translateText } from "../../Utils";
+import { HUD_LABEL } from "../HudModal";
 
 // "Get the look" on the end screen, in the promo box's place: for each player
 // (the one who eliminated you, then looks saved from the player panel), up to
@@ -284,7 +285,7 @@ export class LoadoutRow extends LitElement {
       data-cosmetic-rarity=${String(entry.item.rarity)}
       class="flex w-40 flex-col gap-1.5 rounded-xl border-2 p-2 text-left text-white"
     >
-      <span class="text-[11px] font-bold uppercase tracking-wider text-white/50"
+      <span class=${HUD_LABEL}
         >${translateText(`win_modal.loadout_type_${entry.type}`)}</span
       >
       <span class="truncate text-sm font-bold"

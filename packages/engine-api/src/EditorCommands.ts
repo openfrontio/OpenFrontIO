@@ -64,6 +64,37 @@ export const RemoveStructureCommandSchema = z.object({
   tile: Tile,
 });
 
+/**
+ * A warship of the nation at a water tile, as if built in play, which
+ * patrols around that tile once the game starts.
+ */
+export const PlaceWarshipCommandSchema = z.object({
+  type: z.literal("place_warship"),
+  tile: Tile,
+  nation: ID,
+});
+
+export const RemoveWarshipCommandSchema = z.object({
+  type: z.literal("remove_warship"),
+  tile: Tile,
+});
+
+/**
+ * Makes two nations allies from the start, as an accepted request would at
+ * tick 0: the alliance runs for the config's alliance duration and can be
+ * renewed or broken like any other. The first nation is the requestor.
+ */
+export const AddAllianceCommandSchema = z.object({
+  type: z.literal("add_alliance"),
+  nations: z.tuple([ID, ID]),
+});
+
+/** Takes back an alliance `add_alliance` made, as if it had never been. */
+export const RemoveAllianceCommandSchema = z.object({
+  type: z.literal("remove_alliance"),
+  nations: z.tuple([ID, ID]),
+});
+
 // What the author decides for a tile: 0 for water, 0x80 | elevation (0-30)
 // for land, 0x9f for impassable. These are the bits of the terrain byte the
 // map generator takes from the image; the engine derives the rest.
@@ -119,9 +150,9 @@ export const ExportTerrainCommandSchema = z.object({
 
 /**
  * Makes the game ready to play: AI for every nation, executions for the
- * structures and the running game, spawn phase over. Sent to a second
- * engine started on the exported map files, which is then snapshotted and
- * discarded; it can't be undone.
+ * structures, warships and the running game, spawn phase over. Sent to a
+ * second engine started on the exported map files, which is then
+ * snapshotted and discarded; it can't be undone.
  */
 export const FinalizeCommandSchema = z.object({
   type: z.literal("finalize"),
@@ -134,6 +165,10 @@ export const EditorCommandSchema = z.discriminatedUnion("type", [
   SetOwnerCommandSchema,
   PlaceStructureCommandSchema,
   RemoveStructureCommandSchema,
+  PlaceWarshipCommandSchema,
+  RemoveWarshipCommandSchema,
+  AddAllianceCommandSchema,
+  RemoveAllianceCommandSchema,
   SetTerrainCommandSchema,
   EndTerrainEditCommandSchema,
   ExportTerrainCommandSchema,

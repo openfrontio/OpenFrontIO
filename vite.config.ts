@@ -29,6 +29,7 @@ const __dirname = path.dirname(__filename);
 
 const clientForksTests = [
   "tests/client/ApexNavigation.test.ts",
+  "tests/client/AppleSignIn.test.ts",
   "tests/client/Auth.desktopLogin.test.ts",
   "tests/client/Auth.steamOpenId.test.ts",
   "tests/client/ClientEnvStatic.test.ts",

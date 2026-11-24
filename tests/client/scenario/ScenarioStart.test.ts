@@ -33,6 +33,7 @@ import {
 } from "../../../src/client/scenario/EditorEngine";
 import {
   loadScenarioBundle,
+  ScenarioBundleError,
   useScenarioMap,
 } from "../../../src/client/scenario/ScenarioBundle";
 import {
@@ -43,9 +44,13 @@ import { exportScenario } from "../../../src/client/scenario/ScenarioExport";
 import { replayDocument } from "../../../src/client/scenario/ScenarioReplay";
 import { scenarioGameStart } from "../../../src/client/scenario/ScenarioStart";
 import { terrainMapFileLoader } from "../../../src/client/TerrainMapFileLoader";
+import { UnreadableSnapshotError } from "../../../src/client/WorkerClient";
 
 // The page reads a snapshot's header on a worker of its own; here the
-// engine reads it in place.
+// engine reads it in place, unless a test stands in for the worker.
+const worker = vi.hoisted(() => ({
+  readHeader: null as ((snapshot: Uint8Array) => Promise<unknown>) | null,
+}));
 vi.mock("../../../src/client/WorkerClient", async (importOriginal) => {
   const { readSnapshotHeader } =
     await import("@openfront/engine/snapshot/GameSnapshot");
@@ -54,7 +59,9 @@ vi.mock("../../../src/client/WorkerClient", async (importOriginal) => {
       typeof import("../../../src/client/WorkerClient")
     >()),
     readSnapshotHeader: async (snapshot: Uint8Array) =>
-      readSnapshotHeader(snapshot),
+      worker.readHeader
+        ? worker.readHeader(snapshot)
+        : readSnapshotHeader(snapshot),
   };
 });
 
@@ -94,7 +101,10 @@ async function engine(start: GameStartInfo, files: MapFiles) {
 
 let bundle: Promise<Uint8Array> | undefined;
 
-/** Land with three nations on it, two of them playable; exported once. */
+/**
+ * Land with three nations on it, two of them playable, West and the AI one
+ * allied; exported once.
+ */
 function scenarioBundle(): Promise<Uint8Array> {
   bundle ??= (async () => {
     const doc = newScenarioDocument("Test", W, H);
@@ -125,6 +135,7 @@ function scenarioBundle(): Promise<Uint8Array> {
       tiles: rect(40, 10, 20, 20),
       owner: "MIDNAT01",
     });
+    editor.apply({ type: "add_alliance", nations: ["WESTNAT1", "MIDNAT01"] });
     editor.commit();
     return exportScenario(doc, async (c) => runner.applyEditorCommand(c), {
       scenario: SCENARIO,
@@ -214,6 +225,10 @@ test("each assigned nation goes to its player, and every run reaches the same st
     }
     // The AI runs only the nation nobody took.
     expect(game.nations().map((n) => n.playerInfo.id)).toEqual(["MIDNAT01"]);
+    // Alice starts allied with the nation West was allied with.
+    const mid = game.player("MIDNAT01");
+    expect(game.playerByClientID(ALICE)!.isAlliedWith(mid)).toBe(true);
+    expect(game.playerByClientID(BOB)!.isAlliedWith(mid)).toBe(false);
 
     play(runner, 30);
     runs.push(runner.snapshot(COMMIT));
@@ -279,6 +294,31 @@ test.each([
   },
   30_000,
 );
+
+test("only a snapshot the worker can't decode reads as a newer build's", async () => {
+  const gzipped = await scenarioBundle();
+  const { header } = await loadScenarioBundle(gzipped);
+  const player = { username: "Alice", clanTag: null };
+  try {
+    worker.readHeader = () =>
+      Promise.reject(new UnreadableSnapshotError("snapshot format 9"));
+    const unreadable = await scenarioGameStart(
+      gzipped,
+      header.nations[0].id,
+      player,
+    ).catch((e: unknown) => e);
+    expect(unreadable).toBeInstanceOf(ScenarioBundleError);
+    expect((unreadable as ScenarioBundleError).problem).toBe("format");
+
+    const timeout = new Error("Timed out reading the snapshot");
+    worker.readHeader = () => Promise.reject(timeout);
+    await expect(
+      scenarioGameStart(gzipped, header.nations[0].id, player),
+    ).rejects.toBe(timeout);
+  } finally {
+    worker.readHeader = null;
+  }
+}, 30_000);
 
 test("the start path makes a singleplayer join on the chosen nation", async () => {
   const gzipped = await scenarioBundle();

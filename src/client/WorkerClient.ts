@@ -51,6 +51,9 @@ const READ_SNAPSHOT_HEADER_TIMEOUT_MS = 30_000;
  * can start one. The bytes are copied, not transferred, so the caller can
  * still start the game from them.
  */
+/** readSnapshotHeader's worker read the bytes and found no snapshot it decodes. */
+export class UnreadableSnapshotError extends Error {}
+
 export async function readSnapshotHeader(
   snapshot: Uint8Array,
 ): Promise<SnapshotHeader> {
@@ -65,7 +68,9 @@ export async function readSnapshotHeader(
         if (e.data.type !== "read_snapshot_header_result") return;
         clearTimeout(timer);
         if (e.data.header === null) {
-          reject(new Error(e.data.error ?? "Not a game snapshot"));
+          reject(
+            new UnreadableSnapshotError(e.data.error ?? "Not a game snapshot"),
+          );
         } else {
           resolve(e.data.header);
         }

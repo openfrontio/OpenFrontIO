@@ -21,9 +21,9 @@ import {
   zRef,
   zTile,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
-import { assertNever, boundingBoxTiles } from "@openfront/engine-lib/Util";
+import { assertNever } from "@openfront/engine-lib/Util";
 import { z } from "zod";
-import { Game, Player, Unit } from "../../game/Game";
+import { Attack, Game, Player, Unit } from "../../game/Game";
 import type {
   SnapshotReader,
   SnapshotWriter,
@@ -35,12 +35,16 @@ import { NationAttackBehavior } from "./NationAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
 import {
-  blastHitsFriendlyLand,
+  blastHitsFriendly,
+  circleTiles,
   enemyLandBlastCoverage,
+  IncomingNuke,
+  incomingNukes,
   isNukeAlreadyLandingNear,
   isTrajectoryInterceptableBySam,
   NukeType,
   planSamSalvo,
+  sparesLandOf,
   siloToUpgradeForSalvo,
 } from "./NationNukePlanning";
 import {
@@ -85,6 +89,12 @@ const STRIKE_SPAWN_TICKS = 10;
 
 /** Hard & Impossible: ticks after a launch until that nuke's perceived price is back down to its real price */
 const NUKE_PRICE_MEMORY_TICKS = 3000;
+
+/** Teams: atom bombs' worth of nukes flying at a player's land from which we'd rather nuke another enemy. */
+const TEAM_NUKE_SATURATION = 3;
+
+/** Teams: players we look for a nuke spot on before giving up for this round. */
+const MAX_TEAM_NUKE_TARGETS = 3;
 
 interface Strike {
   target: Player;
@@ -183,23 +193,10 @@ export class NationNukeBehavior {
       return;
     }
 
-    const choice = this.chooseNukeTarget();
-    if (choice === null) {
-      return;
-    }
-    const { target: nukeTarget, strike } = choice;
-
-    if (
-      nukeTarget.type() === PlayerType.Bot || // Don't nuke tribes (as opposed to nations and humans)
-      this.player.isOnSameTeam(nukeTarget) ||
-      this.attackBehavior.shouldAttack(nukeTarget) === false
-    ) {
-      return;
-    }
-
-    // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them, with atom bombs
     const saving = this.isSavingForMirv();
-    if (saving && !this.isHittingUs(nukeTarget)) {
+    const incoming = incomingNukes(this.game);
+    const targets = this.nukeTargetsToTry(incoming);
+    if (targets.length === 0 || !this.mayNuke(targets[0], saving)) {
       return;
     }
 
@@ -208,46 +205,74 @@ export class NationNukeBehavior {
       return;
     }
 
-    const structures = nukeTarget.units(Structures.types);
+    this.removeOldNukeEvents();
+    for (const [i, target] of targets.entries()) {
+      if (i > 0 && !this.mayNuke(target, saving)) continue;
+      if (this.tryNuke(target, nukeTypes, silos, incoming)) return;
+    }
+    if (
+      this.game.config().gameConfig().difficulty === Difficulty.Impossible &&
+      !saving
+    ) {
+      this.maybeDestroyEnemySam(targets[0], incoming);
+    }
+  }
+
+  private mayNuke(target: Player, saving: boolean): boolean {
+    return (
+      target.type() !== PlayerType.Bot && // Don't nuke tribes (as opposed to nations and humans)
+      !this.player.isOnSameTeam(target) &&
+      this.attackBehavior.shouldAttack(target) &&
+      // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them, with atom bombs
+      (!saving || this.isHittingUs(target))
+    );
+  }
+
+  /** Launches our best nuke at the best spot on target; false if no spot is worth any of nukeTypes. */
+  private tryNuke(
+    target: Player,
+    nukeTypes: NukeType[],
+    silos: Unit[],
+    incoming: IncomingNuke[],
+  ): boolean {
+    const strike = this.isStrike(target);
+    const structures = target.units(Structures.types);
     const difficulty = this.game.config().gameConfig().difficulty;
     // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
     const numRandomTiles = difficulty === Difficulty.Impossible ? 30 : 10;
     const randomTiles = randTerritoryTileArray(
       this.random,
       this.game,
-      nukeTarget,
+      target,
       numRandomTiles,
     );
     const candidates = new Set(
       randomTiles.concat(structures.map((u) => u.tile())),
     );
-    this.removeOldNukeEvents();
 
     for (const nukeType of nukeTypes) {
       const tile = this.findBestNukeTile(
         nukeType,
-        nukeTarget,
+        target,
         candidates,
         silos,
         structures,
         strike,
+        incoming,
       );
-      if (tile !== null) {
-        this.sendNuke(tile, nukeType, nukeTarget);
-        if (strike && this.followsUpStrikes()) {
-          this.strikes.push({
-            target: nukeTarget,
-            tile,
-            tick: this.game.ticks(),
-            nuke: null,
-          });
-        }
-        return;
+      if (tile === null) continue;
+      this.sendNuke(tile, nukeType, target);
+      if (strike && this.followsUpStrikes()) {
+        this.strikes.push({
+          target,
+          tile,
+          tick: this.game.ticks(),
+          nuke: null,
+        });
       }
+      return true;
     }
-    if (difficulty === Difficulty.Impossible && !saving) {
-      this.maybeDestroyEnemySam(nukeTarget);
-    }
+    return false;
   }
 
   /** Hydrogen bomb first; on Hard & Impossible, an atom bomb if no spot is worth a hydrogen bomb. */
@@ -281,17 +306,18 @@ export class NationNukeBehavior {
     silos: Unit[],
     structures: Unit[],
     strike: boolean,
+    incoming: IncomingNuke[],
   ): TileRef | null {
     const difficulty = this.game.config().gameConfig().difficulty;
     const range = this.game.config().nukeMagnitudes(nukeType).outer;
     const scored: { tile: TileRef; score: number }[] = [];
 
     outer: for (const tile of candidates) {
-      // Cheap pre-filter, blastHitsFriendlyLand checks the whole blast of the winner
-      const boundingBox = boundingBoxTiles(this.game, tile, range)
+      // Cheap pre-filter on the blast's rim, blastHitsFriendly checks the whole blast of the winner
+      const rim = circleTiles(this.game, tile, range)
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
-        .concat(boundingBoxTiles(this.game, tile, Math.floor(range / 2)));
-      for (const t of boundingBox) {
+        .concat(circleTiles(this.game, tile, Math.floor(range / 2)));
+      for (const t of rim) {
         if (!this.isValidNukeTile(t, nukeTarget)) {
           continue outer;
         }
@@ -302,7 +328,9 @@ export class NationNukeBehavior {
       // Above Easy, skip spots that are already being nuked or where the blast would be mostly wasted
       let coverage = 0;
       if (difficulty !== Difficulty.Easy) {
-        if (isNukeAlreadyLandingNear(this.game, tile, nukeType)) continue;
+        if (isNukeAlreadyLandingNear(this.game, incoming, tile, nukeType)) {
+          continue;
+        }
         coverage = enemyLandBlastCoverage(
           this.game,
           this.player,
@@ -338,66 +366,87 @@ export class NationNukeBehavior {
     const margin = strike ? STRIKE_BORDER_MARGIN : 0;
     const best = scored.find(
       ({ tile }) =>
-        !blastHitsFriendlyLand(this.game, this.player, tile, nukeType, margin),
+        !blastHitsFriendly(this.game, this.player, tile, nukeType, margin),
     );
     return best?.tile ?? null;
   }
 
-  /** Who to nuke, and whether it's a strike: a nuke that softens a player up for our attack. */
-  private chooseNukeTarget(): { target: Player; strike: boolean } | null {
-    const target = this.findBestNukeTarget();
-    if (target === null) return null;
+  /** Whether a nuke on target is a strike: one that softens it up for our attack. */
+  private isStrike(target: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
-    let strike: boolean;
     switch (difficulty) {
       case Difficulty.Easy:
-        strike = false;
-        break;
+        return false;
       case Difficulty.Medium:
-        strike = this.ourTroopsAttacking(target) > 0;
-        break;
+        return this.ourTroopsAttacking(target) > 0;
       case Difficulty.Hard:
       case Difficulty.Impossible:
-        strike = this.canStrike(target);
-        break;
+        return this.canStrike(target);
       default:
         assertNever(difficulty);
     }
-    return { target, strike };
+  }
+
+  /** In FFA our top pick; in Teams a few picks, players already bombarded heavily last. */
+  private nukeTargetsToTry(incoming: IncomingNuke[]): Player[] {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      const target = this.findBestNukeTarget();
+      return target === null ? [] : [target];
+    }
+    const loads = incomingNukeLoads(this.game, incoming);
+    const fresh: Player[] = [];
+    const bombarded: Player[] = [];
+    for (const target of this.nukeTargets()) {
+      if (
+        target.type() === PlayerType.Bot ||
+        this.player.isOnSameTeam(target) ||
+        fresh.includes(target) ||
+        bombarded.includes(target)
+      ) {
+        continue;
+      }
+      if ((loads.get(target) ?? 0) >= TEAM_NUKE_SATURATION) {
+        bombarded.push(target);
+      } else if (fresh.push(target) === MAX_TEAM_NUKE_TARGETS) {
+        break;
+      }
+    }
+    return fresh.concat(bombarded).slice(0, MAX_TEAM_NUKE_TARGETS);
   }
 
   findBestNukeTarget(): Player | null {
+    const first = this.nukeTargets().next();
+    return first.done ? null : first.value;
+  }
+
+  /** Who we'd nuke, most urgent first; a player may come up more than once. */
+  private *nukeTargets(): Generator<Player> {
+    const { difficulty, gameMode } = this.game.config().gameConfig();
     // On Hard & Impossible with only 2 players left, target the only other one
-    const { difficulty: diff } = this.game.config().gameConfig();
     if (
-      (diff === Difficulty.Hard || diff === Difficulty.Impossible) &&
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
       this.game.players().length === 2
     ) {
       const other = this.game.players().find((p) => p !== this.player);
       if (other) {
-        return other;
+        yield other;
+        return;
       }
     }
 
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.attackBehavior.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
-      return incomingAttackPlayer;
+      yield incomingAttackPlayer;
     }
 
-    const incomingNukePlayer = this.findIncomingNukePlayer();
-    if (incomingNukePlayer) {
-      return incomingNukePlayer;
-    }
+    yield* this.incomingNukeSenders();
 
     // In Teams, back up teammates in their fights before starting our own
-    const teammateFightTarget = this.findTeammateFightTarget();
-    if (teammateFightTarget) {
-      return teammateFightTarget;
-    }
+    yield* this.teamFightTargets();
 
     // On impossible difficulty, prioritize nuking the crown if they have more than 50% of the map
-    const { difficulty, gameMode } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Impossible && gameMode === GameMode.FFA) {
       const numTilesWithoutFallout =
         this.game.numLandTiles() - this.game.numTilesWithFallout();
@@ -411,7 +460,7 @@ export class NationNukeBehavior {
         if (crown && crown !== this.player && !this.player.isFriendly(crown)) {
           const crownShare = crown.numTilesOwned() / numTilesWithoutFallout;
           if (crownShare > CROWN_NEAR_WIN_SHARE) {
-            return crown;
+            yield crown;
           }
         }
       }
@@ -420,20 +469,20 @@ export class NationNukeBehavior {
     // Soften up a neighbor about as strong as us before attacking it
     const strikeTarget = this.findStrikeTarget();
     if (strikeTarget !== null) {
-      return strikeTarget;
+      yield strikeTarget;
     }
 
     // On Impossible, the richest nation hunts very high structure density targets
     // Restricting to the richest nation prevents every impossible nation
     // from piling onto the same compact player.
     if (
-      diff === Difficulty.Impossible &&
+      difficulty === Difficulty.Impossible &&
       this.isRichestNation() &&
       this.random.chance(2)
     ) {
       const denseTarget = this.findHighDensityTarget();
       if (denseTarget !== null) {
-        return denseTarget;
+        yield denseTarget;
       }
     }
 
@@ -446,7 +495,7 @@ export class NationNukeBehavior {
         if (target === this.player) continue;
         if (this.player.isFriendly(target)) continue;
         // Found a valid ally target to nuke
-        return target;
+        yield target;
       }
     }
 
@@ -461,22 +510,17 @@ export class NationNukeBehavior {
       const otherMaxTroops = this.game.config().maxTroops(other);
       if (myMaxTroops >= otherMaxTroops * 2) continue;
 
-      return other;
+      yield other;
     }
 
     // In FFAs, nuke the crown if they're far enough ahead
     const crownTarget = this.findFFACrownTarget();
     if (crownTarget) {
-      return crownTarget;
+      yield crownTarget;
     }
 
     // In Teams, nuke the strongest team
-    const teamTarget = this.findStrongestTeamTarget();
-    if (teamTarget) {
-      return teamTarget;
-    }
-
-    return null;
+    yield* this.strongestTeamTargets();
   }
 
   /** A player not much weaker than us: Medium one it's attacking, Hard & Impossible the strongest neighbor they can follow up on. */
@@ -605,7 +649,7 @@ export class NationNukeBehavior {
     return troops;
   }
 
-  private findIncomingNukePlayer(): Player | null {
+  private *incomingNukeSenders(): Generator<Player> {
     const nukes = this.game.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
     for (const nuke of nukes) {
       const sender = nuke.owner();
@@ -615,10 +659,9 @@ export class NationNukeBehavior {
         targetTile !== undefined &&
         this.game.owner(targetTile) === this.player
       ) {
-        return sender;
+        yield sender;
       }
     }
-    return null;
   }
 
   private isRichestNation(): boolean {
@@ -718,49 +761,40 @@ export class NationNukeBehavior {
     return null;
   }
 
-  /** Medium and up: the enemy attacking our teammates hardest, else the one they attack hardest. */
-  private findTeammateFightTarget(): Player | null {
+  /** Medium and up: enemies attacking our team, biggest attack first, then the ones our teammates attack. */
+  private teamFightTargets(): Player[] {
     const { difficulty, gameMode } = this.game.config().gameConfig();
     if (gameMode !== GameMode.Team || difficulty === Difficulty.Easy) {
-      return null;
+      return [];
     }
     const teammates = this.game
       .players()
       .filter((p) => p !== this.player && this.player.isOnSameTeam(p));
     const isEnemy = (p: Player | TerraNullius): p is Player =>
       p.isPlayer() && p.type() !== PlayerType.Bot && !this.player.isFriendly(p);
+    const biggestFirst = (attacks: Attack[]) =>
+      attacks
+        .filter((a) => a.troops() > 0)
+        .sort((a, b) => b.troops() - a.troops());
 
-    let best: Player | null = null;
-    let bestTroops = 0;
-    for (const mate of teammates) {
-      for (const attack of mate.incomingAttacks()) {
-        const attacker = attack.attacker();
-        if (isEnemy(attacker) && attack.troops() > bestTroops) {
-          best = attacker;
-          bestTroops = attack.troops();
-        }
-      }
-    }
-    if (best !== null) return best;
-    for (const mate of teammates) {
-      for (const attack of mate.outgoingAttacks()) {
-        const target = attack.target();
-        if (isEnemy(target) && attack.troops() > bestTroops) {
-          best = target;
-          bestTroops = attack.troops();
-        }
-      }
-    }
-    return best;
+    // Us too: findIncomingAttackPlayer only gives our biggest attacker
+    const attackers = biggestFirst(
+      [this.player, ...teammates].flatMap((p) => p.incomingAttacks()),
+    ).map((a) => a.attacker());
+    const targets = biggestFirst(
+      teammates.flatMap((p) => p.outgoingAttacks()),
+    ).map((a) => a.target());
+    return [...attackers, ...targets].filter(isEnemy);
   }
 
-  private findStrongestTeamTarget(): Player | null {
+  /** In Teams, players of the strongest other team: our pick, then the rest, the most built-up first. */
+  private *strongestTeamTargets(): Generator<Player> {
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
-      return null;
+      return;
     }
 
     if (this.game.players().length <= 1) {
-      return null;
+      return;
     }
 
     const teamTiles = new Map<string, number>();
@@ -768,7 +802,8 @@ export class NationNukeBehavior {
 
     for (const p of this.game.players()) {
       const team = p.team();
-      if (team === null) continue;
+      // Tribes form a team of their own, often the biggest early on
+      if (team === null || p.type() === PlayerType.Bot) continue;
 
       teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
       let players = teamPlayers.get(team);
@@ -784,7 +819,7 @@ export class NationNukeBehavior {
     );
 
     if (sortedTeams.length === 0) {
-      return null;
+      return;
     }
 
     let strongestTeam = sortedTeams[0][0];
@@ -792,7 +827,7 @@ export class NationNukeBehavior {
       if (sortedTeams.length > 1) {
         strongestTeam = sortedTeams[1][0];
       } else {
-        return null;
+        return;
       }
     }
 
@@ -804,28 +839,26 @@ export class NationNukeBehavior {
     );
 
     if (validTargets.length === 0) {
-      return null;
+      return;
     }
 
+    const byLevels = validTargets
+      .map((p) => ({ p, levels: structureLevels(p) }))
+      .sort((a, b) => b.levels - a.levels);
     // Hard & Impossible: one of the three players with the most structure levels
+    const mostStructures = byLevels
+      .filter(({ levels }) => levels > 0)
+      .slice(0, 3);
     const { difficulty } = this.game.config().gameConfig();
     if (
-      difficulty === Difficulty.Hard ||
-      difficulty === Difficulty.Impossible
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      mostStructures.length > 0
     ) {
-      const mostStructures = validTargets
-        .map((p) => ({ p, levels: structureLevels(p) }))
-        .filter(({ levels }) => levels > 0)
-        .sort((a, b) => b.levels - a.levels)
-        .slice(0, 3);
-      if (mostStructures.length > 0) {
-        return this.random.randElement(mostStructures).p;
-      }
-    }
-
-    if (this.random.chance(2)) {
+      yield this.random.randElement(mostStructures).p;
+    } else if (this.random.chance(2)) {
       // Strongest player
-      return validTargets.reduce((prev, current) =>
+      yield validTargets.reduce((prev, current) =>
         this.game.config().maxTroops(prev) >
         this.game.config().maxTroops(current)
           ? prev
@@ -833,8 +866,9 @@ export class NationNukeBehavior {
       );
     } else {
       // Random player
-      return this.random.randElement(validTargets);
+      yield this.random.randElement(validTargets);
     }
+    for (const { p } of byLevels) yield p;
   }
 
   // Each launch makes the next nuke of its type feel pricier, to save up for a MIRV and pace launches
@@ -977,16 +1011,20 @@ export class NationNukeBehavior {
 
     const owner = this.game.owner(t);
     if (owner === nukeTarget) return true;
-    // On Hard & Impossible, allow TerraNullius (hit small islands) and other players unless they are teammates or allies (even AFK ones)
-    if (
-      (difficulty === Difficulty.Hard ||
-        difficulty === Difficulty.Impossible) &&
-      (!owner.isPlayer() || !this.player.isFriendly(owner, true))
-    ) {
-      return true;
+    switch (difficulty) {
+      // Only the target's land (=> nuke away from the border) to reduce nuke usage
+      case Difficulty.Easy:
+        return false;
+      // Also TerraNullius (hit small players) and tribes
+      case Difficulty.Medium:
+        return !owner.isPlayer() || owner.type() === PlayerType.Bot;
+      // Also other players' land, teammates' included, but not ours or allies'
+      case Difficulty.Hard:
+      case Difficulty.Impossible:
+        return !owner.isPlayer() || !sparesLandOf(this.player, owner);
+      default:
+        assertNever(difficulty);
     }
-    // On Easy & Medium, only allow tiles owned by the target player (=> nuke away from the border) to reduce nuke usage
-    return false;
   }
 
   private nukeTileScore(
@@ -1116,7 +1154,10 @@ export class NationNukeBehavior {
   }
 
   // On Impossible, when no spot is worth a nuke, overwhelm one of the target's SAMs with atom bombs
-  private maybeDestroyEnemySam(nukeTarget: Player): void {
+  private maybeDestroyEnemySam(
+    nukeTarget: Player,
+    incoming: IncomingNuke[],
+  ): void {
     if (this.game.config().isUnitDisabled(UnitType.AtomBomb)) {
       return;
     }
@@ -1127,7 +1168,12 @@ export class NationNukeBehavior {
       return;
     }
 
-    const { salvo, failed } = planSamSalvo(this.game, this.player, nukeTarget);
+    const { salvo, failed } = planSamSalvo(
+      this.game,
+      this.player,
+      nukeTarget,
+      incoming,
+    );
     if (salvo !== null) {
       for (const waitTicks of salvo.waitTicks) {
         this.sendNuke(
@@ -1155,6 +1201,32 @@ export class NationNukeBehavior {
 
   private cost(type: UnitType): Gold {
     return this.game.unitInfo(type).cost(this.game, this.player);
+  }
+}
+
+/** Atom bombs' worth of incoming nukes on each player's land from players who aren't its friends. */
+function incomingNukeLoads(
+  game: Game,
+  incoming: IncomingNuke[],
+): Map<Player, number> {
+  const loads = new Map<Player, number>();
+  for (const nuke of incoming) {
+    const owner = game.owner(nuke.tile);
+    if (!owner.isPlayer() || owner.isFriendly(nuke.owner, true)) continue;
+    loads.set(owner, (loads.get(owner) ?? 0) + nukeLoad(nuke.type));
+  }
+  return loads;
+}
+
+/** How many atom bombs a nuke counts as; a MIRV alone saturates its target. */
+function nukeLoad(type: UnitType): number {
+  switch (type) {
+    case UnitType.HydrogenBomb:
+      return 2;
+    case UnitType.MIRV:
+      return TEAM_NUKE_SATURATION;
+    default:
+      return 1;
   }
 }
 

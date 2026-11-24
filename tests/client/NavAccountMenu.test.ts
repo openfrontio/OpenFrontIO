@@ -152,6 +152,24 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).toContain("subscription");
   });
 
+  it("offers the scenario editor only with its flare, and opens it", async () => {
+    fireUserMe(userMe());
+    await el.updateComplete;
+    await click(trigger());
+    expect(itemKeys()).not.toContain("scenario-editor");
+
+    fireUserMe({
+      user: { email: "player@example.com" },
+      player: { publicId: "p", flares: ["scenario_editor"] },
+    } as unknown as UserMeResponse);
+    await el.updateComplete;
+    expect(itemKeys()).toContain("scenario-editor");
+
+    await click(document.querySelector('[data-menu-item="scenario-editor"]')!);
+    expect(window.location.hash).toBe("#scenario-editor");
+    window.location.hash = "";
+  });
+
   it("copies the profile URL and toasts, and hides without a publicId", async () => {
     fireUserMe(userMe());
     await el.updateComplete;

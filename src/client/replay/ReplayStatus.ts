@@ -66,9 +66,7 @@ export class ReplayStatus extends LitElement {
           }
         </div>
       </div>
-      <div
-        class="absolute bottom-0 right-0 p-2 bg-gray-800/92 backdrop-blur-sm rounded-tl-lg"
-      >
+      <div class="absolute bottom-0 right-0 p-2 hud-panel rounded-tl-lg">
         ${exitButton()}
       </div>
     `;
