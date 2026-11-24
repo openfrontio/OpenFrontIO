@@ -93,6 +93,30 @@ export function readVersioned<S>(type: SnapshotType<S>, raw: unknown): S {
   return parsed.data;
 }
 
+// Tile count of the map a snapshot is being restored onto. Snapshots are
+// untrusted (shared scenarios), so every stored tile ref is checked against
+// it; outside a restore there is no map to check against.
+let restoreTileCount = Infinity;
+
+/** Runs `fn` with zTile/zTiles accepting only refs below `tileCount`. */
+export function withRestoreTileCount<T>(tileCount: number, fn: () => T): T {
+  const previous = restoreTileCount;
+  restoreTileCount = tileCount;
+  try {
+    return fn();
+  } finally {
+    restoreTileCount = previous;
+  }
+}
+
+function tilesOnMap(tiles: Uint32Array): boolean {
+  const n = restoreTileCount;
+  for (let i = 0; i < tiles.length; i++) {
+    if (tiles[i] >= n) return false;
+  }
+  return true;
+}
+
 // Shared field schemas.
 
 /** Integer that fits a snapshot varint. */
@@ -100,9 +124,24 @@ export const zInt = () => z.number().int();
 /** A number that may be fractional or non-finite (stored as float64). */
 export const zNum = () =>
   z.custom<number>((v) => typeof v === "number", "expected a number");
-export const zTile = () => z.number().int().nonnegative();
+/**
+ * A number that is never NaN or infinite, nor so large that adding two of
+ * them overflows to Infinity. For amounts the engine turns into bigints or
+ * divides troops by, where a non-finite one throws a tick later.
+ */
+export const zFinite = () =>
+  z.number().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER);
+export const zTile = () =>
+  z
+    .number()
+    .int()
+    .nonnegative()
+    .refine((t) => t < restoreTileCount, "tile is off the map");
 export const zTiles = () =>
-  z.custom<Uint32Array>((v) => v instanceof Uint32Array, "expected tiles");
+  z.custom<Uint32Array>(
+    (v) => v instanceof Uint32Array && tilesOnMap(v),
+    "expected tiles on the map",
+  );
 export const zBytes = () =>
   z.custom<Uint8Array>((v) => v instanceof Uint8Array, "expected bytes");
 export const zU16Array = () =>

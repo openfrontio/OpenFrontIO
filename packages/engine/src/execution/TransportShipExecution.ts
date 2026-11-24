@@ -8,8 +8,8 @@ import {
 import { renderTroops } from "@openfront/engine-lib/Format";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import {
+  zFinite,
   zInt,
-  zNum,
   zPlayerRef,
   zRef,
   zTile,
@@ -412,7 +412,7 @@ const TransportShipExecutionStateSchema = z.object({
   attacker: zPlayerRef(),
   // Unvalidated until init() checks it.
   ref: zInt(),
-  troops: zNum(),
+  troops: zFinite(),
 });
 type TransportShipExecutionState = z.infer<
   typeof TransportShipExecutionStateSchema
