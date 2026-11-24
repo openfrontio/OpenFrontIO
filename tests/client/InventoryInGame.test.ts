@@ -362,6 +362,29 @@ describe("Inventory In game tab", () => {
       ).toContain("bg-sky-600");
     });
 
+    it("a sign-out hides the old account's card tab while it checks", async () => {
+      await open("card");
+      expect(modal.querySelector("my-card-tab")).not.toBeNull();
+      let finishAuth!: (value: false) => void;
+      vi.mocked(userAuth).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishAuth = resolve;
+          }),
+      );
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: false }),
+      );
+      await modal.updateComplete;
+      // userAuth's round trip is still out: the loading state, not the old
+      // account's card.
+      expect(modal.querySelector("my-card-tab")).toBeNull();
+      expect(modal.querySelector("[data-inventory-skeleton]")).not.toBeNull();
+      finishAuth(false);
+      await settle(modal);
+      expect(modal.querySelector("my-card-tab")).toBeNull();
+    });
+
     it("a card save shows in a remade card tab even when the refresh failed", async () => {
       await open("card");
       cardSaved(modal.querySelector("my-card-tab")!);
