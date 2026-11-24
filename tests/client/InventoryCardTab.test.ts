@@ -156,6 +156,38 @@ afterEach(() => {
 });
 
 describe("<inventory-card-tab> owner layout and picker", () => {
+  it("a tab that has left the page never seeds the shared editor again", async () => {
+    // The Inventory remakes the tab around its one editor: an update still
+    // queued on the old tab when it leaves the page must not seed the
+    // editor with that tab's profile, or the two tabs seed it in turn
+    // forever.
+    const before = userMe(OWNER);
+    await render(before);
+    const old = tab;
+    old.remove();
+    const live = document.createElement(
+      "inventory-card-tab",
+    ) as InventoryCardTab;
+    const fresh = userMe(OWNER);
+    live.editor = editor;
+    live.userMe = fresh;
+    live.cosmetics = COSMETICS;
+    document.body.appendChild(live);
+    await live.updateComplete;
+    expect(editor.isSeededWith(fresh)).toBe(true);
+    // The old tab's queued update runs, off the page.
+    old.requestUpdate();
+    (old as unknown as { performUpdate(): void }).performUpdate();
+    const seededAfter = editor.isSeededWith(fresh);
+    // Cut any loop the update started before asserting, so a failure
+    // fails rather than hangs.
+    old.editor = null as never;
+    old.requestUpdate();
+    (old as unknown as { performUpdate(): void }).performUpdate();
+    live.remove();
+    expect(seededAfter).toBe(true);
+  });
+
   it("has a Background row and three tracker rows, no Taunt or Title slot", async () => {
     await render(userMe(OWNER));
     expect(q("[data-card-slot='background']")).not.toBeNull();
