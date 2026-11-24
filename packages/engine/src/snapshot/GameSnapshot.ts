@@ -420,6 +420,10 @@ function restoreGameOnMap(bytes: Uint8Array, deps: RestoreDeps): Game {
       if (!map.isLand(tile) || map.isImpassable(tile)) {
         throw new SnapshotError(`${p.id()} owns tile ${tile}, not land`);
       }
+      // conquer() clears fallout, and fallout is only set on unowned tiles.
+      if (map.hasFallout(tile)) {
+        throw new SnapshotError(`${p.id()} owns tile ${tile}, with fallout`);
+      }
       map.setOwnerID(tile, id);
     }
     for (const tile of p.borderTiles()) {

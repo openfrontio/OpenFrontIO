@@ -104,6 +104,7 @@ describe("hostile snapshots: core state", () => {
     conquerRect(game, a, 5, 5, 15, 15);
     conquerRect(game, b, 20, 5, 30, 15);
     a.buildUnit(UnitType.City, game.ref(8, 8), {});
+    a.buildUnit(UnitType.City, game.ref(12, 12), {});
     const g = game as GameImpl;
     g.createAllianceRequest(a, b)?.accept();
     g.createAllianceRequest(b, bot);
@@ -148,6 +149,23 @@ describe("hostile snapshots: core state", () => {
       f,
       (r) => (r.map.d.numLandTiles = 9_999),
       /land tile count/,
+    );
+    await expectRejected(
+      f,
+      (r) => {
+        const [t] = r.map.d.fallout as Uint32Array;
+        r.map.d.fallout = Uint32Array.of(t, t);
+        r.map.d.numTilesWithFallout = 2;
+      },
+      /fallout count/,
+    );
+  });
+
+  test("an owned tile with fallout", async () => {
+    await expectRejected(
+      f,
+      (r) => (r.players[0].d.tiles[0] = r.map.d.fallout[0]),
+      /with fallout/,
     );
   });
 
@@ -215,6 +233,22 @@ describe("hostile snapshots: core state", () => {
         r.players[0].d.units.push(1);
       },
       /share an id|the game does not/,
+    );
+    // Listed twice by its owner, so the owner's other unit is in no list.
+    await expectRejected(
+      f,
+      (r) => {
+        const units = r.players[0].d.units;
+        expect(units.length).toBe(2);
+        units[1] = units[0];
+      },
+      /listed twice/,
+    );
+    // The next unit built would take a live unit's id.
+    await expectRejected(
+      f,
+      (r) => (r.game.d.nextUnitID = 1),
+      /past next unit id/,
     );
   });
 
@@ -340,6 +374,31 @@ describe("hostile snapshots: water", () => {
     );
   });
 
+  test("water components merged into no component, or a negative size", async () => {
+    await expectRejected(
+      f,
+      (r) => {
+        const c = r.game.d.water.d.components;
+        expect(c.maxId).toBeGreaterThan(0);
+        c.parents[0] = c.maxId;
+      },
+      /water components are inconsistent/,
+    );
+    await expectRejected(
+      f,
+      (r) => {
+        const c = r.game.d.water.d.components;
+        c.parents[c.maxId] = 0;
+      },
+      /water components are inconsistent/,
+    );
+    await expectRejected(
+      f,
+      (r) => (r.game.d.water.d.components.componentSizes[1] = -1),
+      /water components are inconsistent/,
+    );
+  });
+
   test("water component labels past the last id", async () => {
     await expectRejected(
       f,
@@ -432,6 +491,12 @@ describe("hostile snapshots: executions", () => {
       (r) => (exec(r, "Attack").startTroops = Infinity),
       /invalid data/,
     );
+    // Finite, but two of them merged overflow to Infinity.
+    await expectRejected(
+      f,
+      (r) => (r.attacks[0].d.troops = 1e308),
+      /Attack v\d+: invalid data/,
+    );
   });
 
   test("a MIRV with a different warhead count or range", async () => {
@@ -475,6 +540,16 @@ describe("hostile snapshots: executions", () => {
       f,
       (r) => (exec(r, "MIRV").launch.pathFinder.options.increment = 0),
       /parabola increment/,
+    );
+    // next() would step the missing curve.
+    await expectRejected(
+      f,
+      (r) => {
+        const pf = exec(r, "MIRV").launch.pathFinder;
+        expect(pf.lastTo).not.toBeNull();
+        pf.curve = null;
+      },
+      /target but no curve/,
     );
   });
 

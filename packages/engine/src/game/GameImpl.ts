@@ -1912,7 +1912,12 @@ export class GameImpl implements Game {
     if (this._unitMap.size !== s.units.length) {
       throw new SnapshotError("two units share an id");
     }
-    let ownedUnits = 0;
+    for (const id of this._unitMap.keys()) {
+      if (id >= this._nextUnitID) {
+        throw new SnapshotError(`unit ${id} is past next unit id`);
+      }
+    }
+    const listed = new Set<Unit>();
     for (const p of players) {
       for (const u of p.units()) {
         if (u.owner() !== p || !u.isActive()) {
@@ -1921,10 +1926,13 @@ export class GameImpl implements Game {
         if (this._unitMap.get(u.id()) !== u) {
           throw new SnapshotError(`unit ${u.id()} is missing from the game`);
         }
-        ownedUnits++;
+        if (listed.has(u)) {
+          throw new SnapshotError(`unit ${u.id()} is listed twice`);
+        }
+        listed.add(u);
       }
     }
-    if (ownedUnits !== this._unitMap.size) {
+    if (listed.size !== this._unitMap.size) {
       throw new SnapshotError("the game's units differ from the players'");
     }
 

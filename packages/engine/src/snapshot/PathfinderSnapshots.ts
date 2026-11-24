@@ -228,7 +228,14 @@ function checkParabola(game: Game, s: ParabolaState): void {
   if (increment !== undefined && !(increment > 0 && increment < Infinity)) {
     throw new SnapshotError(`invalid parabola increment ${increment}`);
   }
-  if (s.curve === null) return;
+  // next() steps the curve whenever its target is lastTo; they are set and
+  // cleared together.
+  if (s.curve === null) {
+    if (s.lastTo !== null) {
+      throw new SnapshotError("parabola has a target but no curve");
+    }
+    return;
+  }
   const map = game.map();
   const [p0] = s.curve.points;
   if (s.lastTo === null || !map.isValidCoord(p0.x, p0.y)) {

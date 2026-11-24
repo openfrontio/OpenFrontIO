@@ -679,7 +679,10 @@ export class GameMapImpl implements GameMap {
         throw new SnapshotError("snapshot tile is off the map");
       }
     }
-    if (s.numTilesWithFallout !== s.fallout.length) {
+    if (
+      s.numTilesWithFallout !== s.fallout.length ||
+      new Set(s.fallout).size !== s.fallout.length
+    ) {
       throw new SnapshotError("fallout count differs from the fallout tiles");
     }
     // Every edit that changes passability moves the land count with it

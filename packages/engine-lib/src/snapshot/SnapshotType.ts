@@ -125,10 +125,12 @@ export const zInt = () => z.number().int();
 export const zNum = () =>
   z.custom<number>((v) => typeof v === "number", "expected a number");
 /**
- * A number that is never NaN or infinite. For amounts the engine turns into
- * bigints or divides troops by, where a non-finite one throws a tick later.
+ * A number that is never NaN or infinite, nor so large that adding two of
+ * them overflows to Infinity. For amounts the engine turns into bigints or
+ * divides troops by, where a non-finite one throws a tick later.
  */
-export const zFinite = () => z.number();
+export const zFinite = () =>
+  z.number().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER);
 export const zTile = () =>
   z
     .number()

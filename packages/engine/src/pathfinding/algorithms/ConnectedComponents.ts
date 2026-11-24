@@ -93,8 +93,18 @@ export class ConnectedComponents {
       s.maxId >= 0 &&
       s.maxId <= (wide ? LAND_MARKER_WIDE : 252) &&
       s.parents.length === s.maxId + 1 &&
-      // Stored as roots, so every parent is its own parent.
-      s.parents.every((p) => p >= 0 && p <= s.maxId && s.parents[p] === p) &&
+      // Stored as roots, so every parent is its own parent. 0 is no
+      // component: it is never merged into, nor merged.
+      s.parents.every(
+        (p, id) =>
+          p >= 0 &&
+          p <= s.maxId &&
+          s.parents[p] === p &&
+          (p === 0) === (id === 0),
+      ) &&
+      s.componentSizes.every(
+        (n) => n === undefined || (n >= 0 && n <= numTiles),
+      ) &&
       ids.every((id) => id <= s.maxId || id === s.landMarker);
     if (!valid) {
       throw new SnapshotError("water components are inconsistent");
