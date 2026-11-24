@@ -241,6 +241,9 @@ export interface GameConfigSettingsData {
 export class GameConfigSettings extends LitElement {
   @property({ attribute: false }) settings?: GameConfigSettingsData;
   @property({ attribute: false }) sectionGapClass = "space-y-6";
+  // Read-only settings (a publicly listed lobby). The Advanced toggle stays
+  // usable so the settings can still be viewed.
+  @property({ type: Boolean }) locked = false;
   @state() private mapSearchQuery = "";
   @state() private advancedExpanded = false;
 
@@ -465,147 +468,150 @@ export class GameConfigSettings extends LitElement {
   render() {
     if (!this.settings) return nothing;
     const settings = this.settings;
+    const lockedClass = `${this.sectionGapClass} ${this.locked ? "opacity-60" : ""}`;
 
     return html`
       <div class=${this.sectionGapClass}>
-        ${renderSection(
-          MAP_ICON,
-          "text-aquarius",
-          "bg-malibu-blue/20",
-          "map.map",
-          html`<map-picker
-            .selectedMap=${settings.map.selected}
-            .useRandomMap=${settings.map.useRandom}
-            .randomMapDivider=${settings.map.randomMapDivider ?? false}
-            .showMedals=${settings.map.showMedals ?? false}
-            .mapWins=${settings.map.mapWins ?? new Map()}
-            .onSelectMap=${this.handleSelectMap}
-            .onSelectRandom=${this.handleSelectRandom}
-            .searchQuery=${this.mapSearchQuery}
-          ></map-picker>`,
-          undefined,
-          this.renderMapSearchInput(),
-        )}
-        ${renderSection(
-          DIFFICULTY_ICON,
-          "text-green-400",
-          "bg-green-500/20",
-          "difficulty.difficulty",
-          html`
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              ${DIFFICULTY_OPTIONS.map(([key, value]) => {
-                const isSelected = settings.difficulty.selected === value;
-                const isDisabled = settings.difficulty.disabled;
-                return html`
-                  <div class="group/difficulty-card relative">
-                    <button
-                      ?disabled=${isDisabled}
-                      @click=${() =>
-                        !isDisabled &&
-                        this.handleDifficultySelect(value as Difficulty)}
-                      class="${
-                        isDisabled
-                          ? `${DISABLED_CARD} flex flex-col items-center p-4 gap-3 h-full`
-                          : cardClass(
-                              isSelected,
-                              "flex flex-col items-center p-4 gap-3 h-full",
-                            )
-                      }"
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                        class="transform scale-125 origin-center ${
-                          isDisabled ? "pointer-events-none" : ""
+        <div class=${lockedClass} ?inert=${this.locked}>
+          ${renderSection(
+            MAP_ICON,
+            "text-aquarius",
+            "bg-malibu-blue/20",
+            "map.map",
+            html`<map-picker
+              .selectedMap=${settings.map.selected}
+              .useRandomMap=${settings.map.useRandom}
+              .randomMapDivider=${settings.map.randomMapDivider ?? false}
+              .showMedals=${settings.map.showMedals ?? false}
+              .mapWins=${settings.map.mapWins ?? new Map()}
+              .onSelectMap=${this.handleSelectMap}
+              .onSelectRandom=${this.handleSelectRandom}
+              .searchQuery=${this.mapSearchQuery}
+            ></map-picker>`,
+            undefined,
+            this.renderMapSearchInput(),
+          )}
+          ${renderSection(
+            DIFFICULTY_ICON,
+            "text-green-400",
+            "bg-green-500/20",
+            "difficulty.difficulty",
+            html`
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                ${DIFFICULTY_OPTIONS.map(([key, value]) => {
+                  const isSelected = settings.difficulty.selected === value;
+                  const isDisabled = settings.difficulty.disabled;
+                  return html`
+                    <div class="group/difficulty-card relative">
+                      <button
+                        ?disabled=${isDisabled}
+                        @click=${() =>
+                          !isDisabled &&
+                          this.handleDifficultySelect(value as Difficulty)}
+                        class="${
+                          isDisabled
+                            ? `${DISABLED_CARD} flex flex-col items-center p-4 gap-3 h-full`
+                            : cardClass(
+                                isSelected,
+                                "flex flex-col items-center p-4 gap-3 h-full",
+                              )
                         }"
-                      ></difficulty-display>
-                      <span
-                        class="${CARD_LABEL_CLASS} text-center mt-1 text-white"
                       >
-                        ${translateText(`difficulty.${key.toLowerCase()}`)}
+                        <difficulty-display
+                          .difficultyKey=${key}
+                          class="transform scale-125 origin-center ${
+                            isDisabled ? "pointer-events-none" : ""
+                          }"
+                        ></difficulty-display>
+                        <span
+                          class="${CARD_LABEL_CLASS} text-center mt-1 text-white"
+                        >
+                          ${translateText(`difficulty.${key.toLowerCase()}`)}
+                        </span>
+                      </button>
+                      <difficulty-info
+                        .difficultyKey=${key}
+                        .disabled=${isDisabled}
+                      ></difficulty-info>
+                    </div>
+                  `;
+                })}
+              </div>
+            `,
+          )}
+          ${renderSection(
+            MODE_ICON,
+            "text-purple-400",
+            "bg-purple-500/20",
+            "host_modal.mode",
+            html`
+              <div class="grid grid-cols-2 gap-4">
+                ${[GameMode.FFA, GameMode.Team].map((mode) => {
+                  const isSelected = settings.gameMode.selected === mode;
+                  return html`
+                    <button
+                      class="${cardClass(isSelected, "py-6 text-center")}"
+                      @click=${() => this.handleGameModeSelect(mode)}
+                    >
+                      <span
+                        class="text-sm font-bold text-white uppercase tracking-widest"
+                      >
+                        ${
+                          mode === GameMode.FFA
+                            ? translateText("game_mode.ffa")
+                            : translateText("game_mode.teams")
+                        }
                       </span>
                     </button>
-                    <difficulty-info
-                      .difficultyKey=${key}
-                      .disabled=${isDisabled}
-                    ></difficulty-info>
-                  </div>
-                `;
-              })}
-            </div>
-          `,
-        )}
-        ${renderSection(
-          MODE_ICON,
-          "text-purple-400",
-          "bg-purple-500/20",
-          "host_modal.mode",
-          html`
-            <div class="grid grid-cols-2 gap-4">
-              ${[GameMode.FFA, GameMode.Team].map((mode) => {
-                const isSelected = settings.gameMode.selected === mode;
-                return html`
-                  <button
-                    class="${cardClass(isSelected, "py-6 text-center")}"
-                    @click=${() => this.handleGameModeSelect(mode)}
-                  >
-                    <span
-                      class="text-sm font-bold text-white uppercase tracking-widest"
+                  `;
+                })}
+              </div>
+            `,
+          )}
+          ${
+            settings.gameMode.selected === GameMode.FFA
+              ? nothing
+              : html`
+                  <section class="space-y-6">
+                    <div
+                      class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
                     >
-                      ${
-                        mode === GameMode.FFA
-                          ? translateText("game_mode.ffa")
-                          : translateText("game_mode.teams")
-                      }
-                    </span>
-                  </button>
-                `;
-              })}
-            </div>
-          `,
-        )}
-        ${
-          settings.gameMode.selected === GameMode.FFA
-            ? nothing
-            : html`
-                <section class="space-y-6">
-                  <div
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                  >
-                    ${translateText("host_modal.team_count")}
-                  </div>
-                  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    ${TEAM_COUNT_OPTIONS.map((o) => {
-                      const isSelected = settings.teamCount.selected === o;
-                      return html`
-                        <button
-                          class="${cardClass(
-                            isSelected,
-                            "px-4 py-3 text-center",
-                          )}"
-                          @click=${() => this.handleTeamCountSelect(o)}
-                        >
-                          <span class="${CARD_LABEL_CLASS} text-white">
-                            ${
-                              typeof o === "string"
-                                ? o === HumansVsNations
-                                  ? translateText("public_lobby.teams_hvn")
-                                  : translateText(`host_modal.teams_${o}`)
-                                : translateText("public_lobby.teams", {
-                                    num: o,
-                                  })
-                            }
-                          </span>
-                        </button>
-                      `;
-                    })}
-                  </div>
-                </section>
-              `
-        }
+                      ${translateText("host_modal.team_count")}
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      ${TEAM_COUNT_OPTIONS.map((o) => {
+                        const isSelected = settings.teamCount.selected === o;
+                        return html`
+                          <button
+                            class="${cardClass(
+                              isSelected,
+                              "px-4 py-3 text-center",
+                            )}"
+                            @click=${() => this.handleTeamCountSelect(o)}
+                          >
+                            <span class="${CARD_LABEL_CLASS} text-white">
+                              ${
+                                typeof o === "string"
+                                  ? o === HumansVsNations
+                                    ? translateText("public_lobby.teams_hvn")
+                                    : translateText(`host_modal.teams_${o}`)
+                                  : translateText("public_lobby.teams", {
+                                      num: o,
+                                    })
+                              }
+                            </span>
+                          </button>
+                        `;
+                      })}
+                    </div>
+                  </section>
+                `
+          }
+        </div>
         ${this.renderAdvancedToggle()}
         ${
           this.advancedExpanded
-            ? html`<div class=${this.sectionGapClass}>
+            ? html`<div class=${lockedClass} ?inert=${this.locked}>
                 ${renderSection(
                   OPTIONS_ICON,
                   "text-orange-400",

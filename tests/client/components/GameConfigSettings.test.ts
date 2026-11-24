@@ -60,4 +60,21 @@ describe("GameConfigSettings advanced settings", () => {
     await el.updateComplete;
     expect(el.textContent).not.toContain("game_settings.instant_build");
   });
+
+  it("keeps the toggle usable while the settings are locked", async () => {
+    el.locked = true;
+    await el.updateComplete;
+    const toggle = el.querySelector<HTMLButtonElement>(
+      "[data-advanced-settings-toggle]",
+    )!;
+    expect(toggle.closest("[inert]")).toBeNull();
+
+    toggle.click();
+    await el.updateComplete;
+    const option = [...el.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("game_settings.instant_build"),
+    )!;
+    expect(option.closest("[inert]")).not.toBeNull();
+    expect(el.querySelector("map-picker")!.closest("[inert]")).not.toBeNull();
+  });
 });

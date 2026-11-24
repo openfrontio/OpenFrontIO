@@ -699,8 +699,8 @@ export class HostLobbyModal extends BaseModal {
           <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
           <game-config-settings
-            class="block ${this.publiclyListed ? "opacity-60" : ""}"
-            ?inert=${this.publiclyListed}
+            class="block"
+            .locked=${this.publiclyListed}
             .sectionGapClass=${"space-y-10"}
             .settings=${{
               map: {
