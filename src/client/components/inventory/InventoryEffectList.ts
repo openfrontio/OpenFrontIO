@@ -115,6 +115,12 @@ export class InventoryEffectList extends LitElement {
           type="button"
           data-effect-row-change
           aria-expanded=${open ? "true" : "false"}
+          aria-label=${translateText(
+            open
+              ? "inventory.effect_close_slot"
+              : "inventory.effect_change_slot",
+            { slot: translateText(`inventory.effect_slot.${row.slot}`) },
+          )}
           class="min-h-11 min-w-24 rounded-lg border px-4 text-xs font-bold ${
             open
               ? "border-blue-400/70 bg-blue-500/15 text-white"

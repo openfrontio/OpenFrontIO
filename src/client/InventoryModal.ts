@@ -76,6 +76,7 @@ import {
   EFFECTS_KEY,
   FLAG_KEY,
   MAX_LOADOUTS,
+  normalizedFlagKey,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -136,7 +137,10 @@ function sameLoadout(a: CosmeticLoadout, b: CosmeticLoadout): boolean {
   const effectsB = Object.entries(b.effects).sort();
   return (
     a.pattern === b.pattern &&
-    a.flag === b.flag &&
+    // A loadout saved before the country: prefix holds a bare code that
+    // getFlag has since migrated in the live look.
+    (a.flag === null ? null : normalizedFlagKey(a.flag)) ===
+      (b.flag === null ? null : normalizedFlagKey(b.flag)) &&
     a.crown === b.crown &&
     JSON.stringify(effectsA) === JSON.stringify(effectsB)
   );
@@ -352,9 +356,20 @@ export class InventoryModal extends BaseModal {
     userMeResponse?: UserMeResponse | false,
   ): Promise<void> {
     const loadId = ++this.inventoryLoadId;
-    this.isLoading = true;
+    // A first load, or a sign-out (userMeResponse false), shows the loading
+    // state: the old account's items mustn't stay live while userAuth()
+    // checks. A refresh (the /users/@me a card save broadcasts) updates in
+    // place: the skeleton would unmount the Player card tab and lose its
+    // slot and Reset.
+    if (
+      this.cosmetics === null ||
+      this.ownershipState !== "loaded" ||
+      userMeResponse === false
+    ) {
+      this.isLoading = true;
+      this.ownershipState = "loading";
+    }
     this.loadFailed = false;
-    this.ownershipState = "loading";
     try {
       const [cosmetics] = await Promise.all([
         this.loadCatalog(),

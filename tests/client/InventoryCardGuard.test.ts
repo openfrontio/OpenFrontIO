@@ -12,7 +12,10 @@ import {
 } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import { userAuth } from "../../src/client/Auth";
-import { saveCardLoadout } from "../../src/client/CardLoadoutApi";
+import {
+  type CardLoadoutBody,
+  saveCardLoadout,
+} from "../../src/client/CardLoadoutApi";
 import {
   clearPendingPurchase,
   peekPendingPurchase,
@@ -224,6 +227,63 @@ describe("Inventory: unsaved card changes guard", () => {
   });
 
   /** Clicks the bar's Save card with the PUT held until `finish`. */
+  // What a save of openWithChange's change stores.
+  const STORED = {
+    background: "bg_pacific",
+    title: null,
+    taunt: null,
+    trackers: ["wins", "nukes_launched", "games_played"],
+  } as CardLoadoutBody;
+
+  it("a save's /users/@me refresh keeps the same card tab, still on Trackers", async () => {
+    vi.mocked(saveCardLoadout).mockResolvedValue({ ok: true, loadout: STORED });
+    await openWithChange();
+    const tab = q("inventory-card-tab");
+    const picker = q("[data-card-picker]")?.dataset.cardPicker;
+    expect(picker).toBe("tracker:2");
+    await click("[data-card-save]");
+    // The refresh the save broadcasts.
+    const fresh = owner();
+    fresh.player.card!.trackers = [
+      { stat: "wins", value: 312 },
+      { stat: "nukes_launched", value: 4880 },
+      { stat: "games_played", value: 900 },
+    ];
+    vi.mocked(getUserMe).mockResolvedValue(fresh);
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    // Mid-refresh too: no loading skeleton in its place.
+    await modal.updateComplete;
+    expect(q("inventory-card-tab")).toBe(tab);
+    await settle(modal);
+    expect(q("inventory-card-tab")).toBe(tab);
+    expect(q("[data-card-picker]")?.dataset.cardPicker).toBe("tracker:2");
+  });
+
+  it("a save whose refresh failed: a remade card tab and the next save start from what was stored", async () => {
+    vi.mocked(saveCardLoadout).mockResolvedValue({ ok: true, loadout: STORED });
+    await openWithChange();
+    await click("[data-card-save]");
+    // No userMeResponse: the refresh after the save failed, so the
+    // Inventory's profile still holds the card from before.
+    await click("[data-inventory-top-tab='ingame']");
+    await click("[data-inventory-top-tab='card']");
+    // The stored card, with no changes against it ("Saved" may still show).
+    expect(q("[data-card-change-count]")).toBeNull();
+    // best_elo into row 1. From the stored card it replaces wins; from the
+    // old one (best_elo in row 3) it would swap wins down there.
+    await click("[data-card-slot-row='tracker:0'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:best_elo'] [data-tile-main]");
+    await click("[data-card-save]");
+    expect(saveCardLoadout).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        trackers: ["best_elo", "nukes_launched", "games_played"],
+      }),
+      expect.any(Function),
+    );
+  });
+
   async function saveHeld() {
     let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
     vi.mocked(saveCardLoadout).mockReturnValueOnce(
