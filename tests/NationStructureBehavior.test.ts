@@ -1016,7 +1016,7 @@ describe("NationStructureBehavior.doHandleStructures — crowded-map exception",
     game.config = () => ({
       isUnitDisabled: () => false,
       gameConfig: () => ({ difficulty: Difficulty.Impossible }),
-      startingGold: () => 10_000_000n, // high starting gold
+      startingGold: () => 5_000_000n, // high starting gold
     });
     const behavior = makeBehavior(game, makeCrowdedPlayer());
     const spy = vi

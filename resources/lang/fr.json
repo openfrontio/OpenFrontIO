@@ -122,6 +122,8 @@
     "sub_status_canceled": "Résilié",
     "sub_status_canceling": "Résiliation",
     "sub_status_canceling_on": "Annulation le {date}",
+    "sub_status_expired": "Expiré",
+    "sub_status_grace": "Période de grâce",
     "sub_status_incomplete": "Incomplet",
     "sub_status_incomplete_expired": "Expiré",
     "sub_status_past_due": "Échéance passée",
@@ -172,7 +174,6 @@
     "title": "Paramètres de compte"
   },
   "ban_notice": {
-    "appeal": "Si vous pensez que ceci est une erreur, contactez-nous sur Discord en faisant un ticket.",
     "category": {
       "cheating": "Triche ou logiciel non autorisé",
       "child_safety": "Violation des règles de protection de l'enfance",
@@ -187,9 +188,10 @@
       "rank_manipulation": "Manipulation du classement",
       "teaming": "Alliance préméditée ou collusion"
     },
+    "title": "Votre compte est banni",
+    "appeal": "Si vous pensez que ceci est une erreur, contactez-nous sur Discord en faisant un ticket.",
     "permanent": "Ce bannissement est permanent.",
     "reason": "Raison : {reason}",
-    "title": "Votre compte est banni",
     "until": "Votre compte est banni jusqu'au {date}."
   },
   "build_menu": {
@@ -223,7 +225,9 @@
       "crown": "Attaque la couronne !",
       "finish": "Finissons [P1] !",
       "focus": "Concentre l'attaque sur [P1] !",
-      "mirv": "Lance une MIRV sur [P1] !"
+      "mirv": "Lance une MIRV sur [P1] !",
+      "nuke": "Atomise [P1] !",
+      "spend_gold": "Arrête de stocker ton or, utilise-le ou donne-le !"
     },
     "cat": {
       "attack": "Attaque",
@@ -231,6 +235,7 @@
       "greet": "Salutations",
       "help": "Aide",
       "misc": "Divers",
+      "recent": "Récent",
       "warnings": "Avertissements"
     },
     "defend": {
@@ -258,13 +263,17 @@
       "thanks": "Merci !",
       "trust_broken": "Je t'ai fait confiance...",
       "trust_me": "Tu peux me faire confiance. Promis !",
-      "well_played": "Bien joué !"
+      "well_played": "Bien joué !",
+      "what_doing": "Qu'est-ce que tu fais ?!",
+      "why_attack": "Pourquoi est-ce que tu m'attaques ?!"
     },
     "help": {
       "alliance": "Alliance ?",
+      "break_alliance": "Trahis pour que je puisse récupérer du terrain aussi !",
       "gold": "S'il te plaît, donne-moi de l'or !",
       "help_defend": "Aide-moi à me défendre contre [P1] !",
       "no_attack": "S'il te plaît, ne m'attaque pas !",
+      "renew_alliance": "Renouvelle notre alliance au plus vite s'il te plaît !",
       "send_gold_to": "Envoie de l'or à [P1] !",
       "send_troops_to": "Envoie des troupes à [P1] !",
       "sorry_attack": "Désolé, je ne voulais pas attaquer.",
@@ -273,6 +282,7 @@
       "troops_frontlines": "Envoyez des troupes sur la ligne de front !"
     },
     "misc": {
+      "alliances_end_together": "Nos alliances avec [P1] se terminent en même temps !",
       "build_closer": "Construis plus près pour avoir des trains !",
       "coastline": "Laisse-moi avoir accès à un littoral.",
       "fun": "Cette partie est amusante !",
@@ -282,16 +292,21 @@
       "strategy": "Bonne stratégie !",
       "team_up": "Faisons équipe contre [P1] !"
     },
+    "no_phrases": "Aucune phrase correspondante",
     "search": "Rechercher un joueur...",
+    "search_phrases": "Rechercher des phrases...",
     "short": {
       "greet": {
         "ruining_games": "En train de ruiner notre partie"
       },
       "help": {
+        "break_alliance": "Brise notre alliance, j'ai besoin de territoire !",
+        "renew_alliance": "Renouvelle notre alliance !",
         "sorry_attack": "Désolé d'avoir attaqué !",
         "troops_frontlines": "Des troupes au front !"
       },
       "misc": {
+        "alliances_end_together": "Nos alliances avec [P1] se terminent en même temps !",
         "coastline": "Laisse-moi accéder à de l'eau",
         "join_discord": "Rejoins le Discord !",
         "pr": "Quand est-ce que mes skins seront approuvés ?"
@@ -299,10 +314,12 @@
       "warnings": {
         "mirv_ready": "[P1] peut envoyer une MIRV maintenant !",
         "pirating": "[P1] est un pirate",
+        "renew_or_nuke": "Renouvelle ou je t'atomise !",
         "saving_for_mirv": "[P1] économise pour une MIRV",
         "snowballing": "[P1] est en train de nous rouler dessus",
         "stalemate": "Impasse. On fait la paix ?",
-        "stop_trading_all": "Arrête de commercer avec les ennemis !"
+        "stop_trading_enemies": "Arrête de commercer avec les ennemis !",
+        "stop_war": "Arrête avant que d'autres joueurs ne s'en mêlent"
       }
     },
     "title": "Discussion",
@@ -318,14 +335,17 @@
       "mirv_ready": "[P1] a assez d'or pour lancer une MIRV !",
       "mirv_soon": "[P1] peut bientôt lancer une MIRV !",
       "no_allies": "[P1] n'a pas d'alliés.",
+      "nuke_threat": "Arrête maintenant ou je vais te bombarder !",
       "pirating": "[P1] est en train de pirater toute notre éco !",
+      "renew_or_nuke": "Renouvelle l'alliance ou je t'atomise !",
       "saving_for_mirv": "[P1] économise pour lancer une MIRV.",
       "snowballing": "[P1] grandit beaucoup trop vite !",
       "stalemate": "Faisons la paix. C'est une impasse, nous perdrons tous les deux.",
       "stop_trading": "Arrête le commerce avec [P1] !",
+      "stop_trading_enemies": "S'il te plaît, arrête de commercer avec les ennemis !",
+      "stop_war": "Arrêtons cette guerre avant que quelqu'un d'autre n'en profite !",
       "strong": "[P1] est fort·e.",
-      "weak": "[P1] est faible.",
-      "stop_trading_all": "S'il te plaît, arrête de commercer avec les ennemis !"
+      "weak": "[P1] est faible."
     }
   },
   "clan_modal": {
@@ -419,6 +439,10 @@
     "error_request_pending": "Demande d'invitation déjà en attente d'une réponse",
     "failed_to_load_clan": "Échec du chargement du clan",
     "failed_to_load_requests": "Échec de chargement des demandes",
+    "filter_browse_all": "Tous les clans",
+    "filter_browse_invite_only": "Sur invitation",
+    "filter_browse_label": "Montrer",
+    "filter_browse_open": "Ouvert",
     "history_clan_members": "Membres du Clan",
     "history_clan_players": "Joueurs d'un clan",
     "history_clan_players_value": "{clanCount} / {total} total",
@@ -462,6 +486,7 @@
     "left_clan": "Vous avez quitté le clan.",
     "manage_clan": "Gérer",
     "map_frame_title": "Carte du territoire du clan",
+    "map_loading": "Chargement de la carte des clans…",
     "member_banned": "Joueur banni.",
     "member_count": "{count, plural, one {# membre} other {# membres}}",
     "member_demoted": "Membre rétrogradé.",
@@ -506,8 +531,11 @@
     "sort_1v1_wins": "Victoires en 1v1",
     "sort_browse_members": "Le plus de membres",
     "sort_browse_name": "A à Z",
+    "sort_browse_oldest": "Le plus ancien",
     "sort_browse_random": "Aléatoire",
-    "sort_browse_win_score": "Score de Victoire",
+    "sort_browse_richest": "Le plus riche",
+    "sort_browse_win_score": "Meilleur score de victoire",
+    "sort_browse_win_score_low": "Score de victoire le plus bas",
     "sort_by": "Trier par",
     "sort_default": "Rôle",
     "sort_elo_contributed": "ELO de Guerre de Clans",
@@ -534,13 +562,12 @@
     "status": "Statut",
     "tab_donations": "Dons",
     "tab_game_history": "Historique de jeu",
+    "tab_map_alpha": "Carte (ALPHA)",
     "tab_overview": "Vue globale",
     "title": "Clans",
     "transfer_leadership": "Transférer le commandement",
     "transfer_warning": "Cela donnera le commandement du clan au membre sélectionné. Vous deviendrez un membre ordinaire. Cette action ne peut pas être annulée.",
-    "unban": "Pardonner",
-    "map_coming_soon": "À venir",
-    "tab_map": "Carte"
+    "unban": "Pardonner"
   },
   "close_reason": {
     "account_lookup_failed": "Votre compte n'a pas pu être consulté. Merci de réessayer.",
@@ -607,6 +634,7 @@
     "not_logged_in": "Pas connecté·e",
     "paste": "Coller",
     "preset_max": "Max",
+    "scroll_to_top": "Haut de la page",
     "send": "Envoyer",
     "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Conserver",
@@ -624,6 +652,8 @@
   "cosmetics": {
     "adfree": "Sans publicités à vie !",
     "ai_label": "Fait avec l'aide de l'IA",
+    "ai_none_label": "Aucune IA utilisée",
+    "ai_unknown_label": "Utilisation de l'IA incertaine",
     "artist_label": "Artiste :",
     "color_label": "Couleur :",
     "common": "Commun",
@@ -731,6 +761,7 @@
   },
   "detailed_view": {
     "capacity": "Capacité",
+    "default_profile": "Profil par défaut",
     "delete_profile": "Supprimer",
     "filters": "Filtres",
     "filters_with_count": "Filtres ({count})",
@@ -745,6 +776,7 @@
     "mode_ffa": "Chacun pour soi",
     "mode_hvn": "Humains vs Nations",
     "mode_teams": "Équipes",
+    "no_default_profile": "Aucun profil par défaut",
     "no_lobbies": "Aucun salon ne correspond à vos filtres.",
     "no_profile": "Aucun profil",
     "pane_empty": "Aucun salon",
@@ -866,6 +898,7 @@
     "alliance_request_sent": "Demande d'alliance envoyée à {name}.",
     "alliance_request_status": "{name} {status} votre demande d'alliance",
     "atom_bomb_detonated": "{name} - Bombe atomique explosée",
+    "atom_bomb_inbound": "{name} - Bombe atomique imminente",
     "attack_cancelled_retreat": "Attaque annulée, {troops} soldats ont été tués pendant la retraite",
     "attack_request": "{name} vous demande d'attaquer {target}",
     "betrayal_debuff_ends": "{time} secondes restantes jusqu'à la fin du malus de trahison",
@@ -876,8 +909,11 @@
     "duration_seconds_plural": "{seconds} secondes",
     "focus": "Focaliser",
     "hydrogen_bomb_detonated": "{name} - Bombe hydrogène explosée",
+    "hydrogen_bomb_inbound": "{name} - Bombe hydrogène imminente",
     "ignore": "Ignorer",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV IMMINENTE ⚠️⚠️⚠️",
     "missile_intercepted": "Votre SAM a intercepté {unit}",
+    "naval_invasion_inbound": "Invasion navale de {name} ({troops})",
     "no_boats_available": "Aucun bateau disponible, max {max}",
     "received_gold_from_captured_ship": "{gold} d'or reçu pour la capture d'un bateau de {name}",
     "received_gold_from_conquest": "{name} éliminé, {gold} d'or reçu",
@@ -1002,7 +1038,8 @@
     "start": "Commencer la partie",
     "starting": "Lancement…",
     "starting_gold": "Or de départ (En millions)",
-    "water_nukes": "Bombes à eau"
+    "water_nukes": "Bombes à eau",
+    "win_threshold": "Seuil de victoire (%)"
   },
   "game_starting_modal": {
     "code_license": "Code sous licence AGPL-3.0 (sans garantie)",
@@ -1043,9 +1080,10 @@
     "cosmetics_nuke_trails_label": "Trainée des missiles",
     "cosmetics_railroads_desc": "Couleurs de rails personnalisées",
     "cosmetics_railroads_label": "Rails",
-    "cosmetics_show_from_desc": "Permet de définir quels cosmétiques sont affichés. Les vôtres sont toujours visibles.",
+    "cosmetics_show_from_desc": "Permet de définir quels cosmétiques sont affichés. Choisissez \"Personne\" pour cacher vos propres cosmétiques aussi, sans les déséquiper.",
     "cosmetics_show_from_everyone": "Tout le monde",
     "cosmetics_show_from_label": "Montrer les cosmétiques de",
+    "cosmetics_show_from_none": "Personne",
     "cosmetics_show_from_self": "Moi uniquement",
     "cosmetics_show_from_teammates": "Mon équipe",
     "cosmetics_structures_desc": "Couleurs personnalisées des structures",
@@ -1138,7 +1176,6 @@
     "territory_sat_label": "Saturation du territoire d'un joueur"
   },
   "heads_up_message": {
-    "catching_up": "Rattrapage...",
     "choose_spawn": "Choisissez un emplacement de départ",
     "choose_spawn_spectator": "Les joueurs choisissent leur emplacement de départ",
     "dont_show_again": "Ne plus montrer",
@@ -1147,7 +1184,8 @@
     "pvp_immunity_active": "Immunité des joueurs active pour {seconds}s",
     "random_spawn": "Le spawn aléatoire est activé. Sélection de l'emplacement de départ pour vous...",
     "random_spawn_spectator": "Apparition aléatoire activée",
-    "singleplayer_game_paused": "Jeu en pause"
+    "singleplayer_game_paused": "Jeu en pause",
+    "catching_up": "Rattrapage..."
   },
   "help_modal": {
     "action_attack_altclick": "Attaquer (quand le clic gauche est configuré pour ouvrir le menu)",
@@ -1330,19 +1368,6 @@
     "unequip_all": "Tout déséquiper",
     "unequipped_all": "Vous n'avez rien d'équipé"
   },
-  "ios_banner": {
-    "got_it": "J'ai compris",
-    "how": "Comment",
-    "later": "Plus tard",
-    "modal_desc": "Votre navigateur ne supporte pas le grand écran, mais vous pouvez ajouter OpenFront à votre écran d'accueil pour une meilleure expérience :",
-    "modal_title": "Grand écran sur iOS",
-    "never": "Jamais",
-    "step_add_to_home_label": "Ajouter à l'écran d'accueil",
-    "step_open": "Ouvrir depuis votre écran d'accueil — ouvre en grand écran sans la barre d'adresse",
-    "step_scroll_and_tap": "Défilez vers le bas et tapotez",
-    "step_share": "Tapotez le bouton \"Partager\" dans votre navigateur",
-    "text": "Pour le grand écran, ajouter OpenFront à votre écran d'accueil"
-  },
   "kick_reason": {
     "admin": "Expulsé par un admin",
     "duplicate_session": "Expulsé de la partie (vous jouiez peut-être dans un autre onglet)",
@@ -1468,11 +1493,13 @@
     "balkans": "Balkans",
     "balkhash": "Lac Balkhach",
     "baltics": "Terres Baltiques",
+    "benelux": "Benelux",
     "beringsea": "Mer de Béring",
     "beringstrait": "Détroit de Béring",
     "betweentwoseas": "Entre deux mers",
     "blacksea": "Mer Noire",
     "bosphorusstraits": "Détroits du Bosphore",
+    "brainrot": "Brain Rot",
     "branchingpaths": "Ramifications",
     "britannia": "Grande-Bretagne",
     "britanniaclassic": "Grande-Bretagne (Classique)",
@@ -1547,6 +1574,7 @@
     "northamerica": "Amérique du Nord",
     "northwestpassage": "Passage du Nord-Ouest",
     "oceania": "Océanie",
+    "ommatrypta": "Ommatrypta",
     "onion": "Oignon",
     "pangaea": "Pangée",
     "passage": "Passage",
@@ -1576,6 +1604,7 @@
     "tourney3": "Tournoi 4 Équipes",
     "tourney4": "Tournoi 8 Équipes",
     "tradersdream": "Le rêve d'un commerçant",
+    "tutorial": "Tutoriel",
     "twolakes": "Deux Lacs",
     "unitedstates": "États-Unis",
     "vancouverisland": "Île de Vancouver",
@@ -1618,7 +1647,10 @@
     "unfavorite": "Retirer des favoris"
   },
   "map_layers": {
-    "label": "libellé"
+    "eyeland": "Calque de carte : Ommatrypta (terrain)",
+    "eyewater": "Calque de carte : Ommatrypta (eau)",
+    "label": "libellé",
+    "brland": "Calque de carte : Brainrot "
   },
   "marketing_consent": {
     "body": "Recevoir les actualités et mises à jour par e-mail. Modifiez à tout moment depuis votre compte.",
@@ -1651,8 +1683,8 @@
     "title": "Matchmaking 1v1 Classé (ALPHA)",
     "title_2v2": "Matchmaking Classé 2v2 (ALPHA)",
     "title_clanwars": "Matchmaking de Guerre de Clans en Classé (ALPHA)",
-    "title_ffa": "Matchmaking Classé Chacun Pour Soi (ALPHA)",
-    "waiting_for_game": "En attente du début de la partie..."
+    "waiting_for_game": "En attente du début de la partie...",
+    "title_ffa": "Matchmaking Classé Chacun Pour Soi (ALPHA)"
   },
   "mode_selector": {
     "lobbies_unreachable": "Impossible d’accéder aux salons publics pour le moment",
@@ -1661,7 +1693,6 @@
     "ranked_2v2_title": "2v2",
     "ranked_clanwars_subtitle": "Votre clan contre d'autres",
     "ranked_clanwars_title": "Guerres de Clans",
-    "ranked_ffa_title": "Chacun pour soi",
     "ranked_pairing_note": "Dans les modes en équipe, les membres d’un même clan et les amis dans la liste de joueurs sont placés dans la même équipe lorsque c’est possible. Les amis sont regroupés en priorité, puis les membres du clan. Si vos ELOs sont trop éloignées, vous serez placés séparément afin de préserver l’équilibre des parties. En Chacun pour soi, 4 à 10 joueurs sont regroupés par ELOs, les amis et membres du clan ne sont jamais placés dans la même partie. Dans les Guerres de Clans, chaque équipe est un clan : vous jouez avec les membres du clan auquel vous adhérez, et la cote du clan monte ou baisse en fonction du résultat.",
     "ranked_title": "Classés",
     "ranked_trust_required_body": "Les parties Classées sont uniquement accessibles aux comptes fiables. Pour acquérir ce statut, jouez plus de parties ou effectuez un achat.",
@@ -1675,7 +1706,8 @@
     "teams_count": "{teamCount} équipes",
     "teams_of": " {teamCount} équipes de {playersPerTeam}",
     "teams_preset": "{preset} ({teams})",
-    "teams_title": "Équipes"
+    "teams_title": "Équipes",
+    "ranked_ffa_title": "Chacun pour soi"
   },
   "multi_tab": {
     "detected": "Plusieurs onglets de jeu ouverts détectés.",
@@ -1713,6 +1745,38 @@
     "tournament": "TOURNOI",
     "tutorial": "TUTORIEL",
     "warning": "AVERTISSEMENT"
+  },
+  "onboarding": {
+    "got_it": "J'ai compris",
+    "intro_body": "OpenFront est un jeu stratégique où l'objectif est de faire grossir votre territoire et de conquérir vos voisins pour prendre le contrôle de la carte.",
+    "intro_start": "Commencer",
+    "intro_title": "Bienvenue sur OpenFront",
+    "low_troops": "Attendez que vos troupes se régénèrent avant d'attaquer à nouveau.",
+    "low_troops_title": "Vous avez très peu de troupes !",
+    "main_menu": "Menu principal",
+    "play_solo": "Jouer une partie en solo",
+    "step": {
+      "coast": "Continuez à cliquer sur le terrain vide jusqu'à ce que votre territoire atteigne de l'eau.",
+      "coast_touch": "Continuez à tapoter sur le terrain vide jusqu'à ce que votre territoire atteigne de l'eau.",
+      "expand": "Ceci est votre territoire. Cliquez sur les terres adjacentes pour vous étendre.",
+      "expand_touch": "Ceci est votre territoire. Tapotez sur les terres adjacentes pour vous étendre.",
+      "spawn": "Cliquez à l'intérieur du cercle lumineux pour choisir où vous commencez.",
+      "spawn_touch": "Tapotez à l'intérieur du cercle lumineux pour choisir où vous commencez.",
+      "troops": "Cette barre est votre armée. Elle se régénère plus vite lorsqu'elle est environ à moitié pleine, donc n'attendez pas qu'elle se remplisse.",
+      "wrong_target": "Pas ici. Cliquez là où la flèche pointe.",
+      "wrong_target_touch": "Pas là. Tapotez là où la flèche pointe.",
+      "boat": "Les bateaux transportent vos troupes par l'eau. Passez votre souris au-dessus d'une île et pressez \"B\" pour y envoyer un bateau.",
+      "boat_touch": "Les bateaux transportent vos troupes par l'eau. Tapotez sur l'île pour y envoyer un bateau.",
+      "nation": "Et enfin : Red Empire. Survolez sa côte avec votre souris puis envoyez un bateau en pressant \"B\" pour causer sa chute.",
+      "nation_land": "Maintenant, cliquez sur son territoire, et continuez jusqu'à votre victoire.",
+      "nation_land_touch": "Maintenant, tapotez sur son territoire, et continuez jusqu'à votre victoire.",
+      "nation_touch": "Et enfin : Red Empire. Tapotez sur sa côte puis y envoyer un bateau et causer sa chute.",
+      "tribe": "C'est une tribu. Cliquez sur son territoire pour l'attaquer, continuez jusqu'à ce que celui-ci disparaisse.",
+      "tribe_touch": "C'est une tribu. Tapotez sur son territoire pour l'attaquer, continuez jusqu'à ce que celui-ci disparaisse."
+    },
+    "step_counter": "Étape {current} sur {total}",
+    "won_body": "Vous connaissez les bases. Maintenant, lancez une vraie partie : un guide vous montrera les bâtiments, les alliances, les bombes atomiques et plus encore.",
+    "won_title": "Vous avez gagné !"
   },
   "overtime": {
     "first_place": "1er : {name} ({pct} %)",
@@ -1772,14 +1836,14 @@
     "send_gold": "Envoyer de l'or",
     "send_troops": "Envoyer des troupes",
     "start_trade": "Commencer le commerce",
+    "start_trade_enemies": "Commencer le commerce avec les ennemis",
     "stop_trade": "Arrêter le commerce",
+    "stop_trade_enemies": "Arrêter le commerce avec les ennemis",
     "stopped": "Arrêté",
     "target": "Cibler",
     "trading": "Commerce",
     "traitor": "Traître",
-    "troops": "Troupes",
-    "start_trade_all": "Commencer le commerce avec tout le monde",
-    "stop_trade_all": "Arrêter le commerce avec les ennemis"
+    "troops": "Troupes"
   },
   "player_profile": {
     "current_run": "Run en cours",
@@ -1992,6 +2056,8 @@
     "reconcile_other": "Le chiffre final diffère du chiffre provisoire.",
     "reconcile_reconnect": "Un adversaire déconnecté est revenu dans la partie, il ne compte donc pas comme dépassé.",
     "reconcile_team_win": "Votre équipe a gagné, le bonus de victoire a été ajouté.",
+    "reconcile_win": "Vous avez gagné : le bonus de victoire a été ajouté.",
+    "reconcile_win_removed": "Le serveur a trouvé un autre gagnant, donc le bonus de victoire a été retiré.",
     "rewards_balance": "Trésor {caps} Caps · {plutonium} Plutonium",
     "rewards_balance_caps": "Trésor {caps}",
     "rewards_claimed": "Récupéré",
@@ -2115,6 +2181,10 @@
     "unverified": "L'enregistrement de cette partie n'a pas de vérifications, ce replay pourrait donc ne pas être authentique.",
     "watch_classic": "Regardez le replay classique à la place"
   },
+  "report_thanks": {
+    "body": "Un joueur que vous avez signalé récemment a été banni,  merci de contribuer à faire d'OpenFront un jeu plus agréable !",
+    "heading": "Merci"
+  },
   "reward_track": {
     "after_level": "Après le niveau {level}",
     "caps_amount": "{amount} Capsules",
@@ -2124,6 +2194,7 @@
     "earlier": "Niveaux précédents",
     "key_claimed": "Récupéré",
     "key_locked": "Bloqué",
+    "key_pending": "En attente",
     "key_ready": "Prêt à être récupéré",
     "later": "Prochains niveaux",
     "legend_reward": "Récompense de Légende",
@@ -2144,6 +2215,49 @@
   },
   "rewards_modal": {
     "title": "Récompenses"
+  },
+  "saved_games": {
+    "code_placeholder": "Collez un lien ou un ID de partie",
+    "copy_link": "Copier le lien",
+    "delete": "Supprimer",
+    "delete_confirm": "Supprimer \"{name}\" ? Cette action est irréversible.",
+    "empty": "Aucune partie sauvegardée pour le moment. Sauvegardez-en une depuis le menu en jeu.",
+    "error": {
+      "code_invalid": "Ceci n'est pas lien ni un ID de partie.",
+      "copy_failed": "Impossible de copier le lien.",
+      "download_failed": "Impossible de télécharger la partie sauvegardée. Merci de réessayer.",
+      "list_failed": "Impossible de charger vos parties sauvegardées.",
+      "load_failed": "Impossible de lancer la partie sauvegardée.",
+      "name_invalid": "Ce nom n'est pas autorisé.",
+      "name_not_shareable": "Ce nom ne peut pas être montré sur une partie partagée. Commencez par renommer.",
+      "not_found": "Cette partie sauvegardée n'existe plus.",
+      "not_singleplayer": "Seules les parties solo peuvent être chargées.",
+      "request_failed": "Une erreur est survenue. Réessayez.",
+      "shared_not_found": "Cette partie partagée n'est pas accessible. Elle a peut-être été supprimée ou rendue privée.",
+      "unreadable": "Cette partie sauvegardée ne peux pas être chargée par cette version du jeu."
+    },
+    "link_copied": "Lien copié",
+    "loading": "Chargement...",
+    "open": "Ouvrir",
+    "play": "Lecture",
+    "rename": "Renommer",
+    "rename_save": "Sauvegarder",
+    "save_desc": "Sauvegardez cette partie sur votre compte afin de la continuer plus tard",
+    "save_label": "Sauvegarder la partie",
+    "save_status": {
+      "limit": "Vous avez atteint la limite de parties sauvegardées. Supprimez-en d'abord une depuis le menu Solo.",
+      "not_found": "Impossible de sauvegarder la partie. Merci de réessayer.",
+      "rejected": "Cette partie n'a pas pu être sauvegardée.",
+      "request_failed": "Impossible de sauvegarder la partie. Merci de réessayer.",
+      "saved": "Sauvegardée. Retrouvez votre partie dans le menu Solo.",
+      "saving": "Sauvegarde...",
+      "unauthorized": "Connectez-vous pour sauvegarder des parties."
+    },
+    "share": "Partager",
+    "shared_badge": "Partagé",
+    "shared_title": "Partie partagée",
+    "title": "Parties sauvegardées",
+    "unshare": "Ne plus partager"
   },
   "select_lang": {
     "title": "Sélectionner une langue"
@@ -2261,7 +2375,7 @@
     "confirm_downgrade": "Rétrograder vers {tier}? Vous obtiendrez un crédit pour la portion inutilisée de votre abonnement actuel.",
     "confirm_purchase_body": "Acheter {item} pour {amount, number} {currency} ?",
     "confirm_purchase_title": "Confirmer l'achat",
-    "confirm_subscribe_over_grant": "Souscrire maintenant à l’abonnement de grade {tier} ? Votre accès gratuit prendra fin immédiatement ; {days, plural, one {le jour restant ne sera ni remboursé ni ajouté} other {les # jours restants ne seront ni remboursés ni ajoutés}} à la durée de votre abonnement payant.",
+    "confirm_subscribe_over_grant_carried": "Débuter un abonnement de grade {tier} ? Vous serez facturé aujourd'hui et le(s) {days, plural, one {# jour gratuit} other {# jours gratuits}} qui reste(ent) {days, plural, one {est} other {sont}} ajouté(s) à la fin de cette période : votre prochain paiement recule du même montant.",
     "confirm_subscribe_over_grant_no_days": "Souscrire maintenant à l’abonnement de grade {tier} ? Votre accès gratuit prendra fin immédiatement et la durée restante ne sera ni remboursée ni ajoutée à votre abonnement payant.",
     "confirm_tier_change_steam": "Prendre un abonnement de grade {tier} maintenant ? Votre nouveau grade commencera immédiatement à plein prix et le reste de votre mois en cours ne sera pas remboursé.",
     "confirm_upgrade": "Promouvoir à {tier} ? Vous serez maintenant débité de la différence au prorata.",
@@ -2309,6 +2423,7 @@
     "purchase_pending": "Votre achat est toujours en cours de traitement. Il apparaîtra sur votre compte sous peu — vérifiez votre historique d'achats si ce n'est pas le cas.",
     "purchase_success": "Achat réussit : {name}",
     "purchase_tribe_button": "Acheter",
+    "steam_browser_approval": "Steam a ouvert l'achat sur votre navigateur. Allez-y pour l'approuver, puis revenez ici. Il s'affichera lorsque Steam l'aura confirmé.",
     "steam_licence_required": "Cet abonnement est réservé aux joueurs qui possèdent OpenFront sur Steam.",
     "steam_overlay_cancelled": "Achat annulé. Vous n'avez pas été facturé.",
     "steam_overlay_waiting": "Confirmez l’achat dans l’interface Steam pour continuer.",
@@ -2355,7 +2470,8 @@
     "tribes_login_required": "Connectez-vous pour acheter et gérer des noms de tribu.",
     "tribes_purchase_description": "Votre nom est attribué à une tribu contrôlée par un bot dans de vraies parties multijoueur. Il apparaît immédiatement en jeu.",
     "tribes_purchase_heading": "Acheter un nom de tribu",
-    "your_tribes_heading": "Vos noms de tribu"
+    "your_tribes_heading": "Vos noms de tribu",
+    "confirm_subscribe_over_grant": "Souscrire maintenant à l’abonnement de grade {tier} ? Votre accès gratuit prendra fin immédiatement ; {days, plural, one {le jour restant ne sera ni remboursé ni ajouté} other {les # jours restants ne seront ni remboursés ni ajoutés}} à la durée de votre abonnement payant."
   },
   "streaming_now": {
     "live_count": "{count} en direct",
@@ -2535,28 +2651,20 @@
     "break_alliance": "Briser une Alliance (Trahir)",
     "break_alliance_desc": "Brise l'alliance avec le joueur en dessous de votre curseur.",
     "build_atom_bomb": "Envoyer une bombe atomique",
-    "build_atom_bomb_desc": "Envoyer une bombe atomique sous votre curseur.",
     "build_city": "Construire une ville",
-    "build_city_desc": "Construire une ville sous votre curseur.",
     "build_controls": "Contrôles des constructions",
     "build_defense_post": "Construire un poste de défense",
-    "build_defense_post_desc": "Construire un poste de défense sous votre curseur.",
     "build_factory": "Construire une usine",
-    "build_factory_desc": "Construire une ville sous votre curseur.",
     "build_hydrogen_bomb": "Envoyer une bombe à hydrogène",
-    "build_hydrogen_bomb_desc": "Envoyer une bombe à hydrogène sous votre curseur.",
     "build_menu_modifier": "Menu de modification des constructions",
     "build_menu_modifier_desc": "Maintenez cette touche enfoncée en cliquant pour ouvrir le menu de construction.",
     "build_mirv": "Envoyer une MIRV",
-    "build_mirv_desc": "Envoyer une MIRV sous votre curseur.",
     "build_missile_silo": "Construire un silo à missile",
-    "build_missile_silo_desc": "Construire un silo à missile sous votre curseur.",
     "build_port": "Construire un port",
-    "build_port_desc": "Construire un port sous votre curseur.",
     "build_sam_launcher": "Construire un lanceur SAM",
-    "build_sam_launcher_desc": "Construire un lanceur SAM sous votre curseur.",
+    "build_scroll_modifier": "Choix de la quantité de bâtiments avec la molette de la souris",
+    "build_scroll_modifier_desc": "Maintenez cette touche enfoncée et faites défiler avec la roulette de votre souris pour changer la quantité d'unités à produire.",
     "build_warship": "Construire un navire de guerre",
-    "build_warship_desc": "Construire un navire de guerre sous votre curseur.",
     "camera_movement": "Mouvement de la caméra",
     "center_camera": "Centrer la caméra",
     "center_camera_desc": "Centrer la caméra sur le joueur",
@@ -2603,11 +2711,16 @@
     "graphics_refresh_modifier_desc": "Maintenez cette touche ainsi que {key} enfoncées pour actualiser les graphismes",
     "ground_attack": "Attaque au sol",
     "ground_attack_desc": "Envoyez une attaque au joueur dont le pixel est sous votre curseur.",
+    "halloween_theme_desc": "Affiche le thème Halloween sur la page d'accueil.",
+    "halloween_theme_label": "Thème Halloween",
     "help_messages_desc": "Afficher des conseils et des avertissements contextuels pendant la partie, tels que des avertissements sur la limite de troupes et des conseils généraux de jeu.",
     "help_messages_label": "Messages d'aide",
     "highlight_glow_strength_label": "Force de la surbrillance",
     "highlight_small_players_desc": "Mettre les joueurs les plus petits en surbrillance pour les rendre plus visibles.",
+    "hud_opacity_desc": "Ajuster l'arrière-plan des panneaux sans affecter les textes et icônes. 100% signifie garder l'apparence d'origine.",
+    "hud_opacity_label": "Opacité de l'arrière-plan du HUD",
     "keybind_conflict_error": "La touche {key} est déjà liée à une autre action.",
+    "keybind_shift_prefix": "Maj+",
     "keybinds_hint": "Cliquez sur une touche pour la redéfinir. Vous pouvez assigner une seule touche ou Maj + la combinaison de touches.",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
     "left_click_label": "Clic gauche pour ouvrir le menu",
@@ -2615,7 +2728,10 @@
     "lobby_id_visibility_label": "ID du salon masqué",
     "lobby_start_alerts_desc": "Activer l'avertissement sonore pour chaque salon/partie classée par défaut, et afficher une notification de bureau si autorisé. Vous pouvez passer outre ce paramètre en cliquant sur la cloche du salon.",
     "lobby_start_alerts_label": "Alerte de lancement de la partie",
+    "map_layers_desc": "Permet d'afficher les calques qui ajoutent des visuels sur certaines cartes. Désactivez ce paramètre pour les cacher sur toutes les cartes.",
+    "map_layers_label": "Couches de la carte",
     "menu_shortcuts": "Menu des raccourcis ",
+    "modifiers": "Modificateurs",
     "move_down": "Caméra Bas",
     "move_down_desc": "Déplacer la caméra vers le bas",
     "move_left": "Caméra Gauche",
@@ -2636,6 +2752,8 @@
     "performance_overlay_desc": "Activer/désactiver la surcouche de performances. Lorsqu'elle est activée, la surcouche de performances sera affichée. Appuyez sur Maj+D pendant le jeu pour l\"activer.",
     "performance_overlay_label": "Surcouche de performances",
     "press_a_key": "Appuyez sur une touche",
+    "prevent_stacking": "Empêcher l'amélioration des bâtiments",
+    "prevent_stacking_desc": "Maintenez pour construire une nouvelle structure au lieu d'en améliorer une autre aux alentours. Les restrictions de placement normales s'appliquent.",
     "quick_chat": "Tchat rapide",
     "quick_chat_desc": "Ouvre le menu des messages à envoyer au joueur en dessous de votre curseur.",
     "render_debug_gui": "Réglage du moteur de rendu",
@@ -2650,6 +2768,8 @@
     "retaliate_attack_desc": "Envoyez une riposte pour amortir/contrer la puissance de l'attaque la plus récente. Uniquement disponible lorsque quelqu'un vous attaque.",
     "select_all_warships": "Sélectionne tous vos navires de guerre",
     "select_all_warships_desc": "Sélectionne tous vos vaisseaux de guerre sur la carte.",
+    "snap_build_preview_desc": "Déplace l'aperçu de construction vers le pixel sur lequel la structure sera réellement construite",
+    "snap_build_preview_label": "Aperçu de construction auto",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "special_effects_label": "Effets spéciaux",
     "steam_lobby_links_desc": "Ouvre les liens de salons dans Steam plutôt que dans ce navigateur",
@@ -2674,7 +2794,17 @@
     "zoom_in": "Zoom avant",
     "zoom_in_desc": "Zoom sur la carte",
     "zoom_out": "Zoom arrière",
-    "zoom_out_desc": "Dézoom de la carte"
+    "zoom_out_desc": "Dézoom de la carte",
+    "build_atom_bomb_desc": "Envoyer une bombe atomique sous votre curseur.",
+    "build_city_desc": "Construire une ville sous votre curseur.",
+    "build_defense_post_desc": "Construire un poste de défense sous votre curseur.",
+    "build_factory_desc": "Construire une ville sous votre curseur.",
+    "build_hydrogen_bomb_desc": "Envoyer une bombe à hydrogène sous votre curseur.",
+    "build_mirv_desc": "Envoyer une MIRV sous votre curseur.",
+    "build_missile_silo_desc": "Construire un silo à missile sous votre curseur.",
+    "build_port_desc": "Construire un port sous votre curseur.",
+    "build_sam_launcher_desc": "Construire un lanceur SAM sous votre curseur.",
+    "build_warship_desc": "Construire un navire de guerre sous votre curseur."
   },
   "username": {
     "account_invalid_chars": "Les pseudonymes peuvent uniquement contenir des lettres, chiffres, tirets et espaces.",
@@ -2727,11 +2857,25 @@
     "other_team": "L'équipe {team} a gagné !",
     "other_won": "{player} a gagné !",
     "requeue": "Rejouer",
+    "share": "Partager",
     "spectate": "Regarder",
     "support_openfront": "Soutenir OpenFront!",
     "territory_pattern": "Achetez une décoration de territoire pour retirer les publicités !",
     "you_won": "Vous avez gagné !",
     "your_team": "Votre équipe a gagné !",
     "youtube_tutorial": "Besoin d'aide ?"
+  },
+  "ios_banner": {
+    "got_it": "J'ai compris",
+    "how": "Comment",
+    "later": "Plus tard",
+    "modal_desc": "Votre navigateur ne supporte pas le grand écran, mais vous pouvez ajouter OpenFront à votre écran d'accueil pour une meilleure expérience :",
+    "modal_title": "Grand écran sur iOS",
+    "never": "Jamais",
+    "step_add_to_home_label": "Ajouter à l'écran d'accueil",
+    "step_open": "Ouvrir depuis votre écran d'accueil — ouvre en grand écran sans la barre d'adresse",
+    "step_scroll_and_tap": "Défilez vers le bas et tapotez",
+    "step_share": "Tapotez le bouton \"Partager\" dans votre navigateur",
+    "text": "Pour le grand écran, ajouter OpenFront à votre écran d'accueil"
   }
 }

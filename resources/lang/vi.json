@@ -42,7 +42,7 @@
     "games_type_private": "Riêng tư",
     "games_type_public": "Công khai",
     "games_type_singleplayer": "Chơi đơn",
-    "get_magic_link": "Nhận link đăng nhập",
+    "get_magic_link": "Nhận liên kết đăng nhập",
     "google_alt": "Google",
     "identity_token_copied": "Đã sao chép",
     "identity_token_copy": "Sao chép",
@@ -108,7 +108,7 @@
     "reward_monthly_bonus": "Phần thưởng đăng ký hàng tháng",
     "reward_prestige": "Phần thưởng tiến trình",
     "reward_signup_bonus": "Phần thưởng khi đăng ký gói",
-    "search_visibility_desc": "Trang hồ sơ công khai của bạn có thể xuất hiện trên Google và các kết quả tìm kiếm khác. Tắt tùy chọn này để giữ trang khỏi kết quả tìm kiếm; các công cụ tìm kiếm có thể mất một thời gian để loại bỏ một trang đã được lập chỉ mục. Bất kỳ ai có đường link vẫn có thể mở trang.",
+    "search_visibility_desc": "Trang hồ sơ công khai của bạn có thể xuất hiện trên Google và các kết quả tìm kiếm khác. Tắt tùy chọn này để giữ trang khỏi kết quả tìm kiếm; các công cụ tìm kiếm có thể mất một thời gian để loại bỏ một trang đã được lập chỉ mục. Bất kỳ ai có đường liên kết vẫn có thể mở trang.",
     "search_visibility_failed": "Không thể cập nhật cài đặt tìm kiếm của bạn. Vui lòng thử lại.",
     "search_visibility_title": "Hiển thị hồ sơ của tôi trên công cụ tìm kiếm",
     "sign_in_desc": "Đăng nhập để lưu lại thống kê và tiến độ của bạn",
@@ -122,6 +122,8 @@
     "sub_status_canceled": "Đã hủy",
     "sub_status_canceling": "Đang huỷ",
     "sub_status_canceling_on": "Hủy vào {date}",
+    "sub_status_expired": "Đã hết hạn",
+    "sub_status_grace": "Thời gian gia hạn",
     "sub_status_incomplete": "Chưa hoàn tất",
     "sub_status_incomplete_expired": "Đã hết hạn",
     "sub_status_past_due": "Quá hạn",
@@ -172,7 +174,6 @@
     "title": "Cài đặt tài khoản"
   },
   "ban_notice": {
-    "appeal": "Nếu bạn cho rằng đây là lỗi, hãy liên hệ với chúng tôi trên Discord.",
     "category": {
       "cheating": "Gian lận hoặc sử dụng phần mềm trái phép",
       "child_safety": "Vi phạm an toàn trẻ em",
@@ -187,9 +188,10 @@
       "rank_manipulation": "Thao túng thứ hạng hoặc điểm xếp hạng",
       "teaming": "Liên minh hoặc thông đồng"
     },
+    "title": "Tài khoản của bạn bị cấm",
+    "appeal": "Nếu bạn cho rằng đây là lỗi, hãy liên hệ với chúng tôi trên Discord.",
     "permanent": "Lệnh cấm này là vĩnh viễn.",
     "reason": "Lí do: {reason}",
-    "title": "Tài khoản của bạn bị cấm",
     "until": "Bị cấm cho đến {date}."
   },
   "build_menu": {
@@ -223,7 +225,9 @@
       "crown": "Tấn công người có vương miện!",
       "finish": "Hãy kết liễu [P1]!",
       "focus": "Tập trung hỏa lực vào [P1]!",
-      "mirv": "Bắn một MIRV vào [P1]!"
+      "mirv": "Bắn một MIRV vào [P1]!",
+      "nuke": "Phóng tên lửa vào [P1]!",
+      "spend_gold": "Đừng giữ vàng nữa, hãy dùng nó đi!"
     },
     "cat": {
       "attack": "Tấn công",
@@ -231,6 +235,7 @@
       "greet": "Chúc mừng",
       "help": "Trợ giúp",
       "misc": "Linh tinh",
+      "recent": "Gần đây",
       "warnings": "Cảnh báo"
     },
     "defend": {
@@ -258,13 +263,17 @@
       "thanks": "Cảm ơn nhé!",
       "trust_broken": "Tôi tin bạn...",
       "trust_me": "Bạn có thể tin tôi. Tôi hứa đấy!",
-      "well_played": "Chơi tốt lắm!"
+      "well_played": "Chơi tốt lắm!",
+      "what_doing": "Bạn đang làm gì thế?!",
+      "why_attack": "Tại sao bạn lại tấn công tôI?!"
     },
     "help": {
       "alliance": "Liên minh không?",
+      "break_alliance": "Làm ơn phá vỡ liên minh của chúng ta để tôi cũng có thể chiếm được một ít đất!",
       "gold": "Làm ơn gửi cho tôi vàng!",
       "help_defend": "Giúp tôi chống lại [P1]!",
       "no_attack": "Xin đừng tấn công tôi!",
+      "renew_alliance": "Làm ơn gia hạn liên minh của chúng ta trước khi nó hết hạn!",
       "send_gold_to": "Gửi vàng cho [P1]!",
       "send_troops_to": "Gửi lính cho [P1]!",
       "sorry_attack": "Xin lỗi, tôi không cố ý tấn công.",
@@ -273,6 +282,7 @@
       "troops_frontlines": "Gửi quân đến tiền tuyến!"
     },
     "misc": {
+      "alliances_end_together": "Các liên minh của chúng ta với [P1] kết thúc gần như cùng một thời điểm!",
       "build_closer": "Xây gần hơn để kết nối đường sắt!",
       "coastline": "Làm ơn để tôi có đường bờ biển.",
       "fun": "Trận này vui thật sự!",
@@ -282,16 +292,21 @@
       "strategy": "Chiến lực hay!",
       "team_up": "Cùng chống lại [P1] nhé!"
     },
+    "no_phrases": "Không có cụm từ phù hợp",
     "search": "Đang tìm kiếm người chơi...",
+    "search_phrases": "Đang tìm kiếm cụm từ...",
     "short": {
       "greet": {
         "ruining_games": "Phá hỏng trận của chúng ta"
       },
       "help": {
+        "break_alliance": "Phá liên minh đi, tôi cần đất!",
+        "renew_alliance": "Gia hạn liên minh của chúng ta đi!",
         "sorry_attack": "Xin lỗi vì đã tấn công!",
         "troops_frontlines": "Đưa quân ra tiền tuyến!"
       },
       "misc": {
+        "alliances_end_together": "Các liên minh giữa chúng ta và [P1] kết thúc cùng lúc",
         "coastline": "Cho tôi bờ biển với",
         "join_discord": "Tham gia Discord!",
         "pr": "PR của tôi được hợp nhất chưa?"
@@ -299,10 +314,12 @@
       "warnings": {
         "mirv_ready": "[P1] có thể dùng MIRV rồi!",
         "pirating": "[P1] đang cướp tàu",
+        "renew_or_nuke": "Gia hạn liên minh hoặc bị phóng tên lửa!",
         "saving_for_mirv": "[P1] đang để dành cho MIRV",
         "snowballing": "[P1] đang mạnh lên (snowball)",
         "stalemate": "Hòa nhỉ? Bế tắc.",
-        "stop_trading_all": "Dừng mọi giao thương!"
+        "stop_trading_enemies": "Đừng giao thương với kẻ thù nữa!",
+        "stop_war": "Nhanh lên trước khi người khác nhảy vào giành mất"
       }
     },
     "title": "Nhắn tin",
@@ -318,14 +335,17 @@
       "mirv_ready": "[P1] có đủ vàng để bắn một MIRV!",
       "mirv_soon": "[P1] sắp đủ để phóng một MIRV!",
       "no_allies": "[P1] không có đồng minh nào.",
+      "nuke_threat": "Dừng lại ngay, không thì tôi sẽ phóng tên lửa vào bạn!",
       "pirating": "[P1] đang cướp sạch tàu giao thương của chúng ta!",
+      "renew_or_nuke": "Gia hạn liên minh ngay, không thì tôi sẽ phóng tên lửa vào bạn!",
       "saving_for_mirv": "[P1] đang tích vàng để bắn MIRV.",
       "snowballing": "[P1] đang mạnh lên (snowball) quá nhanh!",
       "stalemate": "Hãy làm hòa. Đây là thế bế tắc, cả hai bên đều sẽ thua.",
       "stop_trading": "Ngừng giao thương với [P1]!",
+      "stop_trading_enemies": "Ngừng giao thương với kẻ thù!",
+      "stop_war": "Hãy chấm dứt cuộc chiến này trước khi phe khác lợi dụng tình hình!",
       "strong": "[P1] mạnh.",
-      "weak": "[P1] đang yếu.",
-      "stop_trading_all": "Ngừng giao thương với tất cả!"
+      "weak": "[P1] đang yếu."
     }
   },
   "clan_modal": {
@@ -389,7 +409,7 @@
     "discord_rate_limited": "Vui lòng chờ một lúc trước khi xác minh một liên kết Discord khác.",
     "discord_section_title": "Discord",
     "discord_url_hint": "Sử dụng lời mời được đặt không bao giờ hết hạn.",
-    "discord_url_label": "Link mời vào Discord",
+    "discord_url_label": "Liên kết mời Discord",
     "donate": "Ủng hộ",
     "donate_amount": "Số tiền",
     "donate_insufficient": "Không đủ {currency}.",
@@ -419,6 +439,10 @@
     "error_request_pending": "Yêu cầu tham gia đã được gửi",
     "failed_to_load_clan": "Không thể tải bang hội",
     "failed_to_load_requests": "Không thể tải yêu cầu",
+    "filter_browse_all": "Tất cả bang hội",
+    "filter_browse_invite_only": "Chỉ người được mời",
+    "filter_browse_label": "Hiện",
+    "filter_browse_open": "Không cần lời mời",
     "history_clan_members": "Thành viên bang hội",
     "history_clan_players": "Người chơi trong bang hội",
     "history_clan_players_value": "{clanCount} / {total}",
@@ -430,7 +454,7 @@
     "history_end_of_history": "Kết thúc lịch sử.",
     "history_filter_all": "Tất cả",
     "history_game_type": "Loại trận",
-    "history_load_more_failed": "Không thể tải thêm trò chơi.",
+    "history_load_more_failed": "Không thể tải thêm trận đấu.",
     "history_map": "Bản đồ",
     "history_members_only": "Lịch sử trận đấu chỉ hiển thị cho các thành viên trong bang hội.",
     "history_players": "Người chơi",
@@ -462,6 +486,7 @@
     "left_clan": "Bạn đã rời khỏi bang hội.",
     "manage_clan": "Quản lý",
     "map_frame_title": "Bản đồ lãnh thổ của bang hội",
+    "map_loading": "Đang tải bản đồ bang hội…",
     "member_banned": "Người chơi đã bị cấm.",
     "member_count": "{count, plural, one {# thành viên} other {# thành viên}}",
     "member_demoted": "Đã giáng cấp thành viên.",
@@ -506,8 +531,11 @@
     "sort_1v1_wins": "Số trận 1v1 thắng",
     "sort_browse_members": "Nhiều thành viên nhất",
     "sort_browse_name": "A–Z",
+    "sort_browse_oldest": "Cũ nhất",
     "sort_browse_random": "Ngẫu nhiên",
-    "sort_browse_win_score": "Điểm thắng",
+    "sort_browse_richest": "Giàu nhất",
+    "sort_browse_win_score": "Điểm thắng cao nhất",
+    "sort_browse_win_score_low": "Điểm thắng thấp nhất",
     "sort_by": "Sắp xếp theo",
     "sort_default": "Vai trò",
     "sort_elo_contributed": "ELO Đấu bang hội",
@@ -534,13 +562,12 @@
     "status": "Trạng thái",
     "tab_donations": "Khoản ủng hộ",
     "tab_game_history": "Lịch sử trận đấu",
+    "tab_map_alpha": "Bản đồ (ALPHA)",
     "tab_overview": "Tổng quan",
     "title": "Bang hội",
     "transfer_leadership": "Chuyển chức bang chủ",
     "transfer_warning": "Thao tác này sẽ chuyển thành viên được chọn thành thủ lĩnh mới. Bạn sẽ trở thành một thành viên thường. Hành động này không thể hoàn tác.",
-    "unban": "Bỏ cấm",
-    "map_coming_soon": "Sắp có",
-    "tab_map": "Bản đồ"
+    "unban": "Bỏ cấm"
   },
   "close_reason": {
     "account_lookup_failed": "Không thể tìm thấy tài khoản. Vui lòng thử lại.",
@@ -607,6 +634,7 @@
     "not_logged_in": "Chưa đăng nhập",
     "paste": "Dán",
     "preset_max": "Tối đa",
+    "scroll_to_top": "Cuộn lên đầu trang",
     "send": "Gửi",
     "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Giữ",
@@ -624,6 +652,8 @@
   "cosmetics": {
     "adfree": "không quảng cáo trọn đời!",
     "ai_label": "Được tạo ra với sự hỗ trợ của AI",
+    "ai_none_label": "Không sử dụng AI",
+    "ai_unknown_label": "Không rõ việc sử dụng AI",
     "artist_label": "Người làm:",
     "color_label": "Màu:",
     "common": "Thường",
@@ -673,7 +703,7 @@
   },
   "desktop_gate": {
     "back_to_game": "Quay lại game",
-    "browser_fallback": "Không thể tự động mở trình duyệt của bạn — hãy dùng link ở trên.",
+    "browser_fallback": "Không thể tự động mở trình duyệt của bạn — hãy dùng liên kết ở trên.",
     "cancel": "Huỷ",
     "code_destination_generic": "Nhập mã này trên trang web OpenFront để liên kết tài khoản của bạn:",
     "code_destination_site": "Nhập mã này tại {site} để liên kết tài khoản của bạn:",
@@ -731,6 +761,7 @@
   },
   "detailed_view": {
     "capacity": "Sức chứa",
+    "default_profile": "Hồ sơ mặc định",
     "delete_profile": "Xóa",
     "filters": "Bộ lọc",
     "filters_with_count": "Bộ lọc ({count})",
@@ -745,6 +776,7 @@
     "mode_ffa": "FFA",
     "mode_hvn": "Người vs Quốc gia (HVN)",
     "mode_teams": "Đội",
+    "no_default_profile": "Không có hồ sơ mặc định",
     "no_lobbies": "Không có phòng nào phù hợp với bộ lọc của bạn.",
     "no_profile": "Không có hồ sơ cá nhân",
     "pane_empty": "Không có phòng",
@@ -844,9 +876,9 @@
     "crashed": "Trò chơi đã bị lỗi!",
     "desync_notice": "Bạn đã mất đồng bộ với những người chơi khác. Những gì bạn thấy có thể khác với những người chơi khác.",
     "login_failed": "Đăng nhập thất bại, vui lòng thử lại.",
-    "login_token_consumed": "Link đăng nhập này đã được sử dụng rồi. Có lẽ bạn đã đăng nhập rồi — hãy kiểm tra một tab khác.",
-    "login_token_expired": "Link đăng nhập này đã hết hạn. Vui lòng yêu cầu một link đăng nhập mới.",
-    "login_token_invalid": "Link đăng nhập này không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu một link đăng nhập mới.",
+    "login_token_consumed": "Liên kết đăng nhập này đã được sử dụng rồi. Có lẽ bạn đã đăng nhập rồi — hãy kiểm tra một tab khác.",
+    "login_token_expired": "Liên kết đăng nhập này đã hết hạn. Vui lòng yêu cầu một liên kết đăng nhập mới.",
+    "login_token_invalid": "Liên kết đăng nhập này không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu một liên kết đăng nhập mới.",
     "paste_discord": "Vui lòng dán nội dung sau vào báo cáo lỗi của bạn trên Discord:",
     "spawn_failed": {
       "description": "Tự động chọn điểm hồi sinh thất bại. Bạn không thể chơi trận này.",
@@ -866,6 +898,7 @@
     "alliance_request_sent": "Đã gửi yêu cầu liên minh đến {name}.",
     "alliance_request_status": "{name} đã {status} lời mời liên minh của bạn",
     "atom_bomb_detonated": "{name} - tên lửa bom nguyên tử đã phát nổ",
+    "atom_bomb_inbound": "{name} - Tên lửa bom nguyên tử đang bay tới",
     "attack_cancelled_retreat": "Đòn tấn công đã bị hủy, {troops} quân đã tử trận trong lúc rút lui",
     "attack_request": "{name} muốn bạn tấn công {target}",
     "betrayal_debuff_ends": "Còn {time} giây để hết hiệu ứng cho kẻ phản bội",
@@ -876,8 +909,11 @@
     "duration_seconds_plural": "{seconds} giây",
     "focus": "Xem",
     "hydrogen_bomb_detonated": "{name} - tên lửa bom nhiệt hạch (bom hydro) đã phát nổ",
+    "hydrogen_bomb_inbound": "{name} - Tên lửa bom nhiệt hạch (bom hydro) đang bay tới",
     "ignore": "Bỏ qua",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV ĐANG BAY TỚI ⚠️⚠️⚠️",
     "missile_intercepted": "Bệ phóng SAM đã đánh chặn {unit}",
+    "naval_invasion_inbound": "Phát hiện cuộc đổ bộ đường biển từ {name} ({troops} quân)",
     "no_boats_available": "Không có tàu có sẵn, tối đa {max}",
     "received_gold_from_captured_ship": "Đã nhận {gold} vàng từ con tàu chiếm được của {name}",
     "received_gold_from_conquest": "Đã chinh phục {name} và nhận được {gold} vàng",
@@ -1002,7 +1038,8 @@
     "start": "Bắt Đầu Trận Đấu",
     "starting": "Đang bắt đầu…",
     "starting_gold": "Số vàng ban đầu (Triệu)",
-    "water_nukes": "Bom nước"
+    "water_nukes": "Bom nước",
+    "win_threshold": "Ngưỡng chiến thắng (%)"
   },
   "game_starting_modal": {
     "code_license": "Mã nguồn được cấp phép theo AGPL-3.0 (không kèm bảo hành)",
@@ -1043,9 +1080,10 @@
     "cosmetics_nuke_trails_label": "Đường bay tên lửa",
     "cosmetics_railroads_desc": "Màu tuỳ chỉnh cho đường ray",
     "cosmetics_railroads_label": "Đường ray",
-    "cosmetics_show_from_desc": "Chọn hiển thị đồ trang trí của ai. Đồ trang trí của bạn luôn được hiển thị.",
+    "cosmetics_show_from_desc": "Hiển thị đồ trang trí của ai. Chọn “Không ai” để ẩn cả đồ trang trí của chính bạn mà không cần tháo chúng ra.",
     "cosmetics_show_from_everyone": "Mọi người",
     "cosmetics_show_from_label": "Hiển thị đồ trang trí từ",
+    "cosmetics_show_from_none": "Không ai cả",
     "cosmetics_show_from_self": "Chỉ mình tôi",
     "cosmetics_show_from_teammates": "Đội của tôi",
     "cosmetics_structures_desc": "Màu tuỳ chỉnh cho công trình",
@@ -1138,7 +1176,6 @@
     "territory_sat_label": "Độ bão hòa màu lãnh thổ"
   },
   "heads_up_message": {
-    "catching_up": "Đang đồng bộ...",
     "choose_spawn": "Chọn vị trí bắt đầu",
     "choose_spawn_spectator": "Người chơi đang chọn vị trí bắt đầu",
     "dont_show_again": "Không hiển thị lại",
@@ -1147,7 +1184,8 @@
     "pvp_immunity_active": "Bảo vệ PvP còn hiệu lực trong {seconds} giây",
     "random_spawn": "Đã bật chế độ spawn ngẫu nhiên. Đang chọn vị trí khởi đầu cho bạn...",
     "random_spawn_spectator": "Chế độ spawn ngẫu nhiên đã được bật",
-    "singleplayer_game_paused": "Trận đấu đã tạm dừng"
+    "singleplayer_game_paused": "Trận đấu đã tạm dừng",
+    "catching_up": "Đang đồng bộ..."
   },
   "help_modal": {
     "action_attack_altclick": "Tấn công (khi nhấp chuột trái được thiết lập để mở menu)",
@@ -1330,19 +1368,6 @@
     "unequip_all": "Tháo tất cả",
     "unequipped_all": "Đã tháo tất cả"
   },
-  "ios_banner": {
-    "got_it": "Đã hiểu",
-    "how": "Cách làm",
-    "later": "Để sau",
-    "modal_desc": "Trình duyệt của bạn không hỗ trợ toàn màn hình, nhưng bạn có thể thêm OpenFront vào Màn hình chính để có trải nghiệm chơi tốt hơn:",
-    "modal_title": "Chế độ toàn màn hình trên iOS",
-    "never": "Không bao giờ",
-    "step_add_to_home_label": "Thêm vào Màn hình chính",
-    "step_open": "Mở từ Màn hình chính — chạy ở chế độ toàn màn hình mà không có thanh địa chỉ",
-    "step_scroll_and_tap": "Cuộn xuống và nhấn",
-    "step_share": "Nhấn nút Chia sẻ trong trình duyệt của bạn",
-    "text": "Để sử dụng chế độ toàn màn hình, hãy thêm OpenFront vào Màn hình chính"
-  },
   "kick_reason": {
     "admin": "Đã bị quản trị viên đuổi",
     "duplicate_session": "Đã bị đuổi khỏi trò chơi (có thể bạn đang chơi ở một tab khác)",
@@ -1460,7 +1485,7 @@
     "archipelagosea": "Biển Archipelago",
     "arctic": "Bắc Cực",
     "asia": "Châu Á",
-    "australia": "Úc",
+    "australia": "Úc / Australia",
     "babelmandebstrait": "Eo biển Bab-el-Mandeb",
     "baikal": "Baikal",
     "baikalnukewars": "Baikal (Đấu Tên Lửa)",
@@ -1468,11 +1493,13 @@
     "balkans": "Vùng Balkan",
     "balkhash": "Hồ Balkhash",
     "baltics": "Vùng Baltic",
+    "benelux": "Benelux",
     "beringsea": "Biển Bering",
     "beringstrait": "Eo biển Bering",
     "betweentwoseas": "Giữa hai biển",
     "blacksea": "Biển Đen",
     "bosphorusstraits": "Eo biển Bosporus",
+    "brainrot": "Brain Rot",
     "branchingpaths": "Các đường phân nhánh",
     "britannia": "Quần đảo Anh",
     "britanniaclassic": "Quần đảo Anh (Cổ điển)",
@@ -1483,7 +1510,7 @@
     "caspiansea": "Biển Caspi",
     "caucasus": "Kavkaz",
     "centralamerica": "Trung Mỹ",
-    "channelislands": "Quần đảo Eo Biển",
+    "channelislands": "Quần đảo Channel (California)",
     "china": "Trung Quốc",
     "choppingblock": "Mặt gỗ",
     "clearwaterlakes": "Hồ Clearwater",
@@ -1519,7 +1546,7 @@
     "iceland": "Iceland",
     "indiansubcontinent": "Tiểu lục địa Ấn Độ",
     "irishsea": "Biển Ireland",
-    "italia": "Ý",
+    "italia": "Ý / Italia",
     "japan": "Nhật Bản",
     "juandefucastrait": "Eo biển Juan de Fuca",
     "korea": "Triều Tiên",
@@ -1547,6 +1574,7 @@
     "northamerica": "Bắc Mỹ",
     "northwestpassage": "Hành lang Tây Bắc",
     "oceania": "Châu Đại Dương",
+    "ommatrypta": "Ommatrypta",
     "onion": "Củ hành",
     "pangaea": "Pangaea",
     "passage": "Hành lang",
@@ -1576,6 +1604,7 @@
     "tourney3": "Giải đấu 4 đội",
     "tourney4": "Giải đấu 8 đội",
     "tradersdream": "Giấc mơ giao thương",
+    "tutorial": "Hướng dẫn",
     "twolakes": "Hai hồ",
     "unitedstates": "Hoa Kỳ",
     "vancouverisland": "Đảo Vancouver",
@@ -1618,7 +1647,10 @@
     "unfavorite": "Xóa khỏi yêu thích"
   },
   "map_layers": {
-    "label": "nhãn"
+    "eyeland": "eyeland",
+    "eyewater": "eyewater",
+    "label": "nhãn",
+    "brland": "brland"
   },
   "marketing_consent": {
     "body": "Nhận tin tức và cập nhật qua email. Bạn có thể thay đổi tùy chọn này bất cứ lúc nào trong tài khoản của mình.",
@@ -1651,8 +1683,8 @@
     "title": "Ghép trận xếp hạng 1v1 (ALPHA)",
     "title_2v2": "Ghép trận xếp hạng 2v2 (ALPHA)",
     "title_clanwars": "Ghép trận xếp hạng bang hội (ALPHA)",
-    "title_ffa": "Ghép trận xếp hạng FFA (ALPHA)",
-    "waiting_for_game": "Đang chờ trận đấu bắt đầu..."
+    "waiting_for_game": "Đang chờ trận đấu bắt đầu...",
+    "title_ffa": "Ghép trận xếp hạng FFA (ALPHA)"
   },
   "mode_selector": {
     "lobbies_unreachable": "Hiện không thể kết nối với phòng công khai",
@@ -1661,7 +1693,6 @@
     "ranked_2v2_title": "2v2",
     "ranked_clanwars_subtitle": "Bang hội của bạn vs bang hội khác",
     "ranked_clanwars_title": "Đấu bang hội",
-    "ranked_ffa_title": "FFA",
     "ranked_pairing_note": "Trong các chế độ đấu theo đội, các thành viên cùng bang hội và bạn bè trong hàng chờ sẽ được xếp vào cùng một đội khi có thể. Bạn bè được ghép cặp trước, sau đó đến các thành viên cùng bang hội. Nếu điểm xếp hạng của bạn chênh lệch quá lớn, bạn sẽ được ghép riêng để đảm bảo tính công bằng cho trận đấu. Trong chế độ FFA (loạn chiến), 4 đến 10 người chơi được ghép theo điểm xếp hạng, và bạn bè cùng các thành viên bang hội sẽ không bao giờ được xếp vào cùng một trận. Trong đấu bang hội, mỗi đội là một bang hội: bạn chỉ chơi cùng với các thành viên của bang hội mà bạn đăng ký tham gia, và điểm xếp hạng của bang hội sẽ tăng hoặc giảm tùy theo kết quả trận đấu.",
     "ranked_title": "Đấu xếp hạng",
     "ranked_trust_required_body": "Đấu xếp hạng chỉ chấp nhận tài khoản đáng tin cậy. Để trở nên đáng tin cậy, hãy chơi thêm các trận hoặc thực hiện bất kỳ giao dịch mua nào.",
@@ -1675,7 +1706,8 @@
     "teams_count": "{teamCount} đội",
     "teams_of": "{teamCount} đội – mỗi đội {playersPerTeam} người",
     "teams_preset": "{preset} ({teams})",
-    "teams_title": "Đội"
+    "teams_title": "Đội",
+    "ranked_ffa_title": "FFA"
   },
   "multi_tab": {
     "detected": "Phát hiện nhiều tab trò chơi đang mở.",
@@ -1689,7 +1721,7 @@
     "account_with_level": "Tài khoản ({level})",
     "change_subscription": "Thay đổi gói định kỳ",
     "change_username": "Đổi tên tài khoản",
-    "copy_profile_url": "Sao chép link hồ sơ cá nhân",
+    "copy_profile_url": "Sao chép liên kết hồ sơ cá nhân",
     "log_out": "Đăng xuất",
     "log_out_confirm": "Đăng xuất tài khoản này?",
     "title": "Menu tài khoản",
@@ -1713,6 +1745,38 @@
     "tournament": "GIẢI ĐẤU",
     "tutorial": "HƯỚNG DẪN",
     "warning": "CẢNH BÁO"
+  },
+  "onboarding": {
+    "got_it": "Đã hiểu",
+    "intro_body": "OpenFront là một trò chơi chiến thuật, nơi bạn mở rộng lãnh thổ và chinh phục các nước láng giềng để thống trị toàn bộ bản đồ.",
+    "intro_start": "Bắt đầu",
+    "intro_title": "Chào mừng đến OpenFront",
+    "low_troops": "Hãy đợi chúng nhiều lên rồi mới tấn công tiếp.",
+    "low_troops_title": "Quân đội của bạn đang quá ít!",
+    "main_menu": "Menu chính",
+    "play_solo": "Chơi trận chơi đơn",
+    "step": {
+      "coast": "Tiếp tục nhấp chuột vào vùng đất trống cho đến khi lãnh thổ của bạn chạm tới mặt nước.",
+      "coast_touch": "Tiếp tục chạm vào vùng đất trống cho đến khi lãnh thổ của bạn chạm tới mặt nước.",
+      "expand": "Đây là lãnh thổ của bạn. Hãy nhấp chuột vào vùng đất trống bên cạnh để mở rộng lãnh thổ.",
+      "expand_touch": "Đây là lãnh thổ của bạn. Hãy chạm vào vùng đất trống bên cạnh để mở rộng.",
+      "spawn": "Nhấp chuột vào bên trong vòng tròn phát sáng để chọn vị trí bắt đầu của bạn.",
+      "spawn_touch": "Chạm vào bên trong vòng tròn phát sáng để chọn vị trí bắt đầu của bạn.",
+      "troops": "Thanh này biểu thị quân đội của bạn. Quân số tăng nhanh nhất khi thanh đầy khoảng một nửa, vì vậy đừng chờ đến khi thanh đầy hẳn.",
+      "wrong_target": "Không phải chỗ đó. Hãy nhấp chuột vào vị trí mà mũi tên chỉ.",
+      "wrong_target_touch": "Không phải chỗ đó. Hãy chạm vào vị trí mà mũi tên chỉ.",
+      "boat": "Tàu chở quân vượt biển. Nhấp vào hòn đảo nhỏ để gửi một con tàu đến đó.",
+      "boat_touch": "Tàu chở quân vượt biển. Nhấp chuột vào hòn đảo nhỏ để gửi một con tàu đến đó.",
+      "nation": "Cuối cùng là Đế chế Đỏ. Hãy nhấp chuột vào bờ biển của nó để gửi thuyền đến tấn công cho đến khi nó thất thủ.",
+      "nation_land": "Bây giờ hãy nhấp chuột vào trung tâm lãnh thổ của nó và tiếp tục tấn công cho đến khi nó thất thủ.",
+      "nation_land_touch": "Bây giờ hãy chạm vào trung tâm lãnh thổ của nó và tiếp tục tấn công cho đến khi nó thất thủ.",
+      "nation_touch": "Cuối cùng là Đế chế Đỏ. Hãy chạm vào bờ biển của nó để gửi thuyền đến tấn công cho đến khi nó thất thủ.",
+      "tribe": "Đó là một bộ lạc. Hãy nhấp chuột vào lãnh thổ của họ để tấn công cho đến khi bộ lạc bị tiêu diệt hoàn toàn.",
+      "tribe_touch": "Đó là một bộ lạc. Hãy chạm vào lãnh thổ của họ để tấn công cho đến khi bộ lạc bị tiêu diệt hoàn toàn."
+    },
+    "step_counter": "Bước {current}/{total}",
+    "won_body": "Bạn đã nắm được những thứ cơ bản. Giờ hãy thử một trận đấu thực sự: hướng dẫn sẽ giới thiệu cho bạn về các công trình, liên minh, tên lửa và nhiều hơn thế.",
+    "won_title": "Bạn đã thắng!"
   },
   "overtime": {
     "first_place": "Top 1: {name} ({pct}%)",
@@ -1772,14 +1836,14 @@
     "send_gold": "Gửi Vàng",
     "send_troops": "Gửi Quân",
     "start_trade": "Bắt đầu giao thương",
+    "start_trade_enemies": "Bắt đầu giao thương với kẻ thù",
     "stop_trade": "Ngừng giao thương",
+    "stop_trade_enemies": "Ngừng giao thương với kẻ thù",
     "stopped": "Đã dừng",
     "target": "Mục tiêu",
     "trading": "Giao thương",
     "traitor": "Kẻ phản bội",
-    "troops": "Quân",
-    "start_trade_all": "Bắt đầu giao thương với tất cả",
-    "stop_trade_all": "Ngừng giao thương với tất cả"
+    "troops": "Quân"
   },
   "player_profile": {
     "current_run": "Chặng hiện tại",
@@ -1791,12 +1855,12 @@
     "milestones": "Cột mốc",
     "no_clans": "Người chơi này không thuộc bất kì bang hội nào.",
     "no_prestige": "Chưa từng nâng tiến trình",
-    "not_found_body": "Chúng tôi không thể tìm thấy người chơi nào từ đường link này. Có thể link bị gõ sai, hoặc tài khoản đã bị xóa.",
+    "not_found_body": "Chúng tôi không thể tìm thấy người chơi nào từ đường liên kết này. Có thể liên kết bị gõ sai, hoặc tài khoản đã bị xóa.",
     "not_found_title": "Không tìm thấy người chơi",
     "play": "Chơi OpenFront",
     "prestige_history": "Lịch sử nâng tiến trình",
     "share": "Chia sẻ hồ sơ cá nhân",
-    "share_copy_link": "Sao chép link",
+    "share_copy_link": "Sao chép liên kết",
     "share_discord": "Sao chép bản cho Discord",
     "share_native": "Chia sẻ",
     "share_text": "Xem hồ sơ của {name} trên OpenFront",
@@ -1992,6 +2056,8 @@
     "reconcile_other": "Con số cuối cùng khác với con số tạm tính.",
     "reconcile_reconnect": "Một đối thủ đã ngắt kết nối bỗng quay lại, nên họ không bị tính là đã bị loại.",
     "reconcile_team_win": "Đội của bạn đã thắng: phần thưởng chiến thắng đã được cộng vào.",
+    "reconcile_win": "Bạn đã chiến thắng: phần thưởng chiến thắng đã được cộng vào tài khoản.",
+    "reconcile_win_removed": "Máy chủ xác định một người chơi khác mới là người chiến thắng, nên phần thưởng chiến thắng đã bị thu hồi.",
     "rewards_balance": "Số dư {caps} Caps · {plutonium} Plutonium",
     "rewards_balance_caps": "Số dư {caps} Caps",
     "rewards_claimed": "Đã nhận",
@@ -2013,7 +2079,7 @@
     "xp_bar_label": "Tiến trình cấp độ",
     "xp_before_levels": "Đã chơi trước khi hệ thống cấp độ ra mắt, nên trận này không có XP.",
     "xp_confirmed": "Đã xác nhận XP",
-    "xp_heading": "Đã được cộng XP",
+    "xp_heading": "Số XP được cộng",
     "xp_minus": "−{xp}",
     "xp_plus": "+{xp}",
     "xp_progress": "{current} / {next} XP",
@@ -2115,6 +2181,10 @@
     "unverified": "Bản ghi của trận này không có dữ liệu đối chiếu, nên bản xem lại này không thể được xác minh với trận đã diễn ra.",
     "watch_classic": "Xem bản phát lại cũ để thay thế"
   },
+  "report_thanks": {
+    "body": "Một người mà bạn đã báo cáo gần đây đã bị cấm khỏi trò chơi. Cảm ơn bạn đã góp phần giúp OpenFront trở thành một môi trường an toàn và thú vị hơn!",
+    "heading": "Cảm ơn"
+  },
   "reward_track": {
     "after_level": "Sau cấp {level}",
     "caps_amount": "{amount} Caps",
@@ -2124,6 +2194,7 @@
     "earlier": "Các cấp độ trước",
     "key_claimed": "Đã nhận",
     "key_locked": "Chưa thể nhận",
+    "key_pending": "Đang chờ xử lý",
     "key_ready": "Có thể nhận",
     "later": "Các cấp độ sau",
     "legend_reward": "Phần thưởng Huyền thoại",
@@ -2144,6 +2215,49 @@
   },
   "rewards_modal": {
     "title": "Phần thưởng"
+  },
+  "saved_games": {
+    "code_placeholder": "Dán liên kết hoặc mã trận đấu được chia sẻ",
+    "copy_link": "Sao chép liên kết",
+    "delete": "Xóa",
+    "delete_confirm": "Xóa \"{name}\"? Thao tác này không thể hoàn tác.",
+    "empty": "Chưa có trận đấu nào được lưu. Hãy lưu một trận từ menu trong game.",
+    "error": {
+      "code_invalid": "Đó không phải là liên kết hoặc mã trận đấu được chia sẻ hợp lệ.",
+      "copy_failed": "Không thể sao chép liên kết.",
+      "download_failed": "Không thể tải xuống trận đấu đã lưu. Vui lòng thử lại.",
+      "list_failed": "Không thể tải danh sách trận đấu đã lưu của bạn.",
+      "load_failed": "Không thể bắt đầu trận đấu đã lưu.",
+      "name_invalid": "Tên này không được phép.",
+      "name_not_shareable": "Tên này không thể hiển thị trong trận đấu được chia sẻ. Hãy đổi tên trước.",
+      "not_found": "Trận đấu đã lưu này không còn tồn tại.",
+      "not_singleplayer": "Chỉ có thể tải các trận chơi đơn.",
+      "request_failed": "Đã xảy ra lỗi. Hãy thử lại.",
+      "shared_not_found": "Trận đấu được chia sẻ này hiện không còn có thể mở. Có thể trận đấu đã bị xóa hoặc chuyển sang chế độ riêng tư.",
+      "unreadable": "Phiên bản trò chơi hiện tại không hỗ trợ tải trận đấu đã lưu này."
+    },
+    "link_copied": "Đã sao chép liên kết",
+    "loading": "Đang tải…",
+    "open": "Mở",
+    "play": "Tiếp tục",
+    "rename": "Đổi tên",
+    "rename_save": "Lưu",
+    "save_desc": "Lưu trận đấu này vào tài khoản của bạn để có thể tiếp tục chơi sau",
+    "save_label": "Lưu trận đấu",
+    "save_status": {
+      "limit": "Bạn đã đạt đến giới hạn số trận đấu được lưu. Hãy xóa bớt một trận trong menu chơi đơn trước.",
+      "not_found": "Không thể lưu trận đấu. Hãy thử lại.",
+      "rejected": "Không thể lưu trận đấu này.",
+      "request_failed": "Không thể lưu trận đấu. Hãy thử lại.",
+      "saved": "Đã lưu thành công. Hãy tìm trận đấu trong menu chơi đơn.",
+      "saving": "Đang lưu…",
+      "unauthorized": "Đăng nhập để lưu các trận đấu."
+    },
+    "share": "Chia sẻ",
+    "shared_badge": "Đã chia sẻ",
+    "shared_title": "Trận đấu được chia sẻ",
+    "title": "Các trận đấu đã lưu",
+    "unshare": "Hủy chia sẻ"
   },
   "select_lang": {
     "title": "Chọn ngôn ngữ"
@@ -2192,7 +2306,7 @@
     "confirm": "Liên kết tài khoản",
     "confirm_prompt": "Liên kết tài khoản Steam “{persona}” với tài khoản {username}?",
     "confirm_prompt_no_persona": "Liên kết tài khoản Steam của bạn với tài khoản {username}?",
-    "conflict_confirm": "Xóa nó và link",
+    "conflict_confirm": "Xóa nó và liên kết",
     "conflict_deleting": "Đang xóa…",
     "conflict_explain": "Tài khoản đó được tạo cho bạn trong lần đầu bạn mở game trên Steam. Việc liên kết sẽ xóa vĩnh viễn nó và mọi thứ trên đó.",
     "conflict_games": "{games, plural, =0 {Chưa chơi trận nào} one {# trận đã chơi} other {# trận đã chơi}}",
@@ -2261,7 +2375,7 @@
     "confirm_downgrade": "Hạ xuống gói {tier}? Phần giá trị còn lại của gói hiện tại sẽ được cộng vào số dư tài khoản của bạn.",
     "confirm_purchase_body": "Mua {item} với giá {amount, number} {currency}?",
     "confirm_purchase_title": "Xác nhận mua",
-    "confirm_subscribe_over_grant": "Bắt đầu đăng ký {tier} ngay bây giờ? Quyền truy cập miễn phí của bạn sẽ kết thúc ngay lập tức: {days, plural, one {# ngày còn lại sẽ} other {# ngày còn lại sẽ}} không được hoàn lại và không được cộng vào thời gian trả phí của bạn.",
+    "confirm_subscribe_over_grant_carried": "Bắt đầu đăng ký gói {tier} trả phí ngay bây giờ? Bạn sẽ bị tính phí hôm nay, và {days, plural, one {# ngày miễn phí} other {# ngày miễn phí}} còn lại của bạn {days, plural, one {được} other {được}} cộng vào cuối: lần thanh toán tiếp theo của bạn sẽ lùi lại tương ứng.",
     "confirm_subscribe_over_grant_no_days": "Bắt đầu đăng ký {tier} ngay bây giờ? Quyền truy cập miễn phí của bạn sẽ kết thúc ngay lập tức, và thời gian còn lại sẽ không được hoàn lại và không được cộng vào thời gian trả phí của bạn.",
     "confirm_tier_change_steam": "Đăng ký {tier} ngay? Cấp độ gói mới của bạn sẽ có hiệu lực ngay với giá đầy đủ và phần còn lại của tháng hiện tại sẽ không được hoàn lại tiền.",
     "confirm_upgrade": "Nâng cấp lên gói {tier}? Bạn sẽ chỉ phải thanh toán phần chênh lệch theo tỷ lệ ngay bây giờ.",
@@ -2309,6 +2423,7 @@
     "purchase_pending": "Giao dịch của bạn vẫn đang được xử lý. Sản phẩm sẽ sớm xuất hiện trong tài khoản — hãy kiểm tra lịch sử đơn hàng nếu không thấy.",
     "purchase_success": "Mua thành công: {name}",
     "purchase_tribe_button": "Mua",
+    "steam_browser_approval": "Steam đã mở trang mua hàng trong trình duyệt của bạn. Hãy xác nhận giao dịch tại đó, sau đó quay lại đây. Giao dịch sẽ xuất hiện sau khi được Steam xác nhận.",
     "steam_licence_required": "Gói định kỳ này chỉ dành cho những người chơi sở hữu OpenFront trên Steam.",
     "steam_overlay_cancelled": "Đã hủy giao dịch. Bạn chưa bị tính phí.",
     "steam_overlay_waiting": "Hãy phê duyệt giao dịch trong giao diện Steam để tiếp tục.",
@@ -2355,7 +2470,8 @@
     "tribes_login_required": "Đăng nhập để mua và quản lý tên bộ lạc.",
     "tribes_purchase_description": "Tên của bạn sẽ được gán cho một bộ lạc trong các trận đấu nhiều người chơi. Tên sẽ được sử dụng ngay lập tức.",
     "tribes_purchase_heading": "Mua tên bộ lạc",
-    "your_tribes_heading": "Tên bộ lạc của bạn"
+    "your_tribes_heading": "Tên bộ lạc của bạn",
+    "confirm_subscribe_over_grant": "Bắt đầu đăng ký {tier} ngay bây giờ? Quyền truy cập miễn phí của bạn sẽ kết thúc ngay lập tức: {days, plural, one {# ngày còn lại sẽ} other {# ngày còn lại sẽ}} không được hoàn lại và không được cộng vào thời gian trả phí của bạn."
   },
   "streaming_now": {
     "live_count": "{count} người đang stream",
@@ -2377,7 +2493,7 @@
     "orange": "Cam",
     "purple": "Tím",
     "red": "Đỏ",
-    "teal": "Xanh mòng két",
+    "teal": "Xanh lơ",
     "yellow": "Vàng"
   },
   "territory_patterns": {
@@ -2535,28 +2651,20 @@
     "break_alliance": "Phá vỡ liên minh (Phản bội)",
     "break_alliance_desc": "Chấm dứt liên minh với người chơi sở hữu ô đang nằm dưới con trỏ chuột của bạn.",
     "build_atom_bomb": "Phóng tên lửa bom hạt nhân",
-    "build_atom_bomb_desc": "Phóng tên lửa nguyên tử đến vị trí con trỏ chuột.",
     "build_city": "Xây thành phố",
-    "build_city_desc": "Xây thành phố tại vị trí con trỏ chuột.",
     "build_controls": "Điều khiển xây dựng",
     "build_defense_post": "Xây chốt phòng thủ",
-    "build_defense_post_desc": "Xây chốt phòng thủ tại vị trí con trỏ chuột.",
     "build_factory": "Xây nhà máy",
-    "build_factory_desc": "Xây nhà máy tại vị trí con trỏ chuột.",
     "build_hydrogen_bomb": "Phóng tên lửa bom nhiệt hạch (bom hydro)",
-    "build_hydrogen_bomb_desc": "Phóng tên lửa bom nhiệt hạch (bom hydro) đến vị trí con trỏ chuột.",
     "build_menu_modifier": "Phím bổ trợ cho menu xây dựng",
     "build_menu_modifier_desc": "Giữ phím này trong khi nhấp chuột để mở menu xây dựng.",
     "build_mirv": "Phóng MIRV",
-    "build_mirv_desc": "Phóng MIRV đến vị trí con trỏ chuột.",
     "build_missile_silo": "Xây hầm phóng tên lửa",
-    "build_missile_silo_desc": "Xây hầm phóng tên lửa tại vị trí con trỏ chuột.",
     "build_port": "Xây cảng",
-    "build_port_desc": "Xây cảng tại vị trí con trỏ chuột.",
     "build_sam_launcher": "Xây bệ phóng tên lửa đất đối không (SAM)",
-    "build_sam_launcher_desc": "Xây bệ phóng tên lửa đất đối không (SAM) tại vị trí con trỏ chuột.",
+    "build_scroll_modifier": "Phím bổ trợ dạng cuộn để xây dựng",
+    "build_scroll_modifier_desc": "Giữ phím này và cuộn chuột để thay đổi số lượng xây dựng.",
     "build_warship": "Đóng tàu chiến",
-    "build_warship_desc": "Đóng tàu chuyến đến vị trí con trỏ chuột.",
     "camera_movement": "Chuyển Động Camera",
     "center_camera": "Camera ở giữa",
     "center_camera_desc": "Camera ở giữa người chơi",
@@ -2603,11 +2711,16 @@
     "graphics_refresh_modifier_desc": "Giữ phím này và nhấn {key} để làm mới đồ họa",
     "ground_attack": "Tấn công trên bộ",
     "ground_attack_desc": "Ra lệnh tấn công trên bộ vào ô dưới con trỏ chuột.",
+    "halloween_theme_desc": "Hiển thị giao diện Halloween trên trang chủ.",
+    "halloween_theme_label": "Chủ đề Halloween",
     "help_messages_desc": "Hiển thị mẹo và cảnh báo theo ngữ cảnh trong khi chơi, như cảnh báo giới hạn quân đội và lời khuyên chung về lối chơi.",
     "help_messages_label": "Thông báo trợ giúp",
     "highlight_glow_strength_label": "Mức độ làm nổi bật",
     "highlight_small_players_desc": "Thêm hiệu ứng phát sáng cho các người chơi nhỏ để dễ nhận ra hơn.",
+    "hud_opacity_desc": "Điều chỉnh độ mờ của nền bảng mà không làm mờ chữ hoặc biểu tượng. Mức 100% giữ nguyên diện mạo ban đầu của chúng.",
+    "hud_opacity_label": "Độ mờ nền giao diện HUD",
     "keybind_conflict_error": "Phím {key} đã được gán cho một hành động khác.",
+    "keybind_shift_prefix": "Shift+",
     "keybinds_hint": "Nhấp vào một phím để thay đổi phím tắt. Bạn có thể gán một phím đơn hoặc tổ hợp Shift + phím.",
     "left_click_desc": "Khi bật, chuột trái sẽ mở menu và nút kiếm sẽ tấn công. Khi tắt, chuột trái sẽ tấn công trực tiếp.",
     "left_click_label": "Chuột trái để mở Menu",
@@ -2615,7 +2728,10 @@
     "lobby_id_visibility_label": "Ẩn ID phòng",
     "lobby_start_alerts_desc": "Phát tiếng chuông bắt đầu cho mỗi phòng và trận đấu xếp hạng theo mặc định, đồng thời hiển thị thông báo trên màn hình khi được cho phép. Bạn có thể ghi đè bằng chuông phòng.",
     "lobby_start_alerts_label": "Thông báo bắt đầu phòng",
+    "map_layers_desc": "Hiển thị các hình ảnh bổ sung được vẽ chồng lên địa hình trên một số bản đồ. Tắt tùy chọn này để ẩn chúng trên tất cả bản đồ.",
+    "map_layers_label": "Lớp bản đồ",
     "menu_shortcuts": "Phím tắt menu",
+    "modifiers": "Các điều chỉnh",
     "move_down": "Di chuyển Camera xuống dưới",
     "move_down_desc": "Di chuyển Camera xuống dưới",
     "move_left": "Di chuyển Camera sang trái",
@@ -2636,6 +2752,8 @@
     "performance_overlay_desc": "Bật hoặc tắt lớp phủ hiệu năng. Khi bật, lớp phủ hiệu năng sẽ được hiển thị. Nhấn Shift-D trong khi chơi để bật hoặc tắt.",
     "performance_overlay_label": "Lớp phủ hiệu năng",
     "press_a_key": "Nhấn một phím",
+    "prevent_stacking": "Ngăn xếp chồng công trình",
+    "prevent_stacking_desc": "Nhấn giữ để xây công trình mới thay vì nâng cấp công trình ở gần. Các quy định hạn chế vị trí xây dựng vẫn được áp dụng như bình thường.",
     "quick_chat": "Nhắn tin",
     "quick_chat_desc": "Mở mục nhắn tin cho người chơi có ô đất đang nằm dưới con trỏ chuột của bạn.",
     "render_debug_gui": "Hiển thị giao diện gỡ lỗi",
@@ -2650,10 +2768,12 @@
     "retaliate_attack_desc": "Tấn công trả đũa để làm suy yếu hoặc vô hiệu hóa lực lượng của kẻ tấn công gần nhất. Chỉ dùng được khi bạn đang bị tấn công.",
     "select_all_warships": "Chọn Tất cả Tàu chiến",
     "select_all_warships_desc": "Chọn tất cả tàu chiến của bạn trên bản đồ.",
+    "snap_build_preview_desc": "Di chuyển hình xem trước công trình đến ô đất mà công trình thực sự sẽ được xây dựng",
+    "snap_build_preview_label": "Tự động căn chỉnh vị trí xem trước công trình",
     "special_effects_desc": "Bật/Tắt hiệu ứng đặc biệt. Tắt để cải thiện hiệu suất",
     "special_effects_label": "Hiệu ứng đặc biệt",
-    "steam_lobby_links_desc": "Mở link của phòng trong Steam thay vì tham gia trên trình duyệt này",
-    "steam_lobby_links_label": "Mở link của phòng trong Steam",
+    "steam_lobby_links_desc": "Mở liên kết của phòng trong Steam thay vì tham gia trên trình duyệt này",
+    "steam_lobby_links_label": "Mở liên kết của phòng trong Steam",
     "swap_direction": "Đổi hướng tên lửa",
     "swap_direction_desc": "Đổi hướng phóng tên lửa (lên/xuống).",
     "tab_audio": "Âm thanh",
@@ -2674,7 +2794,17 @@
     "zoom_in": "Phóng to",
     "zoom_in_desc": "Phóng to bản đồ",
     "zoom_out": "Thu nhỏ",
-    "zoom_out_desc": "Thu nhỏ bản đồ"
+    "zoom_out_desc": "Thu nhỏ bản đồ",
+    "build_atom_bomb_desc": "Phóng tên lửa nguyên tử đến vị trí con trỏ chuột.",
+    "build_city_desc": "Xây thành phố tại vị trí con trỏ chuột.",
+    "build_defense_post_desc": "Xây chốt phòng thủ tại vị trí con trỏ chuột.",
+    "build_factory_desc": "Xây nhà máy tại vị trí con trỏ chuột.",
+    "build_hydrogen_bomb_desc": "Phóng tên lửa bom nhiệt hạch (bom hydro) đến vị trí con trỏ chuột.",
+    "build_mirv_desc": "Phóng MIRV đến vị trí con trỏ chuột.",
+    "build_missile_silo_desc": "Xây hầm phóng tên lửa tại vị trí con trỏ chuột.",
+    "build_port_desc": "Xây cảng tại vị trí con trỏ chuột.",
+    "build_sam_launcher_desc": "Xây bệ phóng tên lửa đất đối không (SAM) tại vị trí con trỏ chuột.",
+    "build_warship_desc": "Đóng tàu chuyến đến vị trí con trỏ chuột."
   },
   "username": {
     "account_invalid_chars": "Tên chỉ được chứa chữ cái, số, dấu gạch dưới, dấu gạch ngang và một dấu cách giữa các từ.",
@@ -2727,11 +2857,25 @@
     "other_team": "Đội {team} đã chiến thắng!",
     "other_won": "{player} đã chiến thắng!",
     "requeue": "Chơi lại",
+    "share": "Chia sẻ",
     "spectate": "Xem",
     "support_openfront": "Hỗ trợ OpenFront!",
     "territory_pattern": "Mua một skin lãnh thổ để loại bỏ quảng cáo!",
     "you_won": "Bạn đã thắng!",
     "your_team": "Đội của bạn đã thắng!",
     "youtube_tutorial": "Cần trợ giúp?"
+  },
+  "ios_banner": {
+    "got_it": "Đã hiểu",
+    "how": "Cách làm",
+    "later": "Để sau",
+    "modal_desc": "Trình duyệt của bạn không hỗ trợ toàn màn hình, nhưng bạn có thể thêm OpenFront vào Màn hình chính để có trải nghiệm chơi tốt hơn:",
+    "modal_title": "Chế độ toàn màn hình trên iOS",
+    "never": "Không bao giờ",
+    "step_add_to_home_label": "Thêm vào Màn hình chính",
+    "step_open": "Mở từ Màn hình chính — chạy ở chế độ toàn màn hình mà không có thanh địa chỉ",
+    "step_scroll_and_tap": "Cuộn xuống và nhấn",
+    "step_share": "Nhấn nút Chia sẻ trong trình duyệt của bạn",
+    "text": "Để sử dụng chế độ toàn màn hình, hãy thêm OpenFront vào Màn hình chính"
   }
 }

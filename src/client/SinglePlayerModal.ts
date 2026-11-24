@@ -599,7 +599,6 @@ export class SinglePlayerModal extends BaseModal {
                 selected: this.teamCount,
               },
               options: {
-                titleKey: "game_settings.options",
                 bots: {
                   value: this.bots,
                   labelKey: "game_settings.bots",
