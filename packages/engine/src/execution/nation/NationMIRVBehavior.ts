@@ -39,6 +39,14 @@ const MIN_MIRV_LEAK_SHARE: Record<Difficulty, number> = {
   [Difficulty.Impossible]: 0.25,
 };
 
+/** Least land a MIRV target needs, as a share of what the hydrogen bombs its price buys would blast, keyed by difficulty */
+const MIN_MIRV_TARGET_LAND_SHARE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0, // Never checks
+  [Difficulty.Medium]: 0.1,
+  [Difficulty.Hard]: 0.2,
+  [Difficulty.Impossible]: 0.2,
+};
+
 /** MirvExecution's warhead cap, and the target land per warhead its spacing works out to */
 const MIRV_MAX_WARHEADS = 350;
 const LAND_TILES_PER_MIRV_WARHEAD = 2000;
@@ -295,8 +303,19 @@ export class NationMIRVBehavior {
   private isWorthMirving(target: Player): boolean {
     return (
       !this.wasRecentlyMirved(target) &&
+      this.isBigEnoughForMirv(target) &&
       mirvGetsThrough(this.game, this.player, target)
     );
+  }
+
+  private isBigEnoughForMirv(target: Player): boolean {
+    const config = this.game.config();
+    const share = MIN_MIRV_TARGET_LAND_SHARE[config.gameConfig().difficulty];
+    const hydroCost = this.cost(UnitType.HydrogenBomb);
+    if (share === 0 || hydroCost === 0n) return true;
+    const hydros = Number(this.cost(UnitType.MIRV)) / Number(hydroCost);
+    const { outer } = config.nukeMagnitudes(UnitType.HydrogenBomb);
+    return target.numTilesOwned() >= share * hydros * Math.PI * outer ** 2;
   }
 
   // MIRV Strategy Methods

@@ -55,6 +55,9 @@ export interface AttackLogicResult {
 }
 
 // attackLogic tunables
+/** The first MIRV's price; each MIRV launched raises it */
+export const MIRV_BASE_COST = 25_000_000n;
+
 const LARGE_TERRITORY_MIDPOINT = 300_000;
 const LARGE_TERRITORY_STEEPNESS = 2.5;
 // Floors: a huge attacker's bonus bottoms at 0.3x (losses; speed uses the
@@ -369,7 +372,7 @@ export class EngineConfig extends Config {
           ) {
             return 0n;
           }
-          return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
+          return MIRV_BASE_COST + BigInt(game.mirvsLaunched()) * 15_000_000n;
         };
       case UnitType.MissileSilo:
         return this.costWrapper(() => 1_000_000, UnitType.MissileSilo);

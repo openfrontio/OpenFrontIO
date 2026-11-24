@@ -11,9 +11,22 @@ import {
   generateID,
   generateSingleplayerGameID,
 } from "@openfront/shared/SharedUtil";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import type { JoinLobbyEvent } from "../Main";
-import { readSnapshotHeader } from "../WorkerClient";
-import { loadScenarioBundle, useScenarioMap } from "./ScenarioBundle";
+import { readSnapshotHeader, UnreadableSnapshotError } from "../WorkerClient";
+import {
+  loadScenarioBundle,
+  type ScenarioBundle,
+  ScenarioBundleError,
+  useScenarioMap,
+} from "./ScenarioBundle";
+
+/** Who plays the scenario's nation. */
+export interface ScenarioPlayer {
+  username: string;
+  clanTag: string | null;
+  cosmetics?: PlayerCosmetics;
+}
 
 /**
  * The join-lobby event for playing `nationID` in the bundle. A download
@@ -23,19 +36,45 @@ import { loadScenarioBundle, useScenarioMap } from "./ScenarioBundle";
 export async function scenarioGameStart(
   gzipped: Uint8Array,
   nationID: string,
-  player: { username: string; clanTag: string | null },
+  player: ScenarioPlayer,
   expectedHash?: string,
 ): Promise<JoinLobbyEvent> {
-  const bundle = await loadScenarioBundle(gzipped);
-  const { header, snapshot } = bundle;
-  if (expectedHash !== undefined && header.hash !== expectedHash) {
-    throw new Error("the bundle is not the scenario version asked for");
-  }
-  const { gameConfig } = await readSnapshotHeader(snapshot);
-  if (gameConfig.gameType !== GameType.Singleplayer) {
-    throw new Error("the scenario's snapshot is not a singleplayer game");
-  }
+  const bundle = await loadScenarioBundle(gzipped, expectedHash);
+  const detail = await scenarioBundleGameStart(bundle, nationID, player);
   useScenarioMap(bundle);
+  return detail;
+}
+
+/**
+ * As scenarioGameStart, for a bundle already loaded (and checked against its
+ * listing), but it leaves the map loader alone: the caller installs the
+ * bundle's map with useScenarioMap once it is sure to start. Throws a ScenarioBundleError if this build can't read the
+ * snapshot, as when a newer build exported it, or it isn't a singleplayer
+ * game.
+ */
+export async function scenarioBundleGameStart(
+  bundle: ScenarioBundle,
+  nationID: string,
+  player: ScenarioPlayer,
+): Promise<JoinLobbyEvent> {
+  const { header, snapshot } = bundle;
+  const { gameConfig } = await readSnapshotHeader(snapshot).catch(
+    (e: unknown) => {
+      // Only a snapshot the worker can't decode; a worker that fails to
+      // load or times out is no sign the scenario is from a newer build.
+      if (!(e instanceof UnreadableSnapshotError)) throw e;
+      throw new ScenarioBundleError(
+        "format",
+        `this build can't read the scenario's snapshot: ${String(e)}`,
+      );
+    },
+  );
+  if (gameConfig.gameType !== GameType.Singleplayer) {
+    throw new ScenarioBundleError(
+      "malformed",
+      "the scenario's snapshot is not a singleplayer game",
+    );
+  }
   const gameID = generateSingleplayerGameID();
   const clientID = generateID();
   return {

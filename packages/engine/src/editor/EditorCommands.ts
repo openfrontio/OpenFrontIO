@@ -135,6 +135,55 @@ export function applyEditorCommand(
       unit.delete(false);
       return;
     }
+    case "place_warship": {
+      const n = nation(game, command.nation);
+      checkTile(game, command.tile);
+      if (!game.isWater(command.tile)) {
+        throw new Error(`a warship needs water, tile ${command.tile} is not`);
+      }
+      if (game.config().isUnitDisabled(UnitType.Warship)) {
+        throw new Error(`${UnitType.Warship} is disabled in this game`);
+      }
+      if (warshipAt(game, command.tile) !== undefined) {
+        throw new Error(`tile ${command.tile} already has a warship`);
+      }
+      // Built as play builds it, but free, and on its tile rather than at a
+      // port: it patrols around where the author put it.
+      const gold = n.gold();
+      n.buildUnit(UnitType.Warship, command.tile, { patrolTile: command.tile });
+      n.setGold(gold);
+      return;
+    }
+    case "remove_warship": {
+      checkTile(game, command.tile);
+      const unit = warshipAt(game, command.tile);
+      if (unit === undefined) {
+        throw new Error(`tile ${command.tile} has no warship`);
+      }
+      unit.delete(false);
+      return;
+    }
+    case "add_alliance": {
+      const [a, b] = command.nations.map((id) => nation(game, id));
+      if (a === b) throw new Error(`${a.id()} can't ally with itself`);
+      if (game.config().disableAlliances()) {
+        throw new Error("alliances are disabled in this game");
+      }
+      if (a.isAlliedWith(b)) {
+        throw new Error(`${a.id()} and ${b.id()} are already allies`);
+      }
+      game.createAlliance(a, b);
+      return;
+    }
+    case "remove_alliance": {
+      const [a, b] = command.nations.map((id) => nation(game, id));
+      const alliance = a.allianceWith(b);
+      if (alliance === null) {
+        throw new Error(`${a.id()} and ${b.id()} are not allies`);
+      }
+      game.removeAlliance(alliance);
+      return;
+    }
     case "set_terrain": {
       if (command.terrain.length !== command.tiles.length) {
         throw new Error(
@@ -149,7 +198,7 @@ export function applyEditorCommand(
       });
       // What stands on a tile stands on its kind of terrain: a tile that
       // changes between water, land and impassable loses its units (a
-      // structure on land, a ship on water) and its owner.
+      // structure on land, a warship on water) and its owner.
       const kindChanged = new Set<TileRef>();
       for (const [tile, value] of terrain) {
         if (tileKind(game, tile) !== authoredKind(value)) kindChanged.add(tile);
@@ -206,4 +255,8 @@ function checkTile(game: Game, tile: TileRef): void {
 
 function structureAt(game: Game, tile: TileRef): Unit | undefined {
   return game.nearbyUnits(tile, 0, Structures.types, undefined, true)[0]?.unit;
+}
+
+function warshipAt(game: Game, tile: TileRef): Unit | undefined {
+  return game.units(UnitType.Warship).find((u) => u.tile() === tile);
 }

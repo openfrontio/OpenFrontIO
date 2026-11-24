@@ -100,7 +100,7 @@ export class ColumnPicker extends LitElement {
     litRender(
       html`
         <div
-          class="column-picker-popover fixed z-2000 bg-gray-800/95 border border-slate-500 rounded-md p-2 flex flex-col gap-1 overflow-y-auto whitespace-nowrap"
+          class="column-picker-popover fixed z-2000 hud-modal rounded-md p-2 flex flex-col gap-1 overflow-y-auto whitespace-nowrap"
           style="top: ${top}px; right: ${right}px; max-height: ${maxHeight}px;"
         >
           ${this.columns.map((column) => {
