@@ -2843,6 +2843,11 @@
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
   },
+  "steam_awards": {
+    "cta": "Nominate",
+    "desc": "Nominate OpenFront for the Just 5 More Minutes award. It takes ten seconds. Nominations close 30 November.",
+    "title": "Steam Awards"
+  },
   "steam_grant": {
     "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
     "ended_heading": "Your included Steam month has ended",
