@@ -342,6 +342,8 @@ export class InventoryModal extends BaseModal {
       this.loadFailed = cosmetics === null;
     } catch {
       if (loadId !== this.inventoryLoadId) return;
+      // A refresh that threw keeps what's shown too, as the null path does.
+      if (refresh && this.cosmetics !== null) return;
       this.cosmetics = null;
       this.loadFailed = true;
       if (this.ownershipState === "loading") this.ownershipState = "error";

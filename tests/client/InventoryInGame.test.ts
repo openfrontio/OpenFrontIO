@@ -406,6 +406,34 @@ describe("Inventory In game tab", () => {
       ).toContain("bg-sky-600");
     });
 
+    it("a card save's refresh that throws keeps the card tab on screen", async () => {
+      await open("card");
+      const myCard = modal.querySelector("my-card-tab")!;
+      myCard
+        .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+        .click();
+      await settle(modal);
+      vi.mocked(fetchCosmetics).mockRejectedValue(new Error("offline"));
+      cardSaved(myCard);
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: makeUser(OWNED) }),
+      );
+      await settle(modal);
+      expect(modal.querySelector("[data-inventory-state='error']")).toBeNull();
+      expect(modal.querySelector("my-card-tab")).toBe(myCard);
+      expect(
+        myCard.querySelector("[data-my-card-slot='trackers']")!.className,
+      ).toContain("bg-sky-600");
+    });
+
+    it("the first load that throws still shows the error view", async () => {
+      vi.mocked(fetchCosmetics).mockRejectedValue(new Error("offline"));
+      await open("card");
+      expect(
+        modal.querySelector("[data-inventory-state='error']"),
+      ).not.toBeNull();
+    });
+
     it("the first load's failed catalogue fetch still shows the error view", async () => {
       vi.mocked(fetchCosmetics).mockResolvedValue(null);
       await open("card");
