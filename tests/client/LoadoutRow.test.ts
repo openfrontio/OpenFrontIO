@@ -691,6 +691,22 @@ describe("<loadout-row> buying", () => {
     );
   });
 
+  it("a tap check with no known account binds the buy to none, not to whoever signs in next", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "signed_out",
+    });
+    await render({});
+    account.publicId = null;
+    try {
+      await button().preflight!("hard");
+      account.publicId = "p2";
+      await button().onPurchaseHard();
+    } finally {
+      account.publicId = "p1";
+    }
+    expect(vi.mocked(purchaseCosmeticInPlace).mock.calls[0][4]).toBeNull();
+  });
+
   it("signed out by the time of the buy: the sign-in prompt", async () => {
     vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
       kind: "signed_out",

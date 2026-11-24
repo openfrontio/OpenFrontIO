@@ -124,7 +124,8 @@ export class LoadoutRow extends LitElement {
   private ownTracker = false;
   // The account each item's tap check confirmed, by item key: the buy from
   // that confirm is sent only as this account (purchaseCosmeticInPlace).
-  private confirmedAs = new Map<string, string | null>();
+  // `publicId` null: no account was known then, so the buy is refused.
+  private confirmedAs = new Map<string, { publicId: string | null }>();
 
   createRenderRoot() {
     return this;
@@ -192,9 +193,9 @@ export class LoadoutRow extends LitElement {
       );
     };
     // No tap check (never the case here): the account signed in now.
-    const signedInAs = this.confirmedAs.has(key)
-      ? this.confirmedAs.get(key)!
-      : currentPublicId();
+    const confirmed = this.confirmedAs.get(key);
+    const signedInAs =
+      confirmed === undefined ? currentPublicId() : confirmed.publicId;
     this.confirmedAs.delete(key);
     const outcome = await purchaseCosmeticInPlace(
       this.resolved(entry),
@@ -236,7 +237,7 @@ export class LoadoutRow extends LitElement {
     const result = await checkInPlacePurchase(this.resolved(entry), method);
     // The confirm opens now: remember who it was opened as.
     const key = `${entry.type}:${entry.item.name}`;
-    if (result.ok) this.confirmedAs.set(key, currentPublicId());
+    if (result.ok) this.confirmedAs.set(key, { publicId: currentPublicId() });
     if (!result.ok && result.reason === "signed_out") void this.signIn();
     if (!result.ok && result.reason === "unreachable") {
       void showInGameAlert(translateText("win_modal.server_unreachable"));

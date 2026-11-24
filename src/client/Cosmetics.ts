@@ -829,13 +829,10 @@ export async function purchaseCosmeticInPlace(
     return { kind: "unconfirmed" };
   };
 
-  // Checked again right before the buy, once the token is fresh: this read
-  // is the refresh purchaseWithCurrency would otherwise make, and it can pick
-  // up another tab's sign-in (CardEditor does the same for a card save).
-  if (bound) {
-    await userAuth();
-    if (currentPublicId() !== signedInAs) return { kind: "signed_out" };
-  }
+  // Checked again by purchaseWithCurrency once it holds the token it will
+  // send: reading it can refresh the JWT, and the refresh can pick up
+  // another tab's sign-in (CardEditor does the same for a card save).
+  const stillSignedInAs = () => !bound || currentPublicId() === signedInAs;
 
   let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;
   try {
@@ -845,11 +842,14 @@ export async function purchaseCosmeticInPlace(
       method,
       resolved.colorPalette?.name,
       placement,
+      stillSignedInAs,
     );
   } catch (error) {
     console.error("End-screen purchase failed", error);
     return settleFailure();
   }
+  // Another account by the time the token was read: nothing was sent.
+  if (!result.ok && result.code === "cancelled") return { kind: "signed_out" };
   if (!result.ok && result.code === "insufficient_balance") {
     const fresh = await broadcastFreshUserMe();
     if (fresh === false) return { kind: "failed" };
