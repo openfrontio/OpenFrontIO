@@ -2,8 +2,8 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { TerraNullius } from "@openfront/engine-api/game/GameTypes";
 import {
   snapshotType,
+  zFinite,
   zInt,
-  zNum,
   zPlayerRef,
   zTile,
   zTiles,
@@ -239,7 +239,7 @@ export const AttackSnapshot = snapshotType({
     id: z.string(),
     target: zPlayerRef(),
     attacker: zPlayerRef(),
-    troops: zNum(),
+    troops: zFinite(),
     sourceTile: zTile().nullable(),
     border: zTiles(),
     borderSize: zInt(),

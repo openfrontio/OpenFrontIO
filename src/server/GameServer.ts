@@ -1159,6 +1159,7 @@ export class GameServer {
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
         friends: friendsFor(c),
         teamIndex: this.matchmakingTeamIndex(c),
+        card: c.card,
       })),
       tribes: this.tribes,
     });

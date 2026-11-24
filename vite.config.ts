@@ -29,6 +29,7 @@ const __dirname = path.dirname(__filename);
 
 const clientForksTests = [
   "tests/client/ApexNavigation.test.ts",
+  "tests/client/AppleSignIn.test.ts",
   "tests/client/Auth.desktopLogin.test.ts",
   "tests/client/Auth.steamOpenId.test.ts",
   "tests/client/ClientEnvStatic.test.ts",
@@ -46,6 +47,7 @@ const clientForksTests = [
   "tests/client/TransportConnectionRefused.test.ts",
   "tests/client/TransportPoolRedirect.test.ts",
   "tests/client/TransportReconnect.test.ts",
+  "tests/client/TransportTurnstileFallback.test.ts",
   "tests/client/UsernameBareClaim.test.ts",
   "tests/client/UsernameClaimPrefill.test.ts",
   "tests/client/graphics/layers/WinModal.test.ts",

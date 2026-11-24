@@ -82,6 +82,44 @@ describe("MIRV warheads getting past SAMs", () => {
   });
 });
 
+describe("Nations and MIRVs at small targets", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // With 80-tile hydrogen bomb blasts, Hard wants a target of 20k tiles for a MIRV at its 25M base
+  // price and 44k at 55M; the leader has 30k
+  it.each([
+    [Difficulty.Hard, 0, true],
+    [Difficulty.Hard, 2, false],
+    [Difficulty.Easy, 2, true],
+  ])(
+    "%s with %i MIRVs launched before MIRVs the leader: %s",
+    (difficulty, launched, launches) => {
+      const { game, nation } = setupLeader(difficulty, { sams: false });
+      vi.spyOn(game.config(), "nukeMagnitudes").mockReturnValue({
+        inner: 60,
+        outer: 80,
+      });
+      vi.spyOn(game, "mirvsLaunched").mockReturnValue(launched);
+      nation.addGold(100_000_000n);
+      const random = new PseudoRandom(1);
+      vi.spyOn(random, "chance").mockReturnValue(false);
+      const behavior = new NationMIRVBehavior(
+        random,
+        game,
+        nation,
+        new NationEmojiBehavior(random, game, nation),
+      );
+      const spy = vi.spyOn(game, "addExecution");
+      behavior.considerMIRV();
+      expect(spy.mock.calls.some(([e]) => e instanceof MirvExecution)).toBe(
+        launches,
+      );
+    },
+  );
+});
+
 describe("Nations and MIRVs against SAM-covered leaders", () => {
   afterEach(() => {
     vi.restoreAllMocks();

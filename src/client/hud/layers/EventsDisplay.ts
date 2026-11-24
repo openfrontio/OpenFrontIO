@@ -170,11 +170,45 @@ export class EventsDisplay extends LitElement implements Controller {
     this.events = [];
   }
 
-  init() {
-    this.eventBus.on(
-      SendAllianceRequestIntentEvent,
-      this.onAllianceRequestSentConfirmation.bind(this),
-    );
+  private initGeneration = 0;
+  private allianceConfirmationUnsub: (() => void) | null = null;
+  private onAllianceRequestSentConfirmationBound =
+    this.onAllianceRequestSentConfirmation.bind(this);
+
+  private unsubscribeBus(): void {
+    this.allianceConfirmationUnsub?.();
+    this.allianceConfirmationUnsub = null;
+  }
+
+  init(): () => void {
+    this.unsubscribeBus();
+    const gen = ++this.initGeneration;
+    const bus = this.eventBus;
+    if (bus) {
+      bus.on(
+        SendAllianceRequestIntentEvent,
+        this.onAllianceRequestSentConfirmationBound,
+      );
+      this.allianceConfirmationUnsub = () =>
+        bus.off?.(
+          SendAllianceRequestIntentEvent,
+          this.onAllianceRequestSentConfirmationBound,
+        );
+    }
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
+  }
+
+  dispose(): void {
+    this.initGeneration++;
+    this.unsubscribeBus();
+    this.events = [];
+    this.active = false;
+    this._isVisible = false;
+    this.requestUpdate();
   }
 
   private onAllianceRequestSentConfirmation(e: SendAllianceRequestIntentEvent) {
@@ -834,7 +868,7 @@ export class EventsDisplay extends LitElement implements Controller {
           tier2Events.length > 0
             ? html`
                 <div
-                  class="bg-gray-800/92 backdrop-blur-sm max-h-[12vh] lg:max-h-[22vh] overflow-y-auto rounded-lg sm:max-lg:landscape:rounded-l-none opacity-90 events-container"
+                  class="hud-panel max-h-[12vh] lg:max-h-[22vh] overflow-y-auto rounded-lg sm:max-lg:landscape:rounded-l-none opacity-90 events-container"
                 >
                   <table
                     class="w-full border-collapse text-white text-xs lg:text-sm pointer-events-auto"
@@ -851,7 +885,7 @@ export class EventsDisplay extends LitElement implements Controller {
           tier1Events.length > 0 || showBetrayalTimer
             ? html`
                 <div
-                  class="bg-gray-800 backdrop-blur-sm max-h-[30vh] lg:max-h-[40vh] overflow-y-auto rounded-lg sm:max-lg:landscape:rounded-l-none shadow-lg border-l-4 border-red-500 important-events-container"
+                  class="hud-panel max-h-[30vh] lg:max-h-[40vh] overflow-y-auto rounded-lg sm:max-lg:landscape:rounded-l-none border-l-4 border-red-500 important-events-container"
                 >
                   <table
                     class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"

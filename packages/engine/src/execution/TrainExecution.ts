@@ -463,6 +463,9 @@ export class TrainExecution implements Execution {
   }
 }
 
+/** Cars per train (TrainStationExecution's); bounds what a snapshot holds. */
+export const TRAIN_CARS = 5;
+
 const TrainExecutionStateSchema = z.object({
   active: z.boolean(),
   initialized: z.boolean(),
@@ -484,7 +487,7 @@ const TrainExecutionStateSchema = z.object({
   player: zPlayerRef(),
   source: zRef(),
   destination: zRef(),
-  numCars: zInt(),
+  numCars: zInt().min(0).max(TRAIN_CARS),
 });
 type TrainExecutionState = z.infer<typeof TrainExecutionStateSchema>;
 

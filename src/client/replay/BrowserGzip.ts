@@ -17,10 +17,13 @@ export function gzipInBrowser(data: Uint8Array): Promise<Uint8Array> {
   return pipe(data, new CompressionStream("gzip"));
 }
 
+/** Thrown by gunzipInBrowser when the output passes its `max`. */
+export class InflateLimitError extends Error {}
+
 /**
- * Inflates gzip. With a `max`, it stops and throws once the output passes
- * that many bytes, so a gzip bomb in another player's upload is never
- * inflated in full.
+ * Inflates gzip. With a `max`, it stops and throws an InflateLimitError once
+ * the output passes that many bytes, so a gzip bomb in another player's
+ * upload is never inflated in full.
  */
 export async function gunzipInBrowser(
   data: Uint8Array,
@@ -38,7 +41,9 @@ export async function gunzipInBrowser(
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > max) throw new Error(`inflates past ${max} bytes`);
+      if (total > max) {
+        throw new InflateLimitError(`inflates past ${max} bytes`);
+      }
       chunks.push(value);
     }
   } finally {

@@ -9,7 +9,11 @@ import { AllianceView } from "@openfront/engine-api/game/GameUpdates";
 import { UnitLike } from "@openfront/engine-api/game/ReadViews";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { EventBus } from "@openfront/shared/EventBus";
+import {
+  EventBus,
+  type EventConstructor,
+  type GameEvent,
+} from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
@@ -148,32 +152,73 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   private lastMouseUpdate = 0;
+  private initGeneration = 0;
+  private eventUnsubscribers: Array<() => void> = [];
 
-  init() {
-    this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
-      this.onMouseEvent(e),
-    );
-    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
+  private onBus<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ): void {
+    const bus = this.eventBus;
+    bus?.on(eventType, handler);
+    this.eventUnsubscribers.push(() => bus?.off?.(eventType, handler));
+  }
+
+  private unsubscribeBus(): void {
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
+  }
+
+  init(): () => void {
+    this.unsubscribeBus();
+    const gen = ++this.initGeneration;
+    this.onBus(MouseMoveEvent, (e: MouseMoveEvent) => this.onMouseEvent(e));
+    this.onBus(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
     );
-    this.eventBus.on(TouchEvent, (e: TouchEvent) => this.maybeShow(e.x, e.y));
-    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
-    this.eventBus.on(SpawnBarVisibleEvent, (e) => {
+    this.onBus(TouchEvent, (e: TouchEvent) => this.maybeShow(e.x, e.y));
+    this.onBus(CloseRadialMenuEvent, () => this.hide());
+    this.onBus(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
     });
-    this.eventBus.on(ImmunityBarVisibleEvent, (e) => {
+    this.onBus(ImmunityBarVisibleEvent, (e) => {
       this.immunityBarVisible = e.visible;
     });
-    this.eventBus.on(DoRequestAllianceEvent, (e) =>
+    this.onBus(DoRequestAllianceEvent, (e) =>
       this.markActionTaken(e.tile, "requestAlliance"),
     );
-    this.eventBus.on(DoBreakAllianceEvent, (e) =>
+    this.onBus(DoBreakAllianceEvent, (e) =>
       this.markActionTaken(e.tile, "breakAlliance"),
     );
-    this.eventBus.on(DoTargetPlayerEvent, (e) =>
+    this.onBus(DoTargetPlayerEvent, (e) =>
       this.markActionTaken(e.tile, "target"),
     );
     this._isActive = true;
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
+  }
+
+  dispose(): void {
+    this.initGeneration++;
+    this.unsubscribeBus();
+    this.playerActionsVersion++;
+    this.playerActionsFor = null;
+    this.pointerOnPanel = false;
+    this.spawnBarVisible = false;
+    this.immunityBarVisible = false;
+    this.player = null;
+    this.tile = null;
+    this.playerActions = null;
+    this.playerProfile = null;
+    this.unit = null;
+    this._isInfoVisible = false;
+    this._isActive = false;
+    this.requestUpdate();
   }
 
   // Once I act on the shown player (button or keybind), drop that button
@@ -238,7 +283,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     if (owner && owner.isPlayer()) {
       this.player = owner as PlayerView;
       this.tile = tile;
-      void this.player.profile().then((p) => {
+      const targetPlayer = this.player;
+      void targetPlayer.profile().then((p) => {
+        if (!this._isActive || this.player !== targetPlayer) return;
         this.playerProfile = p;
       });
       this.refreshPlayerActions(this.player, tile);
@@ -927,7 +974,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${
+          class="hud-panel min-[1200px]:rounded-lg sm:rounded-b-lg text-white text-lg lg:text-base w-full ${
             this.showShortcutButtons() ? "sm:w-[598px]" : "sm:w-[500px]"
           } lg:max-w-full overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}

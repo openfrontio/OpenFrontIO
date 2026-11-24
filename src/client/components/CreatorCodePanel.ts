@@ -278,45 +278,48 @@ export class CreatorCodePanel extends LitElement {
           >
             ${translateText("creator_code.input_label")}
           </label>
-          <input
-            id="creator-code-panel-input"
-            type="text"
-            .value=${this.draft}
-            @input=${this.handleInput}
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter" && canSubmit) void this.handleSet();
-            }}
-            placeholder=${translateText("creator_code.input_placeholder")}
-            ?disabled=${locked || this.busy}
-            class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${
-              this.error
-                ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
-                : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"
-            }"
-          />
+          <div data-creator-code-row class="flex items-stretch gap-2">
+            <input
+              id="creator-code-panel-input"
+              type="text"
+              .value=${this.draft}
+              @input=${this.handleInput}
+              @keydown=${(e: KeyboardEvent) => {
+                if (e.key === "Enter" && canSubmit) void this.handleSet();
+              }}
+              placeholder=${translateText("creator_code.input_placeholder")}
+              ?disabled=${locked || this.busy}
+              class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${
+                this.error
+                  ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
+                  : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"
+              }"
+            />
+            <o-button
+              variant=${setArmed ? "warning" : "primary"}
+              width="auto"
+              size="md"
+              translationKey=${
+                setArmed
+                  ? "creator_code.confirm_lock"
+                  : this.creator
+                    ? "creator_code.change"
+                    : "creator_code.support"
+              }
+              .disable=${!canSubmit}
+              @click=${this.handleSet}
+            ></o-button>
+          </div>
           <div class="text-sm text-red-400 min-h-[1.25rem]">${this.error}</div>
-          <o-button
-            variant=${setArmed ? "warning" : "primary"}
-            width="block"
-            size="md"
-            translationKey=${
-              setArmed
-                ? "creator_code.confirm_lock"
-                : this.creator
-                  ? "creator_code.change"
-                  : "creator_code.support"
-            }
-            .disable=${!canSubmit}
-            @click=${this.handleSet}
-          ></o-button>
         </div>
 
         ${
           this.creator
             ? html`<o-button
-                variant=${unsupportArmed ? "warning" : "danger"}
-                width="block"
-                size="md"
+                class="self-start"
+                variant=${unsupportArmed ? "warning" : "dangerLink"}
+                width="auto"
+                size="sm"
                 translationKey=${
                   unsupportArmed
                     ? "creator_code.confirm_unsupport"

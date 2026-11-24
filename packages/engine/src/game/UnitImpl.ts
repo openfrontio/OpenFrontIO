@@ -17,6 +17,7 @@ import {
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import {
   snapshotType,
+  zFinite,
   zInt,
   zNum,
   zPlayerRef,
@@ -937,7 +938,7 @@ export const UnitSnapshot = snapshotType({
     targetUnit: zRef().nullable(),
     health: z.bigint(),
     transportShipState: z
-      .object({ isRetreating: z.boolean(), troops: zNum() })
+      .object({ isRetreating: z.boolean(), troops: zFinite() })
       .nullable(),
     warshipState: z
       .object({
@@ -964,7 +965,7 @@ export const UnitSnapshot = snapshotType({
     lastSetSafeFromPirates: zInt(),
     underConstruction: z.boolean(),
     lastOwner: zPlayerRef().nullable(),
-    troops: zNum(),
+    troops: zFinite(),
     missileTimerQueue: z.array(zInt()),
     hasTrainStation: z.boolean(),
     level: zInt(),

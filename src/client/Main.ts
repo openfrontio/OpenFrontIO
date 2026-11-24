@@ -1,5 +1,6 @@
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import {
+  clientAuth,
   isRewardClaimable,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
@@ -32,6 +33,7 @@ import {
   reauthAfterPortalChange,
   retrySteamSignIn,
   userAuth,
+  type UserAuth,
 } from "./Auth";
 import {
   bootInterruptsAllowed,
@@ -158,6 +160,12 @@ import { steamSDK } from "./SteamSDK";
 import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
 import type { TokenLoginModal } from "./TokenLoginModal";
+import {
+  clearTurnstilePass,
+  hasValidTurnstilePass,
+  readTurnstilePassTimestamp,
+  recordTurnstilePass,
+} from "./TurnstilePass";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,
@@ -349,6 +357,18 @@ class Client {
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinLobbyModal;
+  private readonly gamePortal = gamePortal;
+  private activeJoinAbortController: AbortController | null = null;
+
+  private get joinLobbyModal(): JoinLobbyModal {
+    const modal = this.loadedJoinModal();
+    if (modal) return modal;
+    return {
+      closeWithoutLeaving: () => {},
+      close: () => {},
+    } as unknown as JoinLobbyModal;
+  }
+
   private gameModeSelector: GameModeSelector;
   private userSettings: UserSettings = new UserSettings();
   private storeModal: StoreModal;
@@ -582,16 +602,41 @@ class Client {
     // versioned replay shells: the replay host may not be on the Turnstile
     // site key's domain allowlist, so rendering the widget there just fails —
     // and replays never send a token anyway (see getTurnstileToken below).
-    const turnstilePrefetch =
-      isSteamShell() || isReplayShellHost(window.location.hostname)
-        ? null
-        : getTurnstileToken();
-    // A prefetch that fails is not an error anyone has asked about yet: the
-    // join path drops it and fetches once more (see getTurnstileToken below),
-    // and only that attempt alerts. Mark it handled here so a boot-time
-    // rejection nobody is awaiting yet does not surface as an unhandled one.
-    turnstilePrefetch?.catch(() => {});
-    this.turnstileTokenPromise = turnstilePrefetch;
+    // Also skip for returning accounts that already hold a valid 6h pass hint.
+    this.turnstileTokenPromise = null;
+    if (
+      !isSteamShell() &&
+      !isReplayShellHost(window.location.hostname) &&
+      !this.gamePortal.isOnGamePortal()
+    ) {
+      void userAuth()
+        .then((auth) => {
+          if (
+            auth !== false &&
+            clientAuth(auth.claims) === "account" &&
+            hasValidTurnstilePass(auth.claims.sub)
+          ) {
+            return;
+          }
+          if (
+            this.turnstileTokenPromise === null &&
+            !this.joinInFlight &&
+            this.lobbyHandle === null
+          ) {
+            const prefetch = getTurnstileToken(undefined, {
+              abortOnInteractive: true,
+            });
+            // A prefetch that fails is not an error anyone has asked about yet:
+            // the join path drops it and fetches once more (see getTurnstileToken
+            // below), and only that attempt alerts. Mark it handled here so a
+            // boot-time rejection nobody is awaiting yet does not surface as an
+            // unhandled one.
+            prefetch.catch(() => {});
+            this.turnstileTokenPromise = prefetch;
+          }
+        })
+        .catch(() => {});
+    }
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -692,8 +737,7 @@ class Client {
       // A rejected handshake (Turnstile alerts then rejects) never assigns
       // lobbyHandle, so nothing downstream clears the "lobby" presence
       // emitted at the top of the join -- friends would keep being offered a
-      // Join into a lobby the player never entered. Re-throw so the failure
-      // still surfaces exactly as it does today.
+      // Join into a lobby the player never entered.
       void this.handleJoinLobby(event).catch((error) => {
         this.resetPresenceToMenu();
         // joinInFlight has exactly the same problem: set when the join
@@ -708,7 +752,7 @@ class Client {
           // (back to the editor, for its test play).
           if (this.menuGoneForJoin) exitGame();
         }
-        throw error;
+        console.warn("join-lobby failed:", error);
       });
     });
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
@@ -1257,6 +1301,8 @@ class Client {
         return;
       }
 
+      if (this.currentUrl !== null && this.lobbyHandle !== null) return;
+
       // Reset the UI to its initial state.
       this.loadedJoinModal()?.close();
 
@@ -1467,6 +1513,7 @@ class Client {
     // the way a game start does, without leaving a lobby it never joined.
     this.loadedHostModal()?.disarmLeaveOnClose();
     this.loadedJoinModal()?.disarmLeaveOnClose();
+    this.loadedMatchmakingModal()?.disarmLeaveOnClose();
     this.loadedHostModal()?.closeWithoutLeaving();
     this.loadedJoinModal()?.closeWithoutLeaving();
     this.closeMenu();
@@ -1904,21 +1951,24 @@ class Client {
     // "joined, waiting", and HostLobbyModal after the server lobby exists.
     // Refusing without closing those would leave the UI claiming a lobby the
     // client never entered, with the game starting without them.
+    // Disarm matchmaking before closing any sibling inline modal: BaseModal.close()
+    // calls showPage("page-play") even when already closed, which force-closes an
+    // open matchmaking modal and would emit leave-lobby for a refused join.
+    const closeMatchmaking =
+      lobby.source === "matchmaking" && this.loadedMatchmakingModal()?.isOpen();
+    if (closeMatchmaking) {
+      this.loadedMatchmakingModal()?.disarmLeaveOnClose();
+    }
     this.loadedJoinModal()?.close();
     this.loadedHostModal()?.close();
     // Matchmaking dispatches its own join once the server matches it, so a
     // refusal here leaves its modal sitting on "waiting for a game" over a
-    // match that will never be entered. close() is the same teardown its Back
-    // button uses -- it shuts the queue socket and clears the watchdog -- so
-    // the player leaves the queue rather than holding a slot from a screen
-    // that is lying to them. Scoped to the source that owns that modal: a
-    // deep link refused while someone is legitimately queued must not cancel
-    // their queue.
-    if (
-      lobby.source === "matchmaking" &&
-      this.loadedMatchmakingModal()?.isOpen()
-    ) {
-      this.matchmakingModal.close();
+    // match that will never be entered. closeWithoutLeaving() shuts the queue
+    // socket and clears the watchdog without emitting leave-lobby. Scoped to
+    // the source that owns that modal: a deep link refused while someone is
+    // legitimately queued must not cancel their queue.
+    if (closeMatchmaking && this.loadedMatchmakingModal()?.isOpen()) {
+      this.matchmakingModal.closeWithoutLeaving();
     }
     // false: the web never refuses here any more, so the only feedback left
     // is the desktop status bar's wiggle -- the bar is already showing the
@@ -1927,10 +1977,43 @@ class Client {
     return true;
   }
 
+  private cleanupFailedJoin(event: CustomEvent<JoinLobbyEvent>): void {
+    const ownsFlag = this.mostRecentJoinEvent === event.timeStamp;
+    if (!ownsFlag) return;
+
+    this.activeJoinAbortController?.abort();
+    this.activeJoinAbortController = null;
+    const closeMatchmaking =
+      event.detail.source === "matchmaking" &&
+      this.loadedMatchmakingModal()?.isOpen();
+    // Disarm all involved lobby modals before closing any of them so inline
+    // showPage("page-play") side effects cannot emit an extra leave-lobby.
+    this.loadedHostModal()?.disarmLeaveOnClose();
+    this.loadedJoinModal()?.disarmLeaveOnClose();
+    if (closeMatchmaking) {
+      this.loadedMatchmakingModal()?.disarmLeaveOnClose();
+    }
+    this.joinLobbyModal.closeWithoutLeaving();
+    this.loadedHostModal()?.closeWithoutLeaving();
+    if (closeMatchmaking && this.loadedMatchmakingModal()?.isOpen()) {
+      this.matchmakingModal.closeWithoutLeaving();
+    }
+    const startingModal = document.querySelector("game-starting-modal");
+    if (startingModal instanceof GameStartingModal) {
+      startingModal.hide();
+    }
+    // handleLeaveLobby only resets the URL once a lobby handle exists.
+    history.replaceState(null, "", "/");
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
+  }
+
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
       event.preventDefault();
+      if (!this.joinInFlight && this.lobbyHandle === null) {
+        this.gameModeSelector?.releaseRefusedJoin(lobby?.gameID);
+      }
       // The singleplayer modal shows the starting overlay before dispatching
       // join-lobby; a refused join must release it or it stays over the menu.
       const startingModal = document.querySelector("game-starting-modal");
@@ -1941,12 +2024,18 @@ class Client {
     }
     if (this.blockedJoin(lobby)) {
       event.preventDefault();
+      if (!this.joinInFlight && this.lobbyHandle === null) {
+        this.gameModeSelector?.releaseRefusedJoin(lobby?.gameID);
+      }
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
     // bumped this would supersede a legitimate join still awaiting userAuth
     // and cosmetics, stopping it as stale and leaving the player nowhere.
     this.mostRecentJoinEvent = event.timeStamp;
+    const joinAbort = new AbortController();
+    this.activeJoinAbortController?.abort();
+    this.activeJoinAbortController = joinAbort;
     // Cleared on both ways out of the pre-handle window (superseded, or the
     // handle being assigned) and by handleLeaveLobby, which runs its reset
     // above its own lobbyHandle guard precisely because this window exists.
@@ -2029,6 +2118,7 @@ class Client {
       await loadModal("join-lobby-modal").catch((err) =>
         console.error("join-lobby-modal failed to load:", err),
       );
+      if (joinAbort.signal.aborted) return;
       this.loadedJoinModal()?.open({
         lobbyId: lobby.gameID,
         lobbyInfo: lobby.publicLobbyInfo,
@@ -2052,12 +2142,14 @@ class Client {
       void userAuth();
     }
     const auth = await userAuth(!isSingleplayer);
+    if (joinAbort.signal.aborted) return;
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     // Ensure the one-shot Steam name-seed has settled before reading
     // getUsername(), mirroring how getClanCheck() runs in parallel with the
     // handshake. whenSeeded() always resolves (falling back to the generated
     // anon name on failure/timeout), so this can only delay, never block.
     await this.usernameInput?.whenSeeded();
+    if (joinAbort.signal.aborted) return;
     // One resolution for the whole join: the name and the verified badge have
     // to describe the same decision, so they are read together rather than
     // asked for separately.
@@ -2066,11 +2158,13 @@ class Client {
     let joinLobby: typeof import("./ClientGameRunner").joinLobby;
     try {
       ({ joinLobby } = await loadGameClient());
+      if (joinAbort.signal.aborted) return;
     } catch (err) {
       // The game's chunk didn't load (a network error, or a deploy that
       // replaced it). A full page load also picks up a new deploy, unless the
       // player has since left or started another join.
       console.error("game client failed to load:", err);
+      if (joinAbort.signal.aborted) return;
       if (this.mostRecentJoinEvent !== event.timeStamp) return;
       // The URL names the singleplayer game now, which no server has.
       if (isSingleplayer) history.replaceState(null, "", "/");
@@ -2078,27 +2172,13 @@ class Client {
         reloadForUpdate();
         return;
       }
-      this.loadedJoinModal()?.close();
-      this.loadedHostModal()?.close();
-      if (
-        lobby.source === "matchmaking" &&
-        this.loadedMatchmakingModal()?.isOpen()
-      ) {
-        this.matchmakingModal.close();
-      }
-      const startingModal = document.querySelector("game-starting-modal");
-      if (startingModal instanceof GameStartingModal) {
-        startingModal.hide();
-      }
-      // handleLeaveLobby only resets the URL once a lobby handle exists.
-      history.replaceState(null, "", "/");
       // Go home only once the player has read the alert. Taking the flag
       // also stops beforeunload clearing the editor's in-game signal, so
       // clear it here.
       const menuGone = this.menuGoneForJoin;
       if (menuGone) setInGameSignal(false);
       this.menuGoneForJoin = false;
-      void this.handleLeaveLobby();
+      this.cleanupFailedJoin(event);
       void showInGameAlert(
         translateText("error_modal.game_client_failed"),
       ).then(() => {
@@ -2115,45 +2195,118 @@ class Client {
       });
       return;
     }
-    const newLobbyHandle = joinLobby(this.eventBus, {
-      gameID: lobby.gameID,
-      cosmetics: await getPlayerCosmeticsRefs({
-        verified: resolvedName.verified,
-      }),
-      turnstileToken: await this.getTurnstileToken(lobby),
-      playerName: resolvedName.name,
-      playerClanTag: this.usernameInput?.getClanTag() ?? null,
-      clanTagCheck: this.usernameInput?.getClanCheck(),
-      playerRole,
-      gameStartInfo:
-        lobby.gameStartInfo ??
-        // Replays simulate from the archived record; re-apply the server's
-        // wire blanking or team games desync (see toWireGameStartInfo).
-        (lobby.gameRecord
-          ? toWireGameStartInfo(lobby.gameRecord.info)
-          : undefined),
-      gameRecord: lobby.gameRecord,
-      snapshot: lobby.snapshot,
-      spectator: lobby.spectator,
-      creatorToken: lobby.creatorToken,
-    });
 
-    if (this.mostRecentJoinEvent !== event.timeStamp) {
-      newLobbyHandle.stop(true);
-      console.warn("Join requested, but was superseded");
-      // Deliberately NOT clearing joinInFlight. Being here means a newer join
-      // has already set it, after this one did, so the flag is that join's and
-      // clearing it would re-open the boot interrupts over a lobby the player
-      // has committed to. The newer join clears it on its own exits, and if it
-      // has already finished, lobbyHandle is the guard. Same ownership rule as
-      // joinOwnsInFlightFlag, which is false by construction on this branch.
+    try {
+      const cosmetics = await getPlayerCosmeticsRefs({
+        verified: resolvedName.verified,
+      });
+      if (joinAbort.signal.aborted) return;
+
+      // Dismissing a managed challenge is a cancelled join: close the lobby
+      // modals without a second leave and without an error dialog.
+      const cancelJoin = () => this.cleanupFailedJoin(event);
+      const turnstileToken = await this.getTurnstileToken(
+        lobby,
+        auth,
+        joinAbort.signal,
+        cancelJoin,
+      );
+      if (joinAbort.signal.aborted) return;
+
+      if (this.mostRecentJoinEvent !== event.timeStamp) return;
+
+      const passPersistentId =
+        auth !== false &&
+        clientAuth(auth.claims) === "account" &&
+        ClientEnv.env() !== GameEnv.Dev &&
+        !isSteamShell() &&
+        joinIsGateable(lobby) &&
+        !wasAdmitted(lobby.gameID)
+          ? auth.claims.sub
+          : null;
+      const attemptPassTimestamp =
+        passPersistentId !== null
+          ? (readTurnstilePassTimestamp(passPersistentId) ?? Date.now())
+          : undefined;
+
+      const newLobbyHandle = joinLobby(this.eventBus, {
+        gameID: lobby.gameID,
+        cosmetics,
+        turnstileToken,
+        ...(passPersistentId !== null
+          ? {
+              onTurnstileTokenAdmitted: () =>
+                recordTurnstilePass(passPersistentId),
+              refreshTurnstileToken: (signal?: AbortSignal) => {
+                clearTurnstilePass(passPersistentId, attemptPassTimestamp);
+                return resolveTurnstileToken({
+                  prefetch: null,
+                  requestFresh: freshTurnstileRequester(cancelJoin),
+                  signal,
+                  forceFresh: true,
+                });
+              },
+            }
+          : {}),
+        playerName: resolvedName.name,
+        playerClanTag: this.usernameInput?.getClanTag() ?? null,
+        clanTagCheck: this.usernameInput?.getClanCheck(),
+        playerRole,
+        gameStartInfo:
+          lobby.gameStartInfo ??
+          // Replays simulate from the archived record; re-apply the server's
+          // wire blanking or team games desync (see toWireGameStartInfo).
+          (lobby.gameRecord
+            ? toWireGameStartInfo(lobby.gameRecord.info)
+            : undefined),
+        gameRecord: lobby.gameRecord,
+        snapshot: lobby.snapshot,
+        spectator: lobby.spectator,
+        creatorToken: lobby.creatorToken,
+      });
+
+      if (this.mostRecentJoinEvent !== event.timeStamp) {
+        newLobbyHandle.stop(true);
+        console.warn("Join requested, but was superseded");
+        // Deliberately NOT clearing joinInFlight. Being here means a newer join
+        // has already set it, after this one did, so the flag is that join's and
+        // clearing it would re-open the boot interrupts over a lobby the player
+        // has committed to. The newer join clears it on its own exits, and if it
+        // has already finished, lobbyHandle is the guard. Same ownership rule as
+        // joinOwnsInFlightFlag, which is false by construction on this branch.
+        return;
+      }
+
+      this.lobbyHandle = newLobbyHandle;
+      // From here lobbyHandle is the guard.
+      this.joinInFlight = false;
+      this.menuGoneForJoin = false;
+      this.activeJoinAbortController = null;
+    } catch (error) {
+      if (joinAbort.signal.aborted) return;
+      console.warn("Join failed before handle was assigned:", error);
+      const menuGone = this.menuGoneForJoin;
+      if (menuGone) setInGameSignal(false);
+      this.menuGoneForJoin = false;
+      this.cleanupFailedJoin(event);
+      if (!(error instanceof TurnstileError)) {
+        void showInGameAlert(
+          translateText("error_modal.game_client_failed"),
+        ).then(() => {
+          if (
+            menuGone &&
+            !this.gameUnderway() &&
+            this.scenarioEditor === null &&
+            this.replayViewerID === null
+          ) {
+            exitGame();
+          }
+        });
+      } else if (menuGone) {
+        exitGame();
+      }
       return;
     }
-
-    this.lobbyHandle = newLobbyHandle;
-    // From here lobbyHandle is the guard.
-    this.joinInFlight = false;
-    this.menuGoneForJoin = false;
 
     void this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
@@ -2183,6 +2336,7 @@ class Client {
       // game-start (host or joiner, depending on close order).
       this.loadedHostModal()?.disarmLeaveOnClose();
       this.loadedJoinModal()?.disarmLeaveOnClose();
+      this.loadedMatchmakingModal()?.disarmLeaveOnClose();
       this.loadedHostModal()?.closeWithoutLeaving();
       this.loadedJoinModal()?.closeWithoutLeaving();
       this.closeMenu();
@@ -2364,6 +2518,10 @@ class Client {
   }
 
   private async handleLeaveLobby(event?: CustomEvent) {
+    const wasJoining = this.joinInFlight;
+    this.activeJoinAbortController?.abort();
+    this.activeJoinAbortController = null;
+    this.gameModeSelector?.resetJoinState();
     // Above the lobbyHandle guard on purpose. Presence goes to "lobby" when
     // the join starts, but lobbyHandle is only assigned once the handshake
     // finishes; a modal closed during that window dispatches leave-lobby and
@@ -2384,6 +2542,22 @@ class Client {
     this.mostRecentJoinEvent = performance.now();
 
     if (this.lobbyHandle === null) {
+      if (wasJoining) {
+        const canceledLobby = event?.detail?.lobby;
+        const pathname = window.location.pathname;
+        const matchesCanceledLobby =
+          typeof canceledLobby === "string"
+            ? pathname === ClientEnv.gamePath(canceledLobby) ||
+              pathname === "/streamer-mode"
+            : pathname.startsWith("/join/") || pathname === "/streamer-mode";
+        if (matchesCanceledLobby) {
+          try {
+            history.replaceState(null, "", "/");
+          } catch (e) {
+            console.warn("Failed to restore URL on leave:", e);
+          }
+        }
+      }
       // The join closed the scenario editor, which had replaced the menu, and
       // ended before reaching a lobby: nothing is left on the page, so leave as
       // a game does (back to the editor, for its test play).
@@ -2394,6 +2568,10 @@ class Client {
     this.lobbyHandle.stop(true);
     this.lobbyHandle = null;
     this.currentUrl = null;
+    const startingModal = document.querySelector("game-starting-modal");
+    if (startingModal instanceof GameStartingModal) {
+      startingModal.hide();
+    }
 
     try {
       history.replaceState(null, "", "/");
@@ -2506,7 +2684,11 @@ class Client {
 
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
+    auth: UserAuth,
+    signal?: AbortSignal,
+    onCancel?: () => void,
   ): Promise<string | null> {
+    if (signal?.aborted) return null;
     if (
       ClientEnv.env() === GameEnv.Dev ||
       isSteamShell() ||
@@ -2520,6 +2702,14 @@ class Client {
       return null;
     }
 
+    if (
+      auth !== false &&
+      clientAuth(auth.claims) === "account" &&
+      hasValidTurnstilePass(auth.claims.sub)
+    ) {
+      return null;
+    }
+
     const prefetch = this.turnstileTokenPromise;
     // Clear promise so a new token is fetched next time. Unconditional: a
     // prefetch that rejected must not be waited on twice either.
@@ -2527,12 +2717,13 @@ class Client {
 
     return resolveTurnstileToken({
       prefetch,
-      requestFresh: getTurnstileToken,
+      requestFresh: freshTurnstileRequester(onCancel),
+      signal: signal ?? this.activeJoinAbortController?.signal,
       // Always request a new token on a portal.
-      forceFresh: gamePortal.isOnGamePortal(),
+      forceFresh: this.gamePortal.isOnGamePortal(),
       onError: (code) =>
         void showInGameAlert(
-          translateText("error_modal.turnstile_error", { code }),
+          translateText("error_modal.turnstile_error", { code: code ?? "" }),
         ),
     });
   }
@@ -2579,12 +2770,40 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-async function getTurnstileToken(): Promise<TurnstileToken> {
+// Join-time requests may show a managed challenge. onCancel runs synchronously
+// when the player dismisses it, before the rejection reaches any awaiter.
+function freshTurnstileRequester(
+  onCancel?: () => void,
+): (signal?: AbortSignal) => Promise<TurnstileToken> {
+  return (signal) =>
+    getTurnstileToken(signal, {
+      onCancel,
+      cancelLabel: translateText("common.cancel"),
+      dialogLabel: translateText("error_modal.turnstile_challenge_label"),
+    });
+}
+
+async function getTurnstileToken(
+  signal?: AbortSignal,
+  managed: {
+    abortOnInteractive?: boolean;
+    onCancel?: () => void;
+    cancelLabel?: string;
+    dialogLabel?: string;
+  } = {},
+): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
   while (window.turnstile === undefined && attempts < 100) {
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted", "AbortError");
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
     attempts++;
+  }
+
+  if (signal?.aborted) {
+    throw new DOMException("The operation was aborted", "AbortError");
   }
 
   const turnstile = window.turnstile;
@@ -2600,5 +2819,7 @@ async function getTurnstileToken(): Promise<TurnstileToken> {
   return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
     container: document.getElementById("turnstile-container") ?? document.body,
+    signal,
+    ...managed,
   });
 }

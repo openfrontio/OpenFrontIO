@@ -15,9 +15,10 @@ export class ImmunityTimer extends LitElement implements Controller {
   public eventBus: EventBus;
 
   private isVisible = false;
-  private _barVisible = false;
+  private _barVisible: boolean | null = null;
   private isActive = false;
   private progressRatio = 0;
+  private initGeneration = 0;
 
   createRenderRoot() {
     this.style.position = "fixed";
@@ -31,7 +32,28 @@ export class ImmunityTimer extends LitElement implements Controller {
   }
 
   init() {
+    const gen = ++this.initGeneration;
     this.isVisible = true;
+    this._barVisible = null;
+    this.isActive = false;
+    this.progressRatio = 0;
+    this.style.top = "0px";
+    this.requestUpdate();
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
+  }
+
+  dispose() {
+    this.initGeneration++;
+    this.isVisible = false;
+    this._barVisible = null;
+    this.isActive = false;
+    this.progressRatio = 0;
+    this.style.top = "0px";
+    this.requestUpdate();
   }
 
   tick() {

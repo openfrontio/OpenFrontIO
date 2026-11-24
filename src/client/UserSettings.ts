@@ -218,6 +218,14 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
  * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
  * mutually exclusive, so they share one slot.
  */
+/** A flag key in its current form: a bare country code ("us"), as saved
+ * before the country: prefix, becomes "country:us". */
+export function normalizedFlagKey(flag: string): string {
+  return flag.startsWith("flag:") || flag.startsWith("country:")
+    ? flag
+    : `country:${flag}`;
+}
+
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
@@ -230,12 +238,14 @@ export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
 export const EFFECTS_KEY = "settings.effects";
 /** Saved cosmetic loadouts — see {@link CosmeticLoadout}. */
 export const LOADOUTS_KEY = "settings.cosmeticLoadouts";
-/** The loadout slot equip changes are written back into, if any. */
+/** The loadout last applied or saved; equips never write into it. */
 export const ACTIVE_LOADOUT_KEY = "settings.activeLoadout";
 // Keep the existing storage key so the rename does not reset saved columns.
 export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
 export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
 export const FAVORITE_EMOJIS_KEY = "settings.favoriteEmojis";
+// Players in the Steam app can turn off the sale banners (account settings).
+export const HIDE_SALE_BANNERS_KEY = "settings.hideSaleBanners";
 const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
   player: PLAYER_STATS_COLUMNS_KEY,
   team: TEAM_STATS_COLUMNS_KEY,
@@ -311,8 +321,6 @@ export class UserSettings {
   private static cache = new Map<string, string | null>();
   /** publicId of the logged-in player, or null when logged out. */
   private static playerId: string | null = null;
-  /** Set while applyLoadout writes, to stop the mirror writing back. */
-  private static applyingLoadout = false;
 
   /**
    * Sets which player's cosmetic selections are active. Called with the
@@ -447,6 +455,15 @@ export class UserSettings {
 
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
+  }
+
+  /** Whether the player turned the sale banners off. */
+  hideSaleBanners(): boolean {
+    return this.getBool(HIDE_SALE_BANNERS_KEY, false);
+  }
+
+  setHideSaleBanners(hidden: boolean): void {
+    this.setBool(HIDE_SALE_BANNERS_KEY, hidden);
   }
 
   mapLayers() {
@@ -697,7 +714,6 @@ export class UserSettings {
     } else {
       this.setCached(PATTERN_KEY, value);
     }
-    this.syncActiveLoadout();
   }
 
   /** Returns the bare skin name (no `skin:` prefix), or null if a pattern (or nothing) is selected. */
@@ -725,15 +741,14 @@ export class UserSettings {
     } else {
       this.setCached(CROWN_KEY, name);
     }
-    this.syncActiveLoadout();
   }
 
   getFlag(): string | null {
     let flag = this.getCached(FLAG_KEY);
     if (!flag) return null;
     // Migrate bare country codes to country: prefix
-    if (!flag.startsWith("flag:") && !flag.startsWith("country:")) {
-      flag = `country:${flag}`;
+    if (normalizedFlagKey(flag) !== flag) {
+      flag = normalizedFlagKey(flag);
       // Silent migration: don't emit change event for FlagInput
       this.setCached(FLAG_KEY, flag, false);
     }
@@ -745,13 +760,11 @@ export class UserSettings {
       this.clearFlag(true);
     } else {
       this.setCached(FLAG_KEY, flag);
-      this.syncActiveLoadout();
     }
   }
 
   clearFlag(emitChange: boolean = false): void {
     this.removeCached(FLAG_KEY, emitChange);
-    this.syncActiveLoadout();
   }
 
   /**
@@ -787,7 +800,6 @@ export class UserSettings {
   setSelectedEffects(effects: Record<string, string>): void {
     if (Object.keys(effects).length === 0) this.removeCached(EFFECTS_KEY);
     else this.setString(EFFECTS_KEY, JSON.stringify(effects));
-    this.syncActiveLoadout();
   }
 
   /**
@@ -876,23 +888,20 @@ export class UserSettings {
   applyLoadout(name: string): boolean {
     const loadout = this.getLoadout(name);
     if (loadout === null) return false;
-    // The writes below would otherwise each mirror straight back into the
-    // loadout being read from.
-    UserSettings.applyingLoadout = true;
-    try {
-      this.setSelectedPatternName(loadout.pattern ?? undefined);
-      if (loadout.flag === null) this.clearFlag(true);
-      else this.setFlag(loadout.flag);
-      this.setSelectedCrownName(loadout.crown ?? undefined);
-      this.setSelectedEffects(loadout.effects);
-    } finally {
-      UserSettings.applyingLoadout = false;
-    }
+    this.setSelectedPatternName(loadout.pattern ?? undefined);
+    if (loadout.flag === null) this.clearFlag(true);
+    else this.setFlag(loadout.flag);
+    this.setSelectedCrownName(loadout.crown ?? undefined);
+    this.setSelectedEffects(loadout.effects);
     this.setActiveLoadout(name);
     return true;
   }
 
-  /** The loadout equip changes are mirrored into, or null when none is. */
+  /**
+   * The loadout last applied or saved, or null when none is. Equipping
+   * changes the look only: the loadout keeps what it was saved with until
+   * saveLoadout (Update) writes the look into it.
+   */
   getActiveLoadout(): string | null {
     const name = this.getCached(ACTIVE_LOADOUT_KEY);
     if (name === null) return null;
@@ -903,18 +912,6 @@ export class UserSettings {
   setActiveLoadout(name: string | null): void {
     if (name === null) this.removeCached(ACTIVE_LOADOUT_KEY);
     else this.setCached(ACTIVE_LOADOUT_KEY, name);
-  }
-
-  /**
-   * Mirrors the equipped cosmetics into the active loadout, so the slot always
-   * shows what's being worn. A no-op when no slot is active, or while a
-   * loadout is being applied.
-   */
-  private syncActiveLoadout(): void {
-    if (UserSettings.applyingLoadout) return;
-    const active = this.getActiveLoadout();
-    if (active === null) return;
-    this.saveLoadout(active);
   }
 
   /** Clears every equip slot. Saved loadouts are left alone. */
