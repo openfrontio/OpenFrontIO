@@ -388,6 +388,18 @@ describe("inline-checkout buyer email", () => {
     expect(apple.session.createExpressCheckoutElement).toHaveBeenCalledWith({
       emailRequired: false,
     });
+
+    // But Apple may share no email at all: that account has none to use.
+    document.body.innerHTML = "";
+    const appleNoEmail = fakeSession();
+    createMock.mockResolvedValue(appleNoEmail.session);
+    userMeMock.mockResolvedValue({ user: { apple: {} } });
+    await renderComponent();
+    expect(
+      appleNoEmail.session.createExpressCheckoutElement,
+    ).toHaveBeenCalledWith({
+      emailRequired: true,
+    });
   });
 
   it("rides the wallet-collected email on the confirm", async () => {
