@@ -260,6 +260,40 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(q("[data-card-picker]")?.dataset.cardPicker).toBe("tracker:2");
   });
 
+  it("a save's refresh whose catalogue fetch fails keeps the card tab on screen", async () => {
+    // Open, the Inventory takes a fresh profile in place and fetches no
+    // catalogue; closed, it reloads, and that reload's fetch can fail. The
+    // catalogue already loaded stays, so reopening shows the card tab with
+    // the saved card, not the error view. (Closed renders nothing, so the
+    // tab itself is a new one.)
+    vi.mocked(saveCardLoadout).mockResolvedValue({ ok: true, loadout: STORED });
+    await openWithChange();
+    await click("[data-card-save]");
+    await click("[slot='header'] button");
+    expect(modal.isOpen()).toBe(false);
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    const fresh = owner();
+    fresh.player.card!.trackers = [
+      { stat: "wins", value: 312 },
+      { stat: "nukes_launched", value: 4880 },
+      { stat: "games_played", value: 900 },
+    ];
+    vi.mocked(getUserMe).mockResolvedValue(fresh);
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(vi.mocked(fetchCosmetics).mock.calls.length).toBe(2);
+    modal.open({ tab: "card" });
+    await settle(modal);
+    expect(q("[data-inventory-state='error']")).toBeNull();
+    expect(q("inventory-card-tab")).not.toBeNull();
+    expect(q("[data-card-slot-row='tracker:2']")!.textContent).toContain(
+      "games_played",
+    );
+    expect(q("[data-card-change-count]")).toBeNull();
+  });
+
   it("a save whose refresh failed: a remade card tab and the next save start from what was stored", async () => {
     vi.mocked(saveCardLoadout).mockResolvedValue({ ok: true, loadout: STORED });
     await openWithChange();
