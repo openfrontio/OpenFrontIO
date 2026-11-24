@@ -65,6 +65,9 @@ export function replayDocument(
       level: s.level,
     });
   }
+  for (const w of doc.warships) {
+    send({ type: "place_warship", tile: w.tile, nation: w.nation });
+  }
   for (const nations of doc.alliances) {
     send({ type: "add_alliance", nations });
   }
