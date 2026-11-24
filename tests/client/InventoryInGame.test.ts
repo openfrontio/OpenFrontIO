@@ -324,6 +324,65 @@ describe("Inventory In game tab", () => {
       expect(myCard.placement).toEqual({ kind: "inventory", subTab: "card" });
     });
 
+    // What a successful card save does: card-saved, then a fresh /users/@me.
+    const SAVED_CARD = {
+      background: "bg_saved",
+      title: null,
+      taunt: null,
+      trackers: ["wins"],
+    };
+    function cardSaved(from: Element) {
+      from.dispatchEvent(
+        new CustomEvent("card-saved", {
+          detail: { publicId: "in-game-test-player", loadout: SAVED_CARD },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+
+    it("a card save's refresh keeps the same card tab on the same slot", async () => {
+      await open("card");
+      const myCard = modal.querySelector("my-card-tab")!;
+      myCard
+        .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+        .click();
+      await settle(modal);
+      cardSaved(myCard);
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: makeUser(OWNED) }),
+      );
+      // Mid-refresh too: no loading skeleton in its place.
+      await modal.updateComplete;
+      expect(modal.querySelector("my-card-tab")).toBe(myCard);
+      await settle(modal);
+      expect(modal.querySelector("my-card-tab")).toBe(myCard);
+      expect(
+        myCard.querySelector("[data-my-card-slot='trackers']")!.className,
+      ).toContain("bg-sky-600");
+    });
+
+    it("a card save shows in a remade card tab even when the refresh failed", async () => {
+      await open("card");
+      cardSaved(modal.querySelector("my-card-tab")!);
+      // No userMeResponse: the refresh after the save failed.
+      modal
+        .querySelector<HTMLButtonElement>('[data-inventory-top-tab="ingame"]')!
+        .click();
+      await settle(modal);
+      modal
+        .querySelector<HTMLButtonElement>('[data-inventory-top-tab="card"]')!
+        .click();
+      await settle(modal);
+      const remade = modal.querySelector("my-card-tab") as unknown as {
+        userMe: UserMeResponse;
+      };
+      expect(remade.userMe.player.card).toEqual({
+        background: "bg_saved",
+        trackers: [{ stat: "wins", value: 0 }],
+      });
+    });
+
     it("switches between the two tabs and back to the last category", async () => {
       await open("crowns");
       modal
