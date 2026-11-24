@@ -23,6 +23,10 @@ import {
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
 } from "../ProvisionalProgress";
+import {
+  SCENARIO_EDITOR_FLARE,
+  scenarioEditorHash,
+} from "../scenario/ScenarioEditorRoute";
 import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
@@ -432,6 +436,18 @@ export class NavAccountMenu extends LitElement {
       icon: iconTag,
       onSelect: () => this.openModal("change-username"),
     });
+
+    // Only for the accounts the API lets create scenarios; it checks again.
+    if ((player?.flares ?? []).includes(SCENARIO_EDITOR_FLARE)) {
+      items.push({
+        key: "scenario-editor",
+        labelKey: "nav_account_menu.scenario_editor",
+        icon: iconMap,
+        onSelect: () => {
+          window.location.hash = scenarioEditorHash(null);
+        },
+      });
+    }
 
     if (subscribed) {
       items.push({
@@ -943,6 +959,22 @@ const iconTag = html`<svg
     d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"
   />
   <line x1="7" y1="7" x2="7.01" y2="7" />
+</svg>`;
+
+const iconMap = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-full h-full"
+  aria-hidden="true"
+>
+  <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+  <line x1="9" y1="3" x2="9" y2="18" />
+  <line x1="15" y1="6" x2="15" y2="21" />
 </svg>`;
 
 const iconCard = html`<svg

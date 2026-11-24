@@ -628,6 +628,8 @@ export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
     google: GoogleUserSchema.optional(),
+    // Sign in with Apple. The email may be Apple's private relay address.
+    apple: z.object({ email: z.string().optional() }).optional(),
     email: z.string().optional(),
     steam: SteamUserSchema.optional(),
   }),

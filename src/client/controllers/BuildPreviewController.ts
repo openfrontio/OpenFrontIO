@@ -549,7 +549,7 @@ export class BuildPreviewController implements Controller {
       }
     }
     const magnitude = this.game.config().nukeMagnitudes(nukeType);
-    const threshold = this.game.config().nukeAllianceBreakThreshold();
+    const threshold = this.game.config().nukeAllianceBreakThreshold(nukeType);
     if (
       wouldNukeBreakAlliance({
         game: this.game,
@@ -848,7 +848,7 @@ export class BuildPreviewController implements Controller {
       game: this.game,
       targetTile,
       magnitude: this.game.config().nukeMagnitudes(unitType),
-      threshold: this.game.config().nukeAllianceBreakThreshold(),
+      threshold: this.game.config().nukeAllianceBreakThreshold(unitType),
     });
   }
 
@@ -1257,7 +1257,7 @@ export class BuildPreviewController implements Controller {
             game: this.game,
             targetTile: tile,
             magnitude: this.game.config().nukeMagnitudes(unitType),
-            threshold: this.game.config().nukeAllianceBreakThreshold(),
+            threshold: this.game.config().nukeAllianceBreakThreshold(unitType),
           });
 
     let blocked = false;

@@ -21,7 +21,11 @@ import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { MapManifestSchema } from "@openfront/engine-api/game/MapManifest";
 import { ID } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
-import { gunzipInBrowser, gzipInBrowser } from "../replay/BrowserGzip";
+import {
+  gunzipInBrowser,
+  gzipInBrowser,
+  InflateLimitError,
+} from "../replay/BrowserGzip";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import {
   isScenarioSize,
@@ -76,6 +80,29 @@ export interface ScenarioBundle {
   thumbnail: Uint8Array;
 }
 
+/**
+ * Why a bundle can't be loaded: it inflates past what a client loads, is a
+ * format this build doesn't read, doesn't match its hash (or the one asked
+ * for), or fails a check.
+ */
+export type ScenarioBundleProblem =
+  | "too_large"
+  | "format"
+  | "hash"
+  | "malformed";
+
+export class ScenarioBundleError extends Error {
+  constructor(
+    readonly problem: ScenarioBundleProblem,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const malformed = (message: string) =>
+  new ScenarioBundleError("malformed", message);
+
 /** Everything a bundle holds but what the header derives from it. */
 export type ScenarioBundleContent = Omit<ScenarioBundle, "header"> & {
   header: Omit<ScenarioBundleHeader, "format" | "hash">;
@@ -110,23 +137,34 @@ export async function encodeScenarioBundle(
 }
 
 /**
- * Reads a gzipped bundle. Throws if it inflates past MAX_BUNDLE_BYTES, is
- * not this build's format, has a section that fails its check, or doesn't
- * match its hash. The snapshot is checked when it is restored.
+ * Reads a gzipped bundle. Throws a ScenarioBundleError if it inflates past
+ * MAX_BUNDLE_BYTES, is not this build's format, has a section that fails its
+ * check, doesn't match its hash, or isn't the `expectedHash` a listing names
+ * for it. The snapshot is checked when it is restored.
  */
 export async function loadScenarioBundle(
   gzipped: Uint8Array,
+  expectedHash?: string,
 ): Promise<ScenarioBundle> {
   const raw = await gunzipInBrowser(gzipped, MAX_BUNDLE_BYTES).catch(
     (e: unknown) => {
-      throw new Error(`the bundle doesn't inflate: ${String(e)}`);
+      throw new ScenarioBundleError(
+        e instanceof InflateLimitError ? "too_large" : "malformed",
+        `the bundle doesn't inflate: ${String(e)}`,
+      );
     },
   );
   const reader = new FrameReader(raw);
   const header = readHeader(reader.next());
+  if (expectedHash !== undefined && header.hash !== expectedHash) {
+    throw new ScenarioBundleError(
+      "hash",
+      "the bundle is not the scenario version asked for",
+    );
+  }
   const content = raw.subarray(reader.offset);
   if ((await sha256(content)) !== header.hash) {
-    throw new Error("the bundle doesn't match its hash");
+    throw new ScenarioBundleError("hash", "the bundle doesn't match its hash");
   }
   const manifestBytes = reader.next();
   // Copies, so each file has its own buffer to transfer to a worker.
@@ -139,16 +177,16 @@ export async function loadScenarioBundle(
   try {
     manifestJson = JSON.parse(new TextDecoder().decode(manifestBytes));
   } catch {
-    throw new Error("the bundle's manifest is not JSON");
+    throw malformed("the bundle's manifest is not JSON");
   }
   const manifest = MapManifestSchema.safeParse(manifestJson);
   if (!manifest.success) {
-    throw new Error(`the bundle's manifest: ${manifest.error.message}`);
+    throw malformed(`the bundle's manifest: ${manifest.error.message}`);
   }
   const { map, map4x, map16x } = manifest.data;
   const { width: w, height: h } = map;
   if (!isScenarioSize(w, h)) {
-    throw new Error(`a ${w}x${h} map can't be a scenario`);
+    throw malformed(`a ${w}x${h} map can't be a scenario`);
   }
   const sizes: [Uint8Array, typeof map, number][] = [
     [mapBin, map, 1],
@@ -157,15 +195,15 @@ export async function loadScenarioBundle(
   ];
   for (const [bin, meta, scale] of sizes) {
     if (meta.width !== w / scale || meta.height !== h / scale) {
-      throw new Error(`the manifest's maps don't scale from ${w}x${h}`);
+      throw malformed(`the manifest's maps don't scale from ${w}x${h}`);
     }
     if (bin.length !== meta.width * meta.height) {
-      throw new Error(
+      throw malformed(
         `a ${meta.width}x${meta.height} map file has ${bin.length} bytes`,
       );
     }
   }
-  if (!isWebp(thumbnail)) throw new Error("the thumbnail is not webp");
+  if (!isWebp(thumbnail)) throw malformed("the thumbnail is not webp");
 
   return {
     header,
@@ -201,17 +239,18 @@ function readHeader(frame: Uint8Array): ScenarioBundleHeader {
   try {
     json = JSON.parse(new TextDecoder().decode(frame));
   } catch {
-    throw new Error("the bundle's header is not JSON");
+    throw malformed("the bundle's header is not JSON");
   }
   const format = (json as { format?: unknown } | null)?.format;
   if (format !== SCENARIO_BUNDLE_FORMAT) {
-    throw new Error(
+    throw new ScenarioBundleError(
+      "format",
       `bundle format ${String(format)}, this build reads ${SCENARIO_BUNDLE_FORMAT}`,
     );
   }
   const header = ScenarioBundleHeaderSchema.safeParse(json);
   if (!header.success) {
-    throw new Error(`the bundle's header: ${header.error.message}`);
+    throw malformed(`the bundle's header: ${header.error.message}`);
   }
   return header.data;
 }
@@ -240,12 +279,12 @@ class FrameReader {
 
   next(): Uint8Array {
     if (this.offset + 4 > this.bytes.length) {
-      throw new Error("the bundle is cut short");
+      throw malformed("the bundle is cut short");
     }
     const length = this.view.getUint32(this.offset, true);
     const start = this.offset + 4;
     if (length > this.bytes.length - start) {
-      throw new Error("the bundle is cut short");
+      throw malformed("the bundle is cut short");
     }
     this.offset = start + length;
     return this.bytes.subarray(start, this.offset);
@@ -253,7 +292,7 @@ class FrameReader {
 
   end(): void {
     if (this.offset !== this.bytes.length) {
-      throw new Error("the bundle has bytes after its last section");
+      throw malformed("the bundle has bytes after its last section");
     }
   }
 }
