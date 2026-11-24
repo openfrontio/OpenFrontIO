@@ -172,6 +172,63 @@ describe("player panel: the compact card", () => {
     expect(out).toContain('"stat":"wins"');
   });
 
+  // The template whose markup holds the close icon, and its @click handler.
+  const closeHandler = (value: unknown): ((e: Event) => void) | null => {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        const found = closeHandler(v);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (!value || typeof value !== "object" || !("strings" in value)) {
+      return null;
+    }
+    const t = value as { strings: readonly string[]; values: unknown[] };
+    if (t.strings.join("").includes('name="close"')) {
+      const i = t.strings.findIndex((s) => s.trimEnd().endsWith("@click="));
+      if (i >= 0) return t.values[i] as (e: Event) => void;
+    }
+    for (const v of t.values) {
+      const found = closeHandler(v);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  it("a card owner's panel keeps its close button, and it hides the panel", () => {
+    const out = row(player("vet"));
+    expect(out).toContain("<player-card");
+    expect(out).toContain('name="close"');
+    expect(out).toContain("aria-label=common.close");
+    const onClick = closeHandler(
+      (panel as any).renderIdentityRow(player("vet"), player("me")),
+    );
+    expect(onClick).not.toBeNull();
+    const hide = vi.spyOn(panel, "hide");
+    const event = new Event("click");
+    const stop = vi.spyOn(event, "stopPropagation");
+    onClick!.call(panel, event);
+    expect(hide).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalled();
+    expect((panel as any).isVisible).toBe(false);
+  });
+
+  it("the card and the close button share one row", () => {
+    const out = row(player("vet"));
+    const rowStart = out.indexOf('<div class="flex items-center');
+    expect(rowStart).toBeGreaterThanOrEqual(0);
+    expect(out.indexOf("<player-card")).toBeGreaterThan(rowStart);
+    expect(out.indexOf('name="close"')).toBeGreaterThan(
+      out.indexOf("</player-card>"),
+    );
+  });
+
+  it("the identity row without a card keeps its close button too", () => {
+    cards = {};
+    expect(row(player("vet"))).toContain('name="close"');
+  });
+
   it("is still: never sets animated", () => {
     expect(row(player("vet"))).not.toContain("animated");
   });
