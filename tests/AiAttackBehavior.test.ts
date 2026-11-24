@@ -1274,7 +1274,8 @@ describe("City troops and expansion", () => {
     expect(
       config.maxTroops(nation) - config.maxTroopsWithoutCities(nation),
     ).toBe(30 * 250_000);
-    // 100k troops are a few percent of the 7.6M max troops
+    // A few percent of the 7.6M max troops, and below the trigger ratio of the max without cities
+    nation.setTroops(Math.floor(0.4 * config.maxTroopsWithoutCities(nation)));
     expect(behavior.sendAttack(game.terraNullius())).toBe(true);
     expect(sent()[0]["startTroops"]).toBeCloseTo(
       nation.troops() - 0.2 * config.maxTroopsWithoutCities(nation),

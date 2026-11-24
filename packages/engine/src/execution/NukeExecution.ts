@@ -163,7 +163,7 @@ export class NukeExecution implements Execution {
       game: this.mg,
       targetTile: this.dst,
       magnitude,
-      threshold: this.mg.config().nukeAllianceBreakThreshold(),
+      threshold: this.mg.config().nukeAllianceBreakThreshold(this.nuke.type()),
     });
 
     // Automatically reject incoming alliance requests.
@@ -312,6 +312,16 @@ export class NukeExecution implements Execution {
 
   public getNuke(): Unit | null {
     return this.nuke;
+  }
+
+  /** The bomb this launch will spawn on its first tick, until it does. */
+  public pendingBomb(): {
+    owner: Player;
+    tile: TileRef;
+    type: NukeType;
+  } | null {
+    if (!this.active || this.nuke !== null) return null;
+    return { owner: this.player, tile: this.dst, type: this.nukeType };
   }
 
   /**

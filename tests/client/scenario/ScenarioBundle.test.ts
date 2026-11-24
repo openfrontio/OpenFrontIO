@@ -44,6 +44,7 @@ import {
   loadScenarioBundle,
   MAX_BUNDLE_BYTES,
   type ScenarioBundleContent,
+  ScenarioBundleError,
   useScenarioMap,
 } from "../../../src/client/scenario/ScenarioBundle";
 import {
@@ -107,7 +108,10 @@ function nation(id: string, fields: object = {}) {
 
 const CONTINENT = rect(20, 30, 160, 100);
 
-/** Painted land with a mountain range, two nations with land and a city. */
+/**
+ * Painted land with a mountain range, two allied nations with land, a city,
+ * a port and a warship each.
+ */
 const BUILD: Edit[] = [
   {
     type: "set_terrain",
@@ -144,6 +148,15 @@ const BUILD: Edit[] = [
       level: 1,
     },
   },
+  {
+    type: "place_warship",
+    warship: { nation: "WESTNAT1", tile: tile(10, 70) },
+  },
+  {
+    type: "place_warship",
+    warship: { nation: "EASTNAT1", tile: tile(190, 90) },
+  },
+  { type: "add_alliance", nations: ["WESTNAT1", "EASTNAT1"] },
 ];
 
 interface Live {
@@ -258,6 +271,18 @@ function gameState(runner: GameRunner) {
         level: u.level(),
       }))
       .sort((a, b) => a.tile - b.tile),
+    warships: game
+      .units(UnitType.Warship)
+      .map((u) => ({ nation: u.owner().id(), tile: u.tile() }))
+      .sort((a, b) => a.tile - b.tile),
+    // Each once, though both allies have it: requestor first.
+    alliances: [
+      ...new Set(
+        game.nations().flatMap((n) => game.player(n.playerInfo.id).alliances()),
+      ),
+    ]
+      .map((a): [string, string] => [a.requestor().id(), a.recipient().id()])
+      .sort((x, y) => (x.join() < y.join() ? -1 : 1)),
   };
 }
 
@@ -269,6 +294,8 @@ function documentState(doc: ScenarioDocument): ReturnType<typeof gameState> {
     ),
     nations: [...doc.nations].sort((a, b) => a.id.localeCompare(b.id)),
     structures: doc.structures,
+    warships: doc.warships,
+    alliances: doc.alliances,
   };
 }
 
@@ -294,7 +321,15 @@ test("an exported bundle loads and restores to the document, and plays", async (
 
   const runner = await restore(gzipped);
   expect(live.doc.structures).toHaveLength(2);
+  expect(live.doc.warships).toHaveLength(2);
+  expect(live.doc.alliances).toEqual([["EASTNAT1", "WESTNAT1"]]);
   expect(gameState(runner)).toEqual(documentState(live.doc));
+  // Made at the start, for the settings' alliance duration.
+  const alliance = runner.game
+    .player("EASTNAT1")
+    .allianceWith(runner.game.player("WESTNAT1"))!;
+  expect(alliance.createdAt()).toBe(0);
+  expect(alliance.expiresAt()).toBe(runner.game.config().allianceDuration());
   // The snapshot keeps the document's settings and the exporting build.
   expect(runner.game.config().gameConfig().donateGold).toBe(true);
   expect(runner.game.inSpawnPhase()).toBe(false);
@@ -305,6 +340,19 @@ test("an exported bundle loads and restores to the document, and plays", async (
   }
   expect(runner.game.player("WESTNAT1").isAlive()).toBe(true);
   expect(runner.game.player("EASTNAT1").isAlive()).toBe(true);
+  expect(
+    runner.game.player("WESTNAT1").isAlliedWith(runner.game.player("EASTNAT1")),
+  ).toBe(true);
+  // Each warship still patrols around the tile it was placed on.
+  expect(
+    runner.game
+      .units(UnitType.Warship)
+      .map((u) => [u.owner().id(), u.warshipState().patrolTile])
+      .sort(),
+  ).toEqual([
+    ["EASTNAT1", tile(190, 90)],
+    ["WESTNAT1", tile(10, 70)],
+  ]);
 }, 30_000);
 
 test("exporting leaves the live editor as it was, and edits made meanwhile out", async () => {
@@ -438,7 +486,10 @@ test("a bundle that inflates past the cap is refused before it is all inflated",
       }
     },
   );
-  await expect(loadScenarioBundle(bomb)).rejects.toThrow(
+  const error = await loadScenarioBundle(bomb).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(ScenarioBundleError);
+  expect((error as ScenarioBundleError).problem).toBe("too_large");
+  expect((error as Error).message).toContain(
     `inflates past ${MAX_BUNDLE_BYTES} bytes`,
   );
   expect(inflated).toBeGreaterThan(MAX_BUNDLE_BYTES);
@@ -460,6 +511,23 @@ test("a bundle that isn't gzip, or whose gzip is corrupt, is refused", async () 
   await expect(loadScenarioBundle(flipped)).rejects.toThrow(
     "the bundle doesn't inflate",
   );
+  await expect(loadScenarioBundle(flipped)).rejects.toMatchObject({
+    problem: "malformed",
+  });
+});
+
+test("a bundle that isn't the version its listing names is refused", async () => {
+  const gzipped = await encodeScenarioBundle(await validContent());
+  const { header } = await loadScenarioBundle(gzipped);
+  await expect(loadScenarioBundle(gzipped, header.hash)).resolves.toMatchObject(
+    { header },
+  );
+  await expect(loadScenarioBundle(gzipped, "f".repeat(64))).rejects.toThrow(
+    "the bundle is not the scenario version asked for",
+  );
+  await expect(
+    loadScenarioBundle(gzipped, "f".repeat(64)),
+  ).rejects.toMatchObject({ problem: "hash" });
 });
 
 test("a bundle with a section that fails its check is refused", async () => {
@@ -525,6 +593,9 @@ test("a bundle whose content doesn't match its hash is refused", async () => {
   await expect(loadScenarioBundle(rehashed)).rejects.toThrow(
     "the bundle doesn't match its hash",
   );
+  await expect(loadScenarioBundle(rehashed)).rejects.toMatchObject({
+    problem: "hash",
+  });
 });
 
 test("a bundle of another format is refused before anything else is read", async () => {
@@ -538,6 +609,9 @@ test("a bundle of another format is refused before anything else is read", async
     await expect(loadScenarioBundle(bundle)).rejects.toThrow(
       `bundle format ${String(format)}, this build reads 1`,
     );
+    await expect(loadScenarioBundle(bundle)).rejects.toMatchObject({
+      problem: "format",
+    });
   }
 });
 

@@ -70,7 +70,7 @@ export class ReplayPanel extends LitElement implements Controller {
 
     return html`
       <div
-        class="p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-l-lg"
+        class="p-2 hud-panel rounded-l-lg"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-2 text-white" translate="no">
