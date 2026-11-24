@@ -250,6 +250,12 @@ describe("hostile snapshots: core state", () => {
       (r) => (r.game.d.nextUnitID = 1),
       /past next unit id/,
     );
+    // Past 2^53, incrementing it stops changing it, so ids repeat.
+    await expectRejected(
+      f,
+      (r) => (r.game.d.nextUnitID = Number.MAX_SAFE_INTEGER),
+      /next unit id is/,
+    );
   });
 
   test("alliances listed once, twice by one player, or with oneself", async () => {

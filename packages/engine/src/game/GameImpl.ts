@@ -1912,6 +1912,11 @@ export class GameImpl implements Game {
     if (this._unitMap.size !== s.units.length) {
       throw new SnapshotError("two units share an id");
     }
+    // Far more ids than a game hands out, and far from where incrementing
+    // stops changing the counter (2^53).
+    if (this._nextUnitID < 1 || this._nextUnitID > 0x80000000) {
+      throw new SnapshotError(`next unit id is ${this._nextUnitID}`);
+    }
     for (const id of this._unitMap.keys()) {
       if (id >= this._nextUnitID) {
         throw new SnapshotError(`unit ${id} is past next unit id`);
