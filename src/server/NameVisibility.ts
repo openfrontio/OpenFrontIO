@@ -161,12 +161,22 @@ export class NameVisibility {
       ...wire,
       players: wire.players.map((p, i) => {
         const seesReal = this.seesReal(viewer, p.clientID);
+        // A teammate reveal is narrower (see lobbyClients): the card, but
+        // not the publicId that opens the player's whole profile.
+        const teammateOnly =
+          seesReal && !this.seesRealBeyondTeam(viewer, p.clientID);
         return {
           ...p,
           username: seesReal ? p.username : this.anonName(viewer, p.clientID),
           clanTag: revealClanTags ? real.players[i].clanTag : null,
           friends: undefined,
           cosmetics: seesReal ? p.cosmetics : undefined,
+          // The card names the player as surely as their name does.
+          card: !seesReal
+            ? undefined
+            : teammateOnly
+              ? withoutPublicId(p.card)
+              : p.card,
         };
       }),
     };
@@ -241,4 +251,13 @@ export function friendsLookup(
       .filter((id): id is ClientID => id !== undefined);
     return friendClientIDs.length > 0 ? friendClientIDs : undefined;
   };
+}
+
+function withoutPublicId<T extends { publicId?: string }>(
+  card: T | undefined,
+): Omit<T, "publicId"> | undefined {
+  if (card === undefined) return undefined;
+  const rest = { ...card };
+  delete rest.publicId;
+  return rest;
 }
