@@ -10,9 +10,10 @@ vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
 }));
 // Signed in as the fixture player (Auth's currentPublicId).
+const session = vi.hoisted(() => ({ id: "p1" as string | null }));
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
-  currentPublicId: () => "p1",
+  currentPublicId: () => session.id,
 }));
 const shop = vi.hoisted(() => ({
   buy: vi.fn(),
@@ -149,6 +150,7 @@ beforeEach(() => {
   api.save.mockReset();
   shop.buy.mockReset();
   shop.check.mockReset();
+  session.id = "p1";
 });
 afterEach(() => {
   tab?.remove();
@@ -156,6 +158,38 @@ afterEach(() => {
 });
 
 describe("<inventory-card-tab> owner layout and picker", () => {
+  it("a tab that has left the page never seeds the shared editor again", async () => {
+    // The Inventory remakes the tab around its one editor: an update still
+    // queued on the old tab when it leaves the page must not seed the
+    // editor with that tab's profile, or the two tabs seed it in turn
+    // forever.
+    const before = userMe(OWNER);
+    await render(before);
+    const old = tab;
+    old.remove();
+    const live = document.createElement(
+      "inventory-card-tab",
+    ) as InventoryCardTab;
+    const fresh = userMe(OWNER);
+    live.editor = editor;
+    live.userMe = fresh;
+    live.cosmetics = COSMETICS;
+    document.body.appendChild(live);
+    await live.updateComplete;
+    expect(editor.isSeededWith(fresh)).toBe(true);
+    // The old tab's queued update runs, off the page.
+    old.requestUpdate();
+    (old as unknown as { performUpdate(): void }).performUpdate();
+    const seededAfter = editor.isSeededWith(fresh);
+    // Cut any loop the update started before asserting, so a failure
+    // fails rather than hangs.
+    old.editor = null as never;
+    old.requestUpdate();
+    (old as unknown as { performUpdate(): void }).performUpdate();
+    live.remove();
+    expect(seededAfter).toBe(true);
+  });
+
   it("has a Background row and three tracker rows, no Taunt or Title slot", async () => {
     await render(userMe(OWNER));
     expect(q("[data-card-slot='background']")).not.toBeNull();
@@ -543,6 +577,28 @@ describe("<inventory-card-tab> without the card", () => {
     expect(
       StorePlacementSchema.safeParse(shop.buy.mock.calls[0][2]).success,
     ).toBe(true);
+  });
+
+  it("a buy is sent only as the account signed in now", async () => {
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(NO_CARD, null));
+    await buyButton().onPurchaseHard();
+    expect(shop.buy.mock.calls[0][4]).toBe("p1");
+  });
+
+  it("a buy is sent as the account that opened the confirm, not one signed in since", async () => {
+    shop.check.mockResolvedValue({ ok: true, balance: 5000 });
+    shop.buy.mockResolvedValue({ kind: "signed_out" });
+    await render(userMe(NO_CARD, null));
+    const button = buyButton() as unknown as {
+      preflight: (m: "hard" | "soft") => Promise<unknown>;
+      onPurchaseHard: () => Promise<unknown>;
+    };
+    await button.preflight("hard");
+    // Another tab signs in as someone else while the confirm is open.
+    session.id = "p2";
+    await button.onPurchaseHard();
+    expect(shop.buy.mock.calls[0][4]).toBe("p1");
   });
 
   it("See it in the Store asks for the card in the Store", async () => {

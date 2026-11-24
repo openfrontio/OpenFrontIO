@@ -38,7 +38,7 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
-import { sessionUncertain, userAuth } from "./Auth";
+import { currentPublicId, sessionUncertain, userAuth } from "./Auth";
 import {
   cardItemName,
   type CardItem,
@@ -750,12 +750,19 @@ export type InPlacePurchase =
  * profile is broadcast: the end screen marks it bought here first, so no
  * render sees it owned but not bought here (which would drop it and rebuild
  * the block).
+ *
+ * `signedInAs`, when given, is the account (currentPublicId) that opened the
+ * confirm: the purchase is only sent as that account. A sign-in in another
+ * tab replaces the refresh cookie, so a JWT refresh here could otherwise
+ * buy as the other account. A different account (or none) answers
+ * `signed_out`, with nothing sent.
  */
 export async function purchaseCosmeticInPlace(
   resolved: ResolvedCosmetic,
   method: "hard" | "soft",
   placement?: StorePlacement,
   onOwned?: () => void,
+  signedInAs?: string | null,
 ): Promise<InPlacePurchase> {
   const c = resolved.cosmetic;
   if (!c || resolved.type === "subscription" || resolved.type === "pack") {
@@ -776,6 +783,10 @@ export async function purchaseCosmeticInPlace(
       kind:
         session === false && !sessionUncertain() ? "signed_out" : "unreachable",
     };
+  }
+  const bound = signedInAs !== undefined;
+  if (bound && (signedInAs === null || userMe.player.publicId !== signedInAs)) {
+    return { kind: "signed_out" };
   }
   const wallet = userMe.player.currency;
   const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
@@ -813,6 +824,11 @@ export async function purchaseCosmeticInPlace(
     return { kind: "unconfirmed" };
   };
 
+  // Checked again by purchaseWithCurrency once it holds the token it will
+  // send: reading it can refresh the JWT, and the refresh can pick up
+  // another tab's sign-in (CardEditor does the same for a card save).
+  const stillSignedInAs = () => !bound || currentPublicId() === signedInAs;
+
   let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;
   try {
     result = await purchaseWithCurrency(
@@ -821,11 +837,14 @@ export async function purchaseCosmeticInPlace(
       method,
       resolved.colorPalette?.name,
       placement,
+      stillSignedInAs,
     );
   } catch (error) {
     console.error("End-screen purchase failed", error);
     return settleFailure();
   }
+  // Another account by the time the token was read: nothing was sent.
+  if (!result.ok && result.code === "cancelled") return { kind: "signed_out" };
   if (!result.ok && result.code === "insufficient_balance") {
     const fresh = await broadcastFreshUserMe();
     if (fresh === false) return { kind: "failed" };

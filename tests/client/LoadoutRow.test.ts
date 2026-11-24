@@ -10,6 +10,11 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
   purchaseCosmeticInPlace: vi.fn(),
   checkInPlacePurchase: vi.fn(async () => ({ ok: true, balance: 3000 })),
 }));
+const account = vi.hoisted(() => ({ publicId: "p1" as string | null }));
+vi.mock("../../src/client/Auth", async (orig) => ({
+  ...(await orig<typeof import("../../src/client/Auth")>()),
+  currentPublicId: () => account.publicId,
+}));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn().mockResolvedValue(true),
   showInGameConfirm: vi.fn().mockResolvedValue(false),
@@ -590,6 +595,7 @@ describe("<loadout-row> buying", () => {
       "hard",
       { kind: "card_loadout" },
       expect.any(Function),
+      "p1",
     );
     expect(heard).toHaveBeenCalledWith({ key: "cardBackground:bg_frontline" });
     expect(showInGameAlert).not.toHaveBeenCalled();
@@ -657,6 +663,48 @@ describe("<loadout-row> buying", () => {
     expect(showInGameAlert).toHaveBeenCalledWith(
       "bought Frontline for 400 Plutonium",
     );
+  });
+
+  it("the buy is bound to the account the tap check confirmed", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "signed_out",
+    });
+    await render({});
+    await button().preflight!("hard");
+    // Another tab signs in to another account while the confirm is open.
+    account.publicId = "p2";
+    try {
+      await button().onPurchaseHard();
+    } finally {
+      account.publicId = "p1";
+    }
+    expect(purchaseCosmeticInPlace).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "cardBackground:bg_frontline" }),
+      "hard",
+      { kind: "card_loadout" },
+      expect.any(Function),
+      "p1",
+    );
+    expect(showInGameConfirm).toHaveBeenCalledWith(
+      "win_modal.sign_in_leaves_game",
+      expect.anything(),
+    );
+  });
+
+  it("a tap check with no known account binds the buy to none, not to whoever signs in next", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "signed_out",
+    });
+    await render({});
+    account.publicId = null;
+    try {
+      await button().preflight!("hard");
+      account.publicId = "p2";
+      await button().onPurchaseHard();
+    } finally {
+      account.publicId = "p1";
+    }
+    expect(vi.mocked(purchaseCosmeticInPlace).mock.calls[0][4]).toBeNull();
   });
 
   it("signed out by the time of the buy: the sign-in prompt", async () => {

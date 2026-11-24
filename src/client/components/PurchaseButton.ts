@@ -372,6 +372,9 @@ export class PurchaseButton extends LitElement {
     itemName: string;
     item: PricedItem;
     handler: () => Promise<PurchaseResult>;
+    // The item's busy key, so confirming holds and releases that item's
+    // buttons even after this element is handed another item.
+    busyKey: string;
     // From the preflight's fresh read, for "you'll have N left".
     balance?: number;
   } | null = null;
@@ -482,9 +485,10 @@ export class PurchaseButton extends LitElement {
     // can hand this element another item while it is out.
     const itemName = this.itemName;
     const item = this.pricedItem;
+    const busyKey = this.busyKey;
     const preflight = this.preflight;
     if (preflight === null) {
-      this.confirmingPurchase = { method, itemName, item, handler };
+      this.confirmingPurchase = { method, itemName, item, handler, busyKey };
       return;
     }
     // Busy while the balance is read, so a second tap can't start another.
@@ -497,6 +501,7 @@ export class PurchaseButton extends LitElement {
             itemName,
             item,
             handler,
+            busyKey,
             balance: check.balance,
           };
         } else if (check.info) {
@@ -539,9 +544,15 @@ export class PurchaseButton extends LitElement {
         });
   }
 
-  private executePurchase(handler?: () => Promise<PurchaseResult>) {
-    if (!handler || this.busy) return;
-    const key = this.busyKey;
+  /** Runs a purchase, holding `key` (the item's busy key; this button's own
+   * by default) busy while it is in flight. */
+  private executePurchase(
+    handler?: () => Promise<PurchaseResult>,
+    key: string = this.busyKey,
+  ) {
+    if (!handler || this.ownBusy || (key !== "" && busyItems.has(key))) {
+      return;
+    }
     this.ownBusy = true;
     if (key !== "") setItemBusy(key, true);
     void Promise.resolve()
@@ -740,7 +751,9 @@ export class PurchaseButton extends LitElement {
               @confirm=${() => {
                 const pending = this.confirmingPurchase;
                 this.confirmingPurchase = null;
-                this.executePurchase(pending?.handler);
+                if (pending) {
+                  this.executePurchase(pending.handler, pending.busyKey);
+                }
               }}
               @cancel=${() => (this.confirmingPurchase = null)}
             ></confirm-dialog>`

@@ -72,11 +72,16 @@ const tagOf = (view: LobbyTeamView, name: string) =>
     t.textContent?.includes(name),
   )!;
 
-// The tag as markup, minus its inline style: what must not change.
+// The tag as markup, minus its inline style and Lit's comment markers: what
+// must not change.
 const shape = (tag: HTMLElement) => {
   const copy = tag.cloneNode(true) as HTMLElement;
   copy.removeAttribute("style");
-  return copy.outerHTML.replace(/<!--[^>]*-->/g, "");
+  const walker = document.createTreeWalker(copy, NodeFilter.SHOW_COMMENT);
+  const comments: Node[] = [];
+  while (walker.nextNode()) comments.push(walker.currentNode);
+  for (const comment of comments) (comment as ChildNode).remove();
+  return copy.outerHTML;
 };
 
 describe("lobby name tag: card background", () => {

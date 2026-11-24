@@ -335,6 +335,22 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("inventory-card-tab")).toBeNull();
     });
 
+    it("the first load that throws still shows the error view", async () => {
+      vi.mocked(fetchCosmetics).mockRejectedValue(new Error("offline"));
+      await open("card");
+      expect(
+        modal.querySelector("[data-inventory-state='error']"),
+      ).not.toBeNull();
+    });
+
+    it("the first load's failed catalogue fetch still shows the error view", async () => {
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      await open("card");
+      expect(
+        modal.querySelector("[data-inventory-state='error']"),
+      ).not.toBeNull();
+    });
+
     it("switches between the two tabs and back to the last category", async () => {
       await open("crowns");
       modal

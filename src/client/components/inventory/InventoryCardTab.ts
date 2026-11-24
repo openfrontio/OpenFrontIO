@@ -127,6 +127,11 @@ export class InventoryCardTab extends LitElement {
   }
 
   protected willUpdate(): void {
+    // Off the page (an update queued before the Inventory remade this tab
+    // can still run): no subscribing again and no seeding. The editor is
+    // shared with the live tab, and seeding it with this tab's older
+    // profile would have the two seed it in turn forever.
+    if (!this.isConnected) return;
     const editor = this.editor;
     if (editor !== this.subscribedTo) {
       this.unsubscribe?.();

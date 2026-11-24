@@ -1,4 +1,5 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
+import { currentPublicId } from "../../Auth";
 import {
   checkInPlacePurchase,
   type InsufficientCurrency,
@@ -50,6 +51,12 @@ const CARD_TAB_PLACEMENT: StorePlacement = {
  * Inventory asks about unsaved card changes first). */
 const toAccount = () => window.showPage?.("page-account");
 
+// The account that opened each item's confirm box (by item key), so the
+// buy is only sent as that account: a sign-in in another tab can change the
+// session while the box is open, and purchaseCosmeticInPlace then answers
+// signed_out with nothing sent.
+const confirmedAs = new Map<string, string | null>();
+
 /** The tap check behind the confirm box. A profile that can't be read is
  * never a dead tap. */
 export async function checkCardPurchase(
@@ -58,7 +65,10 @@ export async function checkCardPurchase(
   signIn: () => void = toAccount,
 ): Promise<PurchasePreflight> {
   const result = await checkInPlacePurchase(resolved, method);
-  if (result.ok) return result;
+  if (result.ok) {
+    confirmedAs.set(resolved.key, currentPublicId());
+    return result;
+  }
   if (result.reason === "signed_out") {
     signIn();
   } else if (result.reason === "unreachable") {
@@ -73,10 +83,17 @@ export async function buyCardItem(
   method: "hard" | "soft",
   signIn: () => void = toAccount,
 ): Promise<PurchaseResult> {
+  // No confirm box (no tap check ran): the account signed in now.
+  const signedInAs = confirmedAs.has(resolved.key)
+    ? confirmedAs.get(resolved.key)!
+    : currentPublicId();
+  confirmedAs.delete(resolved.key);
   const outcome = await purchaseCosmeticInPlace(
     resolved,
     method,
     CARD_TAB_PLACEMENT,
+    undefined,
+    signedInAs,
   );
   switch (outcome.kind) {
     case "owned":

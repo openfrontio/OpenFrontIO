@@ -1,9 +1,10 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { cardItemName } from "../../components/card/CardItems";
+import { currentPublicId } from "../../Auth";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
+import { cardItemName } from "../../components/card/CardItems";
 import {
   checkInPlacePurchase,
   type PurchaseResult,
@@ -121,6 +122,10 @@ export class LoadoutRow extends LitElement {
   // On a phone the row starts collapsed to one line; tapping opens it.
   @state() private open = false;
   private ownTracker = false;
+  // The account each item's tap check confirmed, by item key: the buy from
+  // that confirm is sent only as this account (purchaseCosmeticInPlace).
+  // `publicId` null: no account was known then, so the buy is refused.
+  private confirmedAs = new Map<string, { publicId: string | null }>();
 
   createRenderRoot() {
     return this;
@@ -187,11 +192,17 @@ export class LoadoutRow extends LitElement {
         new CustomEvent("look-owned", { detail: { key }, bubbles: true }),
       );
     };
+    // No tap check (never the case here): the account signed in now.
+    const confirmed = this.confirmedAs.get(key);
+    const signedInAs =
+      confirmed === undefined ? currentPublicId() : confirmed.publicId;
+    this.confirmedAs.delete(key);
     const outcome = await purchaseCosmeticInPlace(
       this.resolved(entry),
       method,
       PLACEMENT,
       tellOwned,
+      signedInAs,
     );
     switch (outcome.kind) {
       case "owned":
@@ -224,6 +235,9 @@ export class LoadoutRow extends LitElement {
   // The tap check: a profile that can't be read is never a dead tap.
   private async check(entry: LoadoutItem, method: "hard" | "soft") {
     const result = await checkInPlacePurchase(this.resolved(entry), method);
+    // The confirm opens now: remember who it was opened as.
+    const key = `${entry.type}:${entry.item.name}`;
+    if (result.ok) this.confirmedAs.set(key, { publicId: currentPublicId() });
     if (!result.ok && result.reason === "signed_out") void this.signIn();
     if (!result.ok && result.reason === "unreachable") {
       void showInGameAlert(translateText("win_modal.server_unreachable"));
