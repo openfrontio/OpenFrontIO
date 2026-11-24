@@ -346,12 +346,15 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** Currency purchase awaiting confirmation, if any. Its amount is read
-   * when the dialog renders, so a sale ending while it is open shows (and
+  /** Currency purchase awaiting confirmation, if any. The item's prices
+   * are taken when it opens: a grid rendered by position can hand this
+   * element another item meanwhile. The amount is worked out from them when
+   * the dialog renders, so a sale ending while it is open shows (and
    * charges) the price at that moment. */
   @state() private confirmingPurchase: {
     method: "hard" | "soft";
     itemName: string;
+    item: PricedItem;
     handler: () => Promise<PurchaseResult>;
   } | null = null;
   @state() private ownBusy = false;
@@ -413,19 +416,27 @@ export class PurchaseButton extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>) {
     super.updated(changed);
-    if (changed.has("promotion")) this.scheduleSaleEnd();
+    if (changed.has("promotion") || changed.has("confirmingPurchase")) {
+      this.scheduleSaleEnd();
+    }
   }
 
   /** Re-render when the sale ends, so the price switches to the list price
    * at the same moment everywhere it's shown. */
   private scheduleSaleEnd() {
     this.clearSaleEndTimer();
-    const endsAt = saleEndsAt(this.pricedItem);
-    if (endsAt === null) return;
-    const wait = endsAt - Date.now();
-    if (wait <= 0 || wait > 2 ** 31 - 1) return;
+    // The shown item's sale, and an open dialog's item's (it may be another
+    // item by now): the first one still to come.
+    const now = Date.now();
+    const ends = [this.pricedItem, this.confirmingPurchase?.item]
+      .map((item) => (item === undefined ? null : saleEndsAt(item)))
+      .filter((at): at is number => at !== null && at > now);
+    if (ends.length === 0) return;
+    const wait = Math.min(...ends) - now;
+    if (wait > 2 ** 31 - 1) return;
     this.saleEndTimer = setTimeout(() => {
       this.saleEndTimer = null;
+      this.scheduleSaleEnd();
       this.requestUpdate();
     }, wait + 1);
   }
@@ -445,7 +456,12 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    this.confirmingPurchase = { method, itemName: this.itemName, handler };
+    this.confirmingPurchase = {
+      method,
+      itemName: this.itemName,
+      item: this.pricedItem,
+      handler,
+    };
   }
 
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
@@ -646,7 +662,11 @@ export class PurchaseButton extends LitElement {
               .heading=${translateText("store.confirm_purchase_title")}
               .message=${translateText("store.confirm_purchase_body", {
                 item: this.confirmingPurchase.itemName,
-                amount: this.shown(this.confirmingPurchase.method)?.price ?? 0,
+                amount:
+                  shownPrice(
+                    this.confirmingPurchase.item,
+                    this.confirmingPurchase.method,
+                  )?.price ?? 0,
                 currency: translateText(
                   this.confirmingPurchase.method === "hard"
                     ? "cosmetics.hard"
