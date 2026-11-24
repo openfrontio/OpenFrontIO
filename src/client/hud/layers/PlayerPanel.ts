@@ -783,12 +783,19 @@ export class PlayerPanel extends LitElement implements Controller {
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
     // A card owner's compact card replaces the flag, badge and name, still
-    // (never animated) beside the running game. Card owners are human, so
-    // there is no player-type chip to keep.
+    // (never animated) beside the running game, with the close button at the
+    // end of its row. Card owners are human, so there is no player-type chip.
     const cardView = this.cardViewFor(other);
     if (cardView !== null) {
       return html`
-        <player-card .view=${cardView} size="panel"></player-card>
+        <div class="flex items-center gap-2.5">
+          <player-card
+            class="block min-w-0 flex-1"
+            .view=${cardView}
+            size="panel"
+          ></player-card>
+          ${this.renderCloseButton()}
+        </div>
         ${this.renderTraitorBadge(other)}
         ${this.renderRelationPillIfNation(other, my)}
       `;
@@ -860,18 +867,23 @@ export class PlayerPanel extends LitElement implements Controller {
               </span>`
             : html``
         }
-        <button
-          @click=${this.handleClose}
-          class=${HUD_ICON_BUTTON}
-          aria-label=${translateText("common.close") || "Close"}
-          title=${translateText("common.close") || "Close"}
-        >
-          <of-icon name="close" size="16"></of-icon>
-        </button>
+        ${this.renderCloseButton()}
       </div>
       ${this.renderTraitorBadge(other)}
       ${this.renderRelationPillIfNation(other, my)}
     `;
+  }
+
+  // The panel's only close control: both identity rows (card or not) show it.
+  private renderCloseButton() {
+    return html`<button
+      @click=${this.handleClose}
+      class=${HUD_ICON_BUTTON}
+      aria-label=${translateText("common.close") || "Close"}
+      title=${translateText("common.close") || "Close"}
+    >
+      <of-icon name="close" size="16"></of-icon>
+    </button>`;
   }
 
   private renderResources(other: PlayerView) {
