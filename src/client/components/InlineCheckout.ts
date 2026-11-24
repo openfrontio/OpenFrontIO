@@ -195,7 +195,8 @@ export class InlineCheckout extends LitElement {
     // A Google or Apple login carries its own email (user.google.email,
     // user.apple.email, never the top-level field) and already makes the
     // account recoverable — asking again would collect a second, different
-    // address on every purchase.
+    // address on every purchase. Unlike Google, Apple may share no email at
+    // all, so only an Apple identity that has one counts.
     //
     // `me === false` is NOT "guest": getUserMe collapses signed-out and any
     // transient /users/@me failure into the same false (memoized for the
@@ -207,7 +208,9 @@ export class InlineCheckout extends LitElement {
     // this function exists to prevent (and the API refuses that attach
     // anyway), while a guest purchase without receipt_email merely skips
     // the recovery attach for that one purchase.
-    return me !== false && !me.user.email && !me.user.google && !me.user.apple;
+    return (
+      me !== false && !me.user.email && !me.user.google && !me.user.apple?.email
+    );
   }
 
   private async initWallet(): Promise<void> {
