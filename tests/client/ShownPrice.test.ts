@@ -211,6 +211,57 @@ describe("<purchase-button> reads prices through shownPrice", () => {
     expect(confirm().message).not.toContain("300");
   });
 
+  it("an open confirm dialog keeps its item's price when the button is reused for another item", async () => {
+    const lang = document.createElement("lang-selector");
+    const translations = { "store.confirm_purchase_body": "Pay {amount}" };
+    Object.assign(lang, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(lang);
+    const button = await mount(new Date(Date.now() + 60_000).toISOString());
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    const confirm = () =>
+      button.querySelector("confirm-dialog") as unknown as { message: string };
+    expect(confirm().message).toContain("300");
+    // A grid rendered by position hands this element another item.
+    button.priceHard = 999;
+    button.listPriceHard = null;
+    button.promotion = null;
+    button.itemName = "Other item";
+    await button.updateComplete;
+    expect(confirm().message).toContain("300");
+    expect(confirm().message).not.toContain("999");
+  });
+
+  it("an open confirm dialog switches at its own item's sale end after the button is reused", async () => {
+    const lang = document.createElement("lang-selector");
+    const translations = { "store.confirm_purchase_body": "Pay {amount}" };
+    Object.assign(lang, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(lang);
+    vi.useFakeTimers();
+    const button = await mount(new Date(Date.now() + 5_000).toISOString());
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    button.priceHard = 999;
+    button.listPriceHard = null;
+    button.promotion = null;
+    await button.updateComplete;
+    vi.advanceTimersByTime(5_010);
+    await button.updateComplete;
+    const confirm = button.querySelector("confirm-dialog") as unknown as {
+      message: string;
+    };
+    expect(confirm.message).toContain("400");
+    expect(confirm.message).not.toContain("999");
+  });
+
   it("keeps a reopened button busy while the same item's purchase runs", async () => {
     let finish!: () => void;
     const first = await mount(new Date(Date.now() + 60_000).toISOString());

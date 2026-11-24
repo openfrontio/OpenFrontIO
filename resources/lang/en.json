@@ -1768,6 +1768,8 @@
     },
     "earned_only": "Earned only, not for sale:",
     "effect_change": "Change",
+    "effect_change_slot": "Change {slot}",
+    "effect_close_slot": "Close {slot}",
     "effect_default": "Default",
     "effect_slot": {
       "atom": "Atom bomb blast",
