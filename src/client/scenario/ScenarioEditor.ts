@@ -518,6 +518,8 @@ export class ScenarioEditor extends LitElement {
     // Picking the same file again imports it again.
     input.value = "";
     if (file === undefined) return;
+    // Leaving the editor or resizing during the decode ends this session.
+    const session = this.session;
     let bitmap: ImageBitmap;
     try {
       bitmap = await openHeightmap(file);
@@ -531,7 +533,15 @@ export class ScenarioEditor extends LitElement {
     try {
       const editor = this.editor;
       // As applyEdit: not while a test play's export reads the document.
-      if (editor === null || this.status !== "ready" || this.starting) return;
+      if (
+        editor === null ||
+        session === null ||
+        this.session !== session ||
+        this.status !== "ready" ||
+        this.starting
+      ) {
+        return;
+      }
       const { doc } = editor;
       const size = heightmapSize(bitmap.width, bitmap.height);
       if (size === null) {
@@ -565,6 +575,12 @@ export class ScenarioEditor extends LitElement {
         this.saveDraft();
       }
       this.requestUpdate();
+    } catch (e) {
+      // e.g. a canvas over the browser's size limit.
+      console.error("scenario editor: importing the heightmap failed:", e);
+      void showInGameAlert(
+        translateText("scenario_editor.import_heightmap_failed"),
+      );
     } finally {
       bitmap.close();
     }
