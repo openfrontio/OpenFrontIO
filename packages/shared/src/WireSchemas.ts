@@ -13,6 +13,7 @@ import {
   PatternDataSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
+import { PlayerCardSchema } from "./PlayerCardSchemas";
 
 import {
   AllPlayersStatsSchema,
@@ -473,6 +474,10 @@ export const WirePlayerSchema = z.object({
   clanTag,
   cosmetics: PlayerCosmeticsSchema.optional(),
   ...playerRest,
+  // The player's card, for card owners only, as this viewer may see it (left
+  // off where the player's name is hidden from the viewer). Last, so a frame
+  // or record from before it decodes unchanged.
+  card: PlayerCardSchema.optional(),
 });
 
 export const WireGameStartInfoSchema = GameStartInfoSchema.extend({

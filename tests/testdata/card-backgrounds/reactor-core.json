@@ -1,0 +1,13 @@
+{
+  "name": "bg_reactor_core",
+  "product": null,
+  "rarity": "legendary",
+  "url": "/cosmetics/card-backgrounds/bg_reactor-core.webp",
+  "animation": {
+    "kind": "mask",
+    "mask": "/cosmetics/card-backgrounds/bg_reactor-core_mask.png",
+    "pulse": { "period": 2, "strength": 1, "glowColour": "#9cffb0" },
+    "shimmer": { "period": 5, "angle": 20, "strength": 0.8 },
+    "flow": { "period": 1.6, "strength": 1, "colour": "#5ff0ff" }
+  }
+}
