@@ -68,6 +68,13 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  heightmapPixels,
+  heightmapSize,
+  heightmapTerrain,
+  importHeightmap,
+  openHeightmap,
+} from "./HeightmapImport";
+import {
   allianceIndex,
   alliancesAllowed,
   IMPASSABLE,
@@ -77,6 +84,7 @@ import {
   MAX_SIDE,
   MAX_WARSHIPS,
   MAX_ELEVATION,
+  MIN_SIDE,
   newNation,
   newScenarioDocument,
   resizeScenarioDocument,
@@ -498,6 +506,67 @@ export class ScenarioEditor extends LitElement {
     } catch (e) {
       console.error("scenario editor: resizing failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
+    }
+  }
+
+  /**
+   * Imports a PNG as the map's terrain, one undo step. It must import at
+   * the map's size: a resize can't be undone, so import doesn't do one.
+   */
+  private async importHeightmapFile(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    // Picking the same file again imports it again.
+    input.value = "";
+    if (file === undefined) return;
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await openHeightmap(file);
+    } catch (e) {
+      console.error("scenario editor: decoding the heightmap failed:", e);
+      void showInGameAlert(
+        translateText("scenario_editor.import_heightmap_failed"),
+      );
+      return;
+    }
+    try {
+      const editor = this.editor;
+      // As applyEdit: not while a test play's export reads the document.
+      if (editor === null || this.status !== "ready" || this.starting) return;
+      const { doc } = editor;
+      const size = heightmapSize(bitmap.width, bitmap.height);
+      if (size === null) {
+        void showInGameAlert(
+          translateText("scenario_editor.import_heightmap_too_small", {
+            width: bitmap.width,
+            height: bitmap.height,
+            min: MIN_SIDE,
+          }),
+        );
+        return;
+      }
+      if (size.width !== doc.width || size.height !== doc.height) {
+        void showInGameAlert(
+          translateText("scenario_editor.import_heightmap_wrong_size", {
+            width: size.width,
+            height: size.height,
+            mapWidth: doc.width,
+            mapHeight: doc.height,
+          }),
+        );
+        return;
+      }
+      const { width, height } = size;
+      const pixels = heightmapPixels(bitmap, width, height);
+      this.endStroke();
+      this.settingsRemoved = null;
+      if (
+        importHeightmap(editor, heightmapTerrain(pixels, width, width, height))
+      ) {
+        this.saveDraft();
+      }
+      this.requestUpdate();
+    } finally {
+      bitmap.close();
     }
   }
 
@@ -1909,6 +1978,18 @@ export class ScenarioEditor extends LitElement {
                       </label>`
                     : nothing
                 }
+                <label class="${button} cursor-pointer text-center">
+                  ${translateText("scenario_editor.import_heightmap")}
+                  <input
+                    type="file"
+                    accept="image/png"
+                    class="hidden"
+                    @change=${(e: Event) =>
+                      void this.importHeightmapFile(
+                        e.target as HTMLInputElement,
+                      )}
+                  />
+                </label>
               `
             : nothing
         }
