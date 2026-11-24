@@ -312,6 +312,29 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("[data-inventory-grid]")).toBeNull();
     });
 
+    it("a sign-out hides the old account's card tab while it checks", async () => {
+      await open("card");
+      expect(modal.querySelector("inventory-card-tab")).not.toBeNull();
+      let finishAuth!: (value: false) => void;
+      vi.mocked(userAuth).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishAuth = resolve;
+          }),
+      );
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: false }),
+      );
+      await modal.updateComplete;
+      // userAuth's round trip is still out: the loading state, not the old
+      // account's card.
+      expect(modal.querySelector("inventory-card-tab")).toBeNull();
+      expect(modal.querySelector("[data-inventory-skeleton]")).not.toBeNull();
+      finishAuth(false);
+      await settle(modal);
+      expect(modal.querySelector("inventory-card-tab")).toBeNull();
+    });
+
     it("switches between the two tabs and back to the last category", async () => {
       await open("crowns");
       modal
