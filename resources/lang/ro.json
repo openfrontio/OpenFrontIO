@@ -122,6 +122,8 @@
     "sub_status_canceled": "Anulat",
     "sub_status_canceling": "Se anulează",
     "sub_status_canceling_on": "Se anulează {date}",
+    "sub_status_expired": "Expirat",
+    "sub_status_grace": "Perioadă de grație",
     "sub_status_incomplete": "Incomplet",
     "sub_status_incomplete_expired": "Expirat",
     "sub_status_past_due": "Scadent",
@@ -172,7 +174,6 @@
     "title": "Setări cont"
   },
   "ban_notice": {
-    "appeal": "Dacă crezi că este o greșeală, contactează-ne pe Discord.",
     "category": {
       "cheating": "Program de încălzire sau software neautorizat",
       "child_safety": "Încălcarea siguranței",
@@ -187,9 +188,10 @@
       "rank_manipulation": "Manipularea clasamentului sau a evaluării",
       "teaming": "Echipamente sau coluziuni"
     },
+    "title": "Contul tău este blocat",
+    "appeal": "Dacă crezi că este o greșeală, contactează-ne pe Discord.",
     "permanent": "Această interdicție este permanentă.",
     "reason": "Motivul: {reason}",
-    "title": "Contul tău este blocat",
     "until": "Interzis până la {date}."
   },
   "build_menu": {
@@ -223,7 +225,9 @@
       "crown": "Atacă coroana!",
       "finish": "Hai să-l terminăm pe [P1]!",
       "focus": "Focalizează focul pe [P1]!",
-      "mirv": "Lansează un MIRV la [P1]!"
+      "mirv": "Lansează un MIRV la [P1]!",
+      "nuke": "Bombardează [P1]!",
+      "spend_gold": "Oprește închirierea aurului, folosește-o!"
     },
     "cat": {
       "attack": "Atacă",
@@ -231,6 +235,7 @@
       "greet": "Salutări",
       "help": "Ajutor",
       "misc": "Diverse",
+      "recent": "Recent",
       "warnings": "Avertizări"
     },
     "defend": {
@@ -258,13 +263,17 @@
       "thanks": "Mulțumesc!",
       "trust_broken": "Am avut încredere în tine...",
       "trust_me": "Poți avea încredere în mine. Promit!",
-      "well_played": "Bine jucat!"
+      "well_played": "Bine jucat!",
+      "what_doing": "Ce faci?!",
+      "why_attack": "De ce mă ataci?!"
     },
     "help": {
       "alliance": "Alianță?",
+      "break_alliance": "Te rog distruge alianța noastră pentru a obține și pământ!",
       "gold": "Am nevoie de aur!",
       "help_defend": "Ajută-mă să mă apăr împotriva lui [P1]!",
       "no_attack": "Te rog nu mă ataca!",
+      "renew_alliance": "Te rugam sa reîncarci alianța noastră înainte de expirare!",
       "send_gold_to": "Trimite aur la [P1]!",
       "send_troops_to": "Trimite trupe la [P1]!",
       "sorry_attack": "Scuze, nu am vrut să atac.",
@@ -273,6 +282,7 @@
       "troops_frontlines": "Trimite trupe pe front!"
     },
     "misc": {
+      "alliances_end_together": "Alianțele noastre cu [P1] se termină în același timp!",
       "build_closer": "Construiește mai aproape ca să ai trenuri!",
       "coastline": "Te rog lasă-mi ieșire la mare.",
       "fun": "Jocul ăsta este amuzant!",
@@ -282,16 +292,21 @@
       "strategy": "Bună strategie!",
       "team_up": "Hai să ne aliem împotriva lui [P1]!"
     },
+    "no_phrases": "Nu există expresii corespondente",
     "search": "Caută jucător...",
+    "search_phrases": "Caută expresii...",
     "short": {
       "greet": {
         "ruining_games": "Ne distruge jocul"
       },
       "help": {
+        "break_alliance": "Distruge alianța, am nevoie de pământ!",
+        "renew_alliance": "Reînnoiește alianța noastră!",
         "sorry_attack": "Ne cerem scuze pentru atac!",
         "troops_frontlines": "Trupele în față!"
       },
       "misc": {
+        "alliances_end_together": "Alianțele noastre [P1] se termină împreună",
         "coastline": "Permiteți-mi să am o coastă",
         "join_discord": "Alătură-te comunității pe Discord!",
         "pr": "Este PR meu fuzionat încă?"
@@ -299,10 +314,12 @@
       "warnings": {
         "mirv_ready": "[P1] poate MIRV acum!",
         "pirating": "[P1] Piratează",
+        "renew_or_nuke": "Reînnoiește sau fii bombardat!",
         "saving_for_mirv": "[P1] economisește pentru MIRV",
         "snowballing": "[P1] exuberă",
         "stalemate": "Pace? Blocaj.",
-        "stop_trading_all": "Oprește toate tranzacțiile!"
+        "stop_trading_enemies": "Oprește comerțul cu [P1]!",
+        "stop_war": "Oprește înaintea altora să se împing în"
       }
     },
     "title": "Chat Rapid",
@@ -318,14 +335,17 @@
       "mirv_ready": "[P1] Are suficient aur să lanseze un MIRV!",
       "mirv_soon": "[P1] Poate lansa un MIRV în curând!",
       "no_allies": "[P1] Nu are aliați.",
+      "nuke_threat": "Opriți-vă acum, sau te voi bombarda!",
       "pirating": "[P1] piratează toate tranzacțiile noastre!",
+      "renew_or_nuke": "Reînnoiește alianța noastră, sau te voi bombarda!",
       "saving_for_mirv": "[P1] strânge aur pentru a lansa un MIRV.",
       "snowballing": "[P1] scapă de sub control!",
       "stalemate": "Hai să facem pace. E un impas, o să pierdem amândoi.",
       "stop_trading": "Oprește comerțul cu [P1]!",
+      "stop_trading_enemies": "Te rugăm să oprești comerțul cu dușmanii!",
+      "stop_war": "Hai să oprim acest război înainte ca altcineva să profite de el!",
       "strong": "[P1] este puternic.",
-      "weak": "[P1] E slab.",
-      "stop_trading_all": "Te rugăm să încetezi toate schimburile comerciale!"
+      "weak": "[P1] E slab."
     }
   },
   "clan_modal": {
@@ -419,6 +439,10 @@
     "error_request_pending": "Solicitarea de înscriere este în așteptare",
     "failed_to_load_clan": "Încărcarea clanului a eșuat",
     "failed_to_load_requests": "Încărcarea cererilor a eșuat",
+    "filter_browse_all": "Toate clanurile",
+    "filter_browse_invite_only": "Doar pe bază de invitație",
+    "filter_browse_label": "Arată",
+    "filter_browse_open": "Deschideți să vă alăturați",
     "history_clan_members": "Membrii clanului",
     "history_clan_players": "Jucători de clan",
     "history_clan_players_value": "{clanCount} / {total} în total",
@@ -462,6 +486,7 @@
     "left_clan": "Ai părăsit clanul.",
     "manage_clan": "Administrați",
     "map_frame_title": "Harta teritoriului clanului",
+    "map_loading": "Încărcare hartă clan…",
     "member_banned": "Jucător banat.",
     "member_count": "{count, plural, one {# membru} other {# membri}}",
     "member_demoted": "Membru retrogradat.",
@@ -506,8 +531,11 @@
     "sort_1v1_wins": "1v1 Victorii",
     "sort_browse_members": "Cei mai mulți membri",
     "sort_browse_name": "A-Z",
+    "sort_browse_oldest": "Cel mai vechi",
     "sort_browse_random": "Aleatoriu",
-    "sort_browse_win_score": "Scor de victorii",
+    "sort_browse_richest": "Cel mai bogat",
+    "sort_browse_win_score": "Cel mai mare scor de victorie",
+    "sort_browse_win_score_low": "Cel mai mic scor de victorie",
     "sort_by": "Sortează după",
     "sort_default": "Rolul",
     "sort_elo_contributed": "ELO Războaie de Clan",
@@ -534,13 +562,12 @@
     "status": "Statut",
     "tab_donations": "Donațiile",
     "tab_game_history": "Istoricul partidelor",
+    "tab_map_alpha": "Hartă (ALFA)",
     "tab_overview": "Rezumat",
     "title": "Clanuri",
     "transfer_leadership": "Transferă funcția de lider",
     "transfer_warning": "Acest lucru va face membrul selectat noul lider. Veți deveni un membru obișnuit. Această acțiune nu poate fi anulată.",
-    "unban": "Deblochează",
-    "map_coming_soon": "În curând",
-    "tab_map": "Harta"
+    "unban": "Deblochează"
   },
   "close_reason": {
     "account_lookup_failed": "Contul vostru nu a putut fi căutat. Vă rugăm să încercați din nou.",
@@ -607,6 +634,7 @@
     "not_logged_in": "Neautentificat",
     "paste": "Lipiți",
     "preset_max": "Maxim",
+    "scroll_to_top": "Derulează până sus",
     "send": "Trimite",
     "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Păstrează",
@@ -624,6 +652,8 @@
   "cosmetics": {
     "adfree": "Fără reclame pentru viață!",
     "ai_label": "Făcut cu asistență IA",
+    "ai_none_label": "Fără IA utilizată",
+    "ai_unknown_label": "Utilizare de IA necunoscută",
     "artist_label": "Artistul:",
     "color_label": "Culoarea:",
     "common": "Comun",
@@ -731,6 +761,7 @@
   },
   "detailed_view": {
     "capacity": "Capacitatea",
+    "default_profile": "Profil implicit",
     "delete_profile": "Ștergeți",
     "filters": "Filtrele",
     "filters_with_count": "Filtre ({count})",
@@ -745,6 +776,7 @@
     "mode_ffa": "FFA",
     "mode_hvn": "Oameni Vs Națiuni",
     "mode_teams": "Echipele",
+    "no_default_profile": "Niciun profil implicit",
     "no_lobbies": "Nicio cameră nu se potrivește cu filtrele tale.",
     "no_profile": "Niciun profil",
     "pane_empty": "Nicio cameră",
@@ -866,6 +898,7 @@
     "alliance_request_sent": "Cererea alianței a fost trimisă lui {name}.",
     "alliance_request_status": "{name} {status} Cererea ta de alianță",
     "atom_bomb_detonated": "{name} - bombă detonată",
+    "atom_bomb_inbound": "{name} - bombă atomică în apropiere",
     "attack_cancelled_retreat": "Atac anulat, {troops} unități ucise în timpul retragerii",
     "attack_request": "{name} Solicită să ataci {target}",
     "betrayal_debuff_ends": "{time} Secunde",
@@ -876,8 +909,11 @@
     "duration_seconds_plural": "{seconds} Secunde",
     "focus": "Focalizează",
     "hydrogen_bomb_detonated": "{name} - bombă cu hidrogen detonată",
+    "hydrogen_bomb_inbound": "{name} - bombă cu hidrogen în apropiere",
     "ignore": "Ignoră",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV ÎN APROPIERE ⚠️⚠️⚠️",
     "missile_intercepted": "Racheta a interceptat {unit}",
+    "naval_invasion_inbound": "Invazia avală vine din {name} ({troops})",
     "no_boats_available": "Nu sunt disponibile bărci, maxim {max}",
     "received_gold_from_captured_ship": "Ai primit {gold} aur de la nava capturată de la {name}",
     "received_gold_from_conquest": "Cucerit {name}, primit {gold} aur",
@@ -995,14 +1031,15 @@
     "instant_build": "Construire Rapidă",
     "max_timer": "Durata jocului (minute)",
     "mins_placeholder": "Minute",
-    "nations": "Națiune: ",
+    "nations": "Națiuni: ",
     "options": "Opțiunile",
     "overtime": "Mai mult timp după (minute)",
-    "random_spawn": "Start aleatoriu",
+    "random_spawn": "Apariție aleatorie",
     "start": "Începe jocul",
     "starting": "Se pornește…",
     "starting_gold": "Aur la început (Milioane)",
-    "water_nukes": "Bombă nucleară de apă"
+    "water_nukes": "Bombă nucleară de apă",
+    "win_threshold": "Pragul de câștig (%)"
   },
   "game_starting_modal": {
     "code_license": "Licență cod sursă: AGPL-3.0 (fără garanție)",
@@ -1043,9 +1080,10 @@
     "cosmetics_nuke_trails_label": "Urme de la bomba nucleară",
     "cosmetics_railroads_desc": "Culori personalizate pentru calea ferată",
     "cosmetics_railroads_label": "Căile ferate",
-    "cosmetics_show_from_desc": "Călătoarele cosmetice sunt desenate. Propria ta cosmetică este întotdeauna prezentată.",
+    "cosmetics_show_from_desc": "Ale cui cosmetice sunt afișate. Alege Nimeni pentru a-ți ascunde și propriile cosmetice, fără a le dezechipa.",
     "cosmetics_show_from_everyone": "Toți",
     "cosmetics_show_from_label": "Arata cosmetice de la",
+    "cosmetics_show_from_none": "Nimeni",
     "cosmetics_show_from_self": "Doar eu",
     "cosmetics_show_from_teammates": "Echipa mea",
     "cosmetics_structures_desc": "Culori de structură personalizate",
@@ -1138,7 +1176,6 @@
     "territory_sat_label": "Saturarea teritoriului"
   },
   "heads_up_message": {
-    "catching_up": "Se actualizează ...",
     "choose_spawn": "Alegeți o locație de început",
     "choose_spawn_spectator": "Jucătorii aleg locații de început",
     "dont_show_again": "Nu mai arăta",
@@ -1147,7 +1184,8 @@
     "pvp_immunity_active": "Imunitatea PVP activă pentru {seconds}s",
     "random_spawn": "Apariția aleatorie este activată. Se selectează locația de pornire...",
     "random_spawn_spectator": "Programarea aleatorie este activată",
-    "singleplayer_game_paused": "Joc întrerupt"
+    "singleplayer_game_paused": "Joc întrerupt",
+    "catching_up": "Se actualizează ..."
   },
   "help_modal": {
     "action_attack_altclick": "Atac (când clic stânga este configurat să deschidă meniul)",
@@ -1330,19 +1368,6 @@
     "unequip_all": "Dezechipează totul",
     "unequipped_all": "Dezechipează totul"
   },
-  "ios_banner": {
-    "got_it": "Am înțeles",
-    "how": "Cum",
-    "later": "Mai târziu",
-    "modal_desc": "Browser-ul vostru nu acceptă ecran complet, dar poți adăuga OpenFront pe ecranul principal pentru o experiență imersă:",
-    "modal_title": "Ecran complet pe iOS",
-    "never": "Niciodată",
-    "step_add_to_home_label": "Adaugă pe ecranul principal",
-    "step_open": "Deschide din ecranul de pornire - deschide tot ecranul fără bara de adrese",
-    "step_scroll_and_tap": "Derulează în jos și apasă",
-    "step_share": "Apasă butonul Distribuie din browser",
-    "text": "Pentru ecran complet, adaugă OpenFront pe ecranul de pornire"
-  },
   "kick_reason": {
     "admin": "Exclus de un administrator",
     "duplicate_session": "Dat afară din joc (este posibil să fi jucat pe o altă filă)",
@@ -1468,11 +1493,13 @@
     "balkans": "Balcani",
     "balkhash": "Balkhash",
     "baltics": "Balticii",
+    "benelux": "Benelux",
     "beringsea": "Marea Bering",
     "beringstrait": "Strâmtoarea Bering",
     "betweentwoseas": "Între două mări",
     "blacksea": "Marea Neagră",
     "bosphorusstraits": "Strâmtoarea Bosfor",
+    "brainrot": "Brain Rot",
     "branchingpaths": "Căi de ramificare",
     "britannia": "Britanie",
     "britanniaclassic": "Britania (Clasic)",
@@ -1489,7 +1516,7 @@
     "clearwaterlakes": "Lacuri goale",
     "conakry": "Conakry",
     "crimea": "Crimeea",
-    "danishstraits": "Strâmtoare daneze",
+    "danishstraits": "Strâmtorile Daneze",
     "deglaciatedantarctica": "Antarctica deglaciată",
     "didier": "Didier",
     "didierfrance": "Didier (Franța)",
@@ -1506,7 +1533,7 @@
     "france": "Franța",
     "gatewaytotheatlantic": "Poarta către Atlantic",
     "germany": "Germania",
-    "giantworldmap": "Harta Lumii Gigantică",
+    "giantworldmap": "Hartă mondială gigantică",
     "greatlakes": "Lacuri mari",
     "gulfofguinea": "Golful Guineei",
     "gulfofmexico": "Golful Mexic",
@@ -1547,6 +1574,7 @@
     "northamerica": "America de Nord",
     "northwestpassage": "Pasajul de nord-vest",
     "oceania": "Oceania",
+    "ommatrypta": "Ommatrypta",
     "onion": "Ceapa",
     "pangaea": "Pangeea",
     "passage": "Pasaj",
@@ -1569,13 +1597,14 @@
     "svalmel": "Svalmel",
     "taiwanstrait": "Strâmtoarea Taiwan",
     "thebox": "Cutia",
-    "tierradelfuego": "Tierra del Fuego",
+    "tierradelfuego": "Țara de Foc",
     "titan": "Titan",
     "tourney1": "Echipe de turneu 2",
     "tourney2": "Echipe de turneu 3",
     "tourney3": "Echipe de turneu 4",
     "tourney4": "Turneu 8 echipe",
     "tradersdream": "Val neguțătorilor",
+    "tutorial": "Tutorial",
     "twolakes": "Două Lacuri",
     "unitedstates": "Statele Unite ale Americii",
     "vancouverisland": "Insula Vancouver",
@@ -1618,7 +1647,10 @@
     "unfavorite": "Scoate de la favorite"
   },
   "map_layers": {
-    "label": "Etichetă"
+    "eyeland": "pleoapă",
+    "eyewater": "apă",
+    "label": "Etichetă",
+    "brland": "brland"
   },
   "marketing_consent": {
     "body": "Noutăți și actualizări prin e-mail. Modificați-le oricând în contul vostru.",
@@ -1651,8 +1683,8 @@
     "title": "Meciuri Clasați 1v1 (ALFA)",
     "title_2v2": "2v2 Potrivire clasată (ALFA)",
     "title_clanwars": "Sistem de matchmaking clasificat pentru Războaiele de Clan (ALFA)",
-    "title_ffa": "Matchmaking Clasament de Fiecare pentru el (ALFA)",
-    "waiting_for_game": "Se așteaptă începerea meciului..."
+    "waiting_for_game": "Se așteaptă începerea meciului...",
+    "title_ffa": "Matchmaking Clasament de Fiecare pentru el (ALFA)"
   },
   "mode_selector": {
     "lobbies_unreachable": "Nu se poate ajunge la camerele publice momentan",
@@ -1661,7 +1693,6 @@
     "ranked_2v2_title": "2v2",
     "ranked_clanwars_subtitle": "Clan-ul tău vs al lor",
     "ranked_clanwars_title": "Războaie de Clan",
-    "ranked_ffa_title": "Fiecare pentru el",
     "ranked_pairing_note": "În moduri de echipă, clanmatii și prietenii din coadă sunt plasați în aceeași echipă, acolo unde este posibil. Prietenii sunt împerecheați mai întâi, apoi clanurii. Dacă ratingurile dvs. sunt prea îndepărtate veți fi potrivit separat pentru a păstra jocurile corecte. În FFA, 4 până la 10 jucători sunt egalați de rating, iar prietenii și clanmatii nu sunt plasați niciodată în același joc. În Clan Wars, fiecare echipă este o clan: te joci doar alături de membrii clanului la care te aștepți, iar ratingul clanului creşte sau scade cu rezultatul.",
     "ranked_title": "Clasat",
     "ranked_trust_required_body": "Modul Clasament acceptă doar conturi de încredere. Pentru a deveni de încredere, joacă mai multe meciuri sau efectuează o achiziție.",
@@ -1675,7 +1706,8 @@
     "teams_count": "{teamCount} Echipe",
     "teams_of": "{teamCount} Echipe de {playersPerTeam}",
     "teams_preset": "{preset} ({teams})",
-    "teams_title": "Echipe"
+    "teams_title": "Echipe",
+    "ranked_ffa_title": "Fiecare pentru el"
   },
   "multi_tab": {
     "detected": "Au fost detectate mai multe file cu joc deschis.",
@@ -1713,6 +1745,38 @@
     "tournament": "TURNAȚIE",
     "tutorial": "TUTORIALE",
     "warning": "ATENŢIE"
+  },
+  "onboarding": {
+    "got_it": "Am înțeles",
+    "intro_body": "OpenFront este un joc de strategie unde îți crești pământul și cucerești vecinilor tăi să preia harta.",
+    "intro_start": "Pornire",
+    "intro_title": "Bun venit la OpenFront",
+    "low_troops": "Așteaptă ca ei să crească înapoi înainte de a ataca din nou.",
+    "low_troops_title": "Trupele tale sunt scăzute!",
+    "main_menu": "Meniul principal",
+    "play_solo": "Joacă un joc individual",
+    "step": {
+      "coast": "Continuă să faci clic pe pământul gol până când aterizezi ajunge în apă.",
+      "coast_touch": "Continuă să atingi terenul gol până când pământul tău ajunge în apă.",
+      "expand": "Acesta este tărâmul tău. Fă clic pe terenul gol de lângă el pentru a crește.",
+      "expand_touch": "Acesta este tărâmul tău. Apasă terenul gol lângă el pentru a crește.",
+      "spawn": "Dă click în interiorul cercului strălucitor pentru a alege de unde începi.",
+      "spawn_touch": "Apasă interiorul cercului strălucitor pentru a alege de unde începeți.",
+      "troops": "Această bară reprezintă armata ta. Ea crește cel mai rapid atunci când este cam pe jumătate plină, așa că nu aștepta să se umple complet.",
+      "wrong_target": "Nu acolo. Dă click unde sunt punctele săgeții.",
+      "wrong_target_touch": "Nu acolo. Apasă unde indică săgeata.",
+      "boat": "Bărcile care transportă trupe peste apă. Fă clic pe insula mică pentru a trimite una acolo.",
+      "boat_touch": "Bărcile care transportă trupe peste apă. Atinge insula mică pentru a trimite una acolo.",
+      "nation": "Ultimul: Imperiul Roșu. Fă clic pe coastă pentru a trimite bărci până cade.",
+      "nation_land": "Acum dă click pe mijlocul pământului și continuă să mergi până cade.",
+      "nation_land_touch": "Acum lovește în mijlocul pământului și continuă să meargă până cade.",
+      "nation_touch": "Ultimul: Imperiul Roșu. Fă clic pe coastă pentru a trimite bărci până cade.",
+      "tribe": "Ăsta e un trib. Apasă pământul pentru a-l ataca, și continuă să mergi până când dispare.",
+      "tribe_touch": "Ăsta e un trib. Atinge pământul pentru a-l ataca, și continuă să meargă până când dispare."
+    },
+    "step_counter": "Pasul {current} din {total}",
+    "won_body": "Cunoașteți elementele de bază. Acum încercați un joc adevărat: un ghid vă va arăta clădiri, alianțe, bombe nucleare și multe altele.",
+    "won_title": "Ai câștigat!"
   },
   "overtime": {
     "first_place": "1st: {name} ({pct}%)",
@@ -1772,14 +1836,14 @@
     "send_gold": "Trimite aur",
     "send_troops": "Trimite Trupe",
     "start_trade": "Începe comerțul",
+    "start_trade_enemies": "Începe comerțul cu dușmanii",
     "stop_trade": "Oprește comerțul",
+    "stop_trade_enemies": "Oprește comerțul cu dușmanii",
     "stopped": "Oprit",
     "target": "Țintă",
     "trading": "Comerț",
     "traitor": "Trădător",
-    "troops": "Trupe",
-    "start_trade_all": "Începe comerțul cu toți",
-    "stop_trade_all": "Oprește comerțul cu toți"
+    "troops": "Trupe"
   },
   "player_profile": {
     "current_run": "Parcurgere curentă",
@@ -1992,6 +2056,8 @@
     "reconcile_other": "Valoarea finală diferă de cea provizorie.",
     "reconcile_reconnect": "Un adversar deconectat a revenit în joc, așa că nu este considerat eliminat.",
     "reconcile_team_win": "Echipa ta a câștigat: bonusul de victorie a fost adăugat.",
+    "reconcile_win": "Ai câștigat: bonusul câștigător a fost adăugat.",
+    "reconcile_win_removed": "Serverul a găsit un alt câștigător, astfel încât bonusul câștigător a fost decolat.",
     "rewards_balance": "Balanță: {caps} Capace · {plutonium} Plutoniu",
     "rewards_balance_caps": "Balanță: {caps} Capace",
     "rewards_claimed": "Revendicat",
@@ -2034,7 +2100,7 @@
     "peace_time_label": "Imunitate PVP",
     "ports_disabled": "Porturi dezactivate",
     "ports_disabled_label": "Porturi",
-    "random_spawn": "Start aleatoriu",
+    "random_spawn": "Apariție aleatorie",
     "sams_disabled": "SAM-uri dezactivate",
     "sams_disabled_label": "SAM-uri",
     "starting_gold": "{amount}M Pornire Aur",
@@ -2115,6 +2181,10 @@
     "unverified": "Înregistrarea acestui joc nu are verificări, astfel încât această repetare nu a putut fi verificată împotriva jocului care a fost jucat.",
     "watch_classic": "Urmărește reluarea veche în schimb"
   },
+  "report_thanks": {
+    "body": "O persoană pe care ați raportat-o recent a fost interzisă, mulțumită pentru că ați menținut deschis un loc mai sigur și mai plăcut",
+    "heading": "Mulțumesc"
+  },
   "reward_track": {
     "after_level": "După nivel {level}",
     "caps_amount": "{amount} Capace",
@@ -2124,6 +2194,7 @@
     "earlier": "Niveluri anterioare",
     "key_claimed": "Revendicat",
     "key_locked": "Blocat",
+    "key_pending": "În așteptare",
     "key_ready": "Gata de revendicare",
     "later": "Niveluri ulterioare",
     "legend_reward": "Recompensă Legendă",
@@ -2144,6 +2215,49 @@
   },
   "rewards_modal": {
     "title": "Recompense"
+  },
+  "saved_games": {
+    "code_placeholder": "Lipește un link sau un cod de joc partajat",
+    "copy_link": "Copiază linkul",
+    "delete": "Ștergeți",
+    "delete_confirm": "Ștergeți \"{name}\"? Acest lucru nu poate fi anulat.",
+    "empty": "Nici un joc salvat încă. Economisește unul din meniul din joc.",
+    "error": {
+      "code_invalid": "Acesta nu este un link sau un cod de joc partajat.",
+      "copy_failed": "Linkul nu a putut fi copiat.",
+      "download_failed": "Nu s-a putut descărca jocul salvat. Încercați din nou.",
+      "list_failed": "Nu s-a putut încărca jocurile salvate.",
+      "load_failed": "Nu s-a putut porni jocul salvat.",
+      "name_invalid": "Acest nume nu este permis.",
+      "name_not_shareable": "Acel nume nu poate fi afișat într-un joc partajat. Redenumiți-l mai întâi.",
+      "not_found": "Acest joc salvat nu mai există.",
+      "not_singleplayer": "Se pot încărca doar jocurile singleplayer.",
+      "request_failed": "A apărut o problemă. Încercați din nou.",
+      "shared_not_found": "Acest joc partajat nu este disponibil. Este posibil să fi fost șters sau făcut privat.",
+      "unreadable": "Acest joc salvat nu poate fi încărcat cu această versiune a jocului."
+    },
+    "link_copied": "Link copiat",
+    "loading": "Se încarcă...",
+    "open": "Deschide",
+    "play": "Joacă",
+    "rename": "Redenumește",
+    "rename_save": "Salvează",
+    "save_desc": "Salvează acest joc în contul tău pentru a-l continua mai târziu",
+    "save_label": "Salvează jocul",
+    "save_status": {
+      "limit": "Ați atins limita de joc salvată. Mai întâi ștergeți unul din meniul Solo.",
+      "not_found": "Nu s-a putut salva jocul. Încercați din nou.",
+      "rejected": "Acest joc nu a putut fi salvat.",
+      "request_failed": "Nu s-a putut salva jocul. Încercați din nou.",
+      "saved": "Salvat. Găsește-l în meniul Solo.",
+      "saving": "Se salvează…",
+      "unauthorized": "Autentifică-te pentru a salva jocurile."
+    },
+    "share": "Distribuie",
+    "shared_badge": "Distribuit",
+    "shared_title": "Joc distribuit",
+    "title": "Jocurile salvate",
+    "unshare": "Anulează partajarea"
   },
   "select_lang": {
     "title": "Selectează limba"
@@ -2261,7 +2375,7 @@
     "confirm_downgrade": "Retrogradați la {tier}? Veți obține credit pentru partea neutilizată din planul dvs. curent.",
     "confirm_purchase_body": "Cumpără {item} pentru {amount, number} {currency}?",
     "confirm_purchase_title": "Confirmați achiziția",
-    "confirm_subscribe_over_grant": "Dorești să începi acum un abonament plătit de tip {tier}? Accesul tău gratuit se încheie imediat: {days, plural, one {# zi rămasă} other {# zile rămase}} nu se rambursează și nu se adaugă la perioada plătită.",
+    "confirm_subscribe_over_grant_carried": "Începe un abonament plătit {tier} acum? Ești taxat astăzi, și {days, plural, one {# zi gratuite} few {# zile gratuite} other {# zile gratuite}} ai plecat {days, plural, one {este} few {sunt} other {sunt}} adăugat la sfârșit: următoarea ta plată se mută înapoi cu aceeași sumă.",
     "confirm_subscribe_over_grant_no_days": "Începe un abonament plătit {tier} acum? Accesul tău gratuit se încheie imediat, iar timpul rămas nu este rambursat și nu este adăugat la timpul tău plătit.",
     "confirm_tier_change_steam": "Abonează-te la {tier} acum? Noul tău nivel începe imediat la prețul maxim, iar restul lunii tale nu este rambursat.",
     "confirm_upgrade": "Faceți upgrade la {tier}? Veți fi taxat acum diferența pro ratat.",
@@ -2309,6 +2423,7 @@
     "purchase_pending": "Achiziția este încă în curs de procesare. Va apărea în scurt timp în contul dvs. - verificați istoricul comenzilor dacă nu este.",
     "purchase_success": "Achiziție reușită: {name}",
     "purchase_tribe_button": "Cumpărați",
+    "steam_browser_approval": "Steam a deschis achiziția în browser-ul tău. Aprobă-l acolo, apoi întoarce-te aici. Va apărea odată ce Steam confirmă acest lucru.",
     "steam_licence_required": "Acest abonament este destinat doar jucătorilor care dețin OpenFront pe Steam.",
     "steam_overlay_cancelled": "Achiziție anulată. Nu ați fost taxată.",
     "steam_overlay_waiting": "Aprobă achiziția de la Steam suprapusă pentru a continua.",
@@ -2355,7 +2470,8 @@
     "tribes_login_required": "Autentifică-te pentru a cumpăra și gestiona numele tribului.",
     "tribes_purchase_description": "Numele tău este atribuit unui bot trib în jocuri cu mai mulți jucători. Devine în direct imediat.",
     "tribes_purchase_heading": "Cumpără un nume de Trib",
-    "your_tribes_heading": "Numele tribului tău"
+    "your_tribes_heading": "Numele tribului tău",
+    "confirm_subscribe_over_grant": "Dorești să începi acum un abonament plătit de tip {tier}? Accesul tău gratuit se încheie imediat: {days, plural, one {# zi rămasă} other {# zile rămase}} nu se rambursează și nu se adaugă la perioada plătită."
   },
   "streaming_now": {
     "live_count": "{count} Streaming",
@@ -2535,28 +2651,20 @@
     "break_alliance": "Pauza Alianței (Intrat)",
     "break_alliance_desc": "Împarte alianța cu jucătorul a cărui dală este sub cursorul tău.",
     "build_atom_bomb": "Construiește o bombă atomică",
-    "build_atom_bomb_desc": "Construiește o bombă atomică sub cursor.",
     "build_city": "Construiește oraș",
-    "build_city_desc": "Construiește un oraș sub cursor.",
     "build_controls": "Controale construcție",
     "build_defense_post": "Construiește bază fortificată",
-    "build_defense_post_desc": "Construiește o bază fortificată sub cursor.",
     "build_factory": "Construiește fabrică",
-    "build_factory_desc": "Construiește o fabrică sub cursor.",
     "build_hydrogen_bomb": "Construiește o bombă cu hidrogen",
-    "build_hydrogen_bomb_desc": "Construiește o bombă cu hidrogen sub cursor.",
     "build_menu_modifier": "Modificator Meniu Construcție",
     "build_menu_modifier_desc": "Ține apăsat această tastă în timp ce faceți clic pentru a deschide meniul de construcție.",
     "build_mirv": "Construiește MIRV",
-    "build_mirv_desc": "Construiește un MIRV sub cursor.",
     "build_missile_silo": "Siloz de rachete",
-    "build_missile_silo_desc": "Construiește un siloz de rachete sub cursor.",
     "build_port": "Construire port",
-    "build_port_desc": "Construiește un port sub cursor.",
     "build_sam_launcher": "Construiește un lansator SAM",
-    "build_sam_launcher_desc": "Construiește un lansator SAM sub cursor.",
+    "build_scroll_modifier": "Construiește modificatorul de derulare",
+    "build_scroll_modifier_desc": "Ține această cheie și derulează pentru a schimba valoarea de construcție.",
     "build_warship": "Construiește navă de război",
-    "build_warship_desc": "Construiește o navă de război sub cursor.",
     "camera_movement": "Controale Cameră",
     "center_camera": "Centrează camera",
     "center_camera_desc": "Centrează camera pe jucător",
@@ -2603,11 +2711,16 @@
     "graphics_refresh_modifier_desc": "Țineți apăsată această cheie și {key} pentru a reîmprospăta grafica",
     "ground_attack": "Atac terestru",
     "ground_attack_desc": "Trimite un atac sub cursor.",
+    "halloween_theme_desc": "Arată privirea de Halloween pe pagina principală.",
+    "halloween_theme_label": "Tema Halloween",
     "help_messages_desc": "Arată sfaturi contextuale și avertismente în timpul jocului, cum ar fi limita de avertismente și sfaturi generale pentru joc.",
     "help_messages_label": "Mesaj asistență",
     "highlight_glow_strength_label": "Putere evidențiere",
     "highlight_small_players_desc": "Adaugă o strălucire jucătorilor mici pentru a fi ușor de găsit.",
+    "hud_opacity_desc": "Reglați fundalurile panoului fără a estompa textul sau icoanele. 100% păstrează aspectul original.",
+    "hud_opacity_label": "Opacitatea fundalului HUD",
     "keybind_conflict_error": "Tasta {key} este deja folosită de altă acțiune.",
+    "keybind_shift_prefix": "Shift+",
     "keybinds_hint": "Faceți clic pe o cheie pentru a o restabili. Puteți atribui o singură cheie sau combinația de taste Shift.",
     "left_click_desc": "Când este pornit, clic stânga deschide meniul și butonul cu sabia atacă. Când este oprit, clic atacă direct.",
     "left_click_label": "Clic stânga pentru a deschide meniul",
@@ -2615,7 +2728,10 @@
     "lobby_id_visibility_label": "ID-uri ascunse in jocul privat",
     "lobby_start_alerts_desc": "Redă sunetul de început pentru fiecare lobby și meciul clasificat în mod implicit și afișează o notificare pe desktop atunci când este permis. Îl poți suprascrie cu clopoțelul lobby.",
     "lobby_start_alerts_label": "Alerte de pornire a camerelor",
+    "map_layers_desc": "Arată imaginile suplimentare desenează unele hărți pe teren. Dezactivează pentru a le ascunde pe fiecare hartă.",
+    "map_layers_label": "Straturile ale Hărții",
     "menu_shortcuts": "Scurtături meniu",
+    "modifiers": "Modificatorii",
     "move_down": "Mută camera în jos",
     "move_down_desc": "Mută camera în jos",
     "move_left": "Mută camera în stânga",
@@ -2636,6 +2752,8 @@
     "performance_overlay_desc": "Activează suprapunerea de performanță. Când este activat, acesta va fi afișat. Apasă Shift-D în timpul meciului pentru a comuta.",
     "performance_overlay_label": "Suprapunerea de performanță",
     "press_a_key": "Apasă o tastă",
+    "prevent_stacking": "Împiedică ascensiunea de construcții",
+    "prevent_stacking_desc": "Ține apăsat pentru a construi o nouă structură în loc să modernizați una din apropiere. Restricțiile normale de plasament se mai aplică.",
     "quick_chat": "Chat rapid",
     "quick_chat_desc": "Deschide chatul rapid pentru jucătorul a cărui teritorială se află sub cursorul tău.",
     "render_debug_gui": "Randare GUI de depanare",
@@ -2650,6 +2768,8 @@
     "retaliate_attack_desc": "Trimite un atac de răzbunare pentru a nimic/nega forța celui mai recent atacator activ. Este disponibil numai atunci când ești atacat.",
     "select_all_warships": "Selectează toate navele tale de război",
     "select_all_warships_desc": "Selectează toate navele tale de război de pe hartă.",
+    "snap_build_preview_desc": "Mută previzualizarea versiunii pe caseta pe care va fi construită efectiv structura",
+    "snap_build_preview_label": "Previzualizare versiune instantanee",
     "special_effects_desc": "Activează efectele speciale. Dezactivează pentru a îmbunătăți performanța",
     "special_effects_label": "Efecte speciale",
     "steam_lobby_links_desc": "Deschide link-uri de lobby în aplicația Steam în loc să te alături acestui browser",
@@ -2674,7 +2794,17 @@
     "zoom_in": "Mărește",
     "zoom_in_desc": "Mărește harta",
     "zoom_out": "Micșorează",
-    "zoom_out_desc": "Micșorează harta"
+    "zoom_out_desc": "Micșorează harta",
+    "build_atom_bomb_desc": "Construiește o bombă atomică sub cursor.",
+    "build_city_desc": "Construiește un oraș sub cursor.",
+    "build_defense_post_desc": "Construiește o bază fortificată sub cursor.",
+    "build_factory_desc": "Construiește o fabrică sub cursor.",
+    "build_hydrogen_bomb_desc": "Construiește o bombă cu hidrogen sub cursor.",
+    "build_mirv_desc": "Construiește un MIRV sub cursor.",
+    "build_missile_silo_desc": "Construiește un siloz de rachete sub cursor.",
+    "build_port_desc": "Construiește un port sub cursor.",
+    "build_sam_launcher_desc": "Construiește un lansator SAM sub cursor.",
+    "build_warship_desc": "Construiește o navă de război sub cursor."
   },
   "username": {
     "account_invalid_chars": "Numele de utilizator poate conține doar litere, numere, linii de subliniere, cratime și spații individuale între cuvinte.",
@@ -2727,11 +2857,25 @@
     "other_team": "Echipa {team} a câștigat!",
     "other_won": "{player} A câștigat!",
     "requeue": "Jucați din nou",
+    "share": "Distribuie",
     "spectate": "Spectator",
     "support_openfront": "Susține OpenFront!",
     "territory_pattern": "Cumpără un skin de teritoriu pentru a scăpa de reclame!",
     "you_won": "Ai câștigat!",
     "your_team": "Echipa ta a câștigat!",
     "youtube_tutorial": "Ai nevoie de ajutor?"
+  },
+  "ios_banner": {
+    "got_it": "Am înțeles",
+    "how": "Cum",
+    "later": "Mai târziu",
+    "modal_desc": "Browser-ul vostru nu acceptă ecran complet, dar poți adăuga OpenFront pe ecranul principal pentru o experiență imersă:",
+    "modal_title": "Ecran complet pe iOS",
+    "never": "Niciodată",
+    "step_add_to_home_label": "Adaugă pe ecranul principal",
+    "step_open": "Deschide din ecranul de pornire - deschide tot ecranul fără bara de adrese",
+    "step_scroll_and_tap": "Derulează în jos și apasă",
+    "step_share": "Apasă butonul Distribuie din browser",
+    "text": "Pentru ecran complet, adaugă OpenFront pe ecranul de pornire"
   }
 }
