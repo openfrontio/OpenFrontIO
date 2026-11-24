@@ -17,12 +17,15 @@ import {
   addStructure,
   addWarship,
   allianceIndex,
+  alliancesAllowed,
   checkTile,
   isAuthoredTerrain,
   isOwnable,
   isShore,
   MAX_NATIONS,
   nationIndex,
+  type ScenarioConfig,
+  ScenarioConfigSchema,
   type ScenarioDocument,
   type ScenarioNation,
   ScenarioNationSchema,
@@ -32,6 +35,7 @@ import {
   ScenarioWarshipSchema,
   structureAt,
   warshipAt,
+  warshipsAllowed,
   WATER,
   IMPASSABLE,
 } from "./ScenarioDocument";
@@ -60,6 +64,12 @@ export type Edit =
   /** Two nations allied from the start, by id, in either order. */
   | { type: "add_alliance"; nations: [string, string] }
   | { type: "remove_alliance"; nations: [string, string] }
+  /**
+   * Replaces the settings. Structures of a type it disables go with it, as
+   * do all warships if it disables them and all alliances if it turns
+   * alliances off.
+   */
+  | { type: "set_config"; config: ScenarioConfig }
   /** `terrain[i]` for `tiles[i]`; the last value given for a tile wins. */
   | {
       type: "set_terrain";
@@ -270,6 +280,49 @@ export class DocumentEditor {
         const [nations] = doc.alliances.splice(i, 1);
         this.send({ type: "remove_alliance", nations });
         return [{ type: "add_alliance", nations }];
+      }
+      case "set_config": {
+        const config = ScenarioConfigSchema.parse(edit.config);
+        const before = doc.config;
+        doc.config = config;
+        // The engine keeps the editor's own settings, so only what the new
+        // ones remove reaches it.
+        const disabled = config.disabledUnits ?? [];
+        const structures = doc.structures.filter((s) =>
+          disabled.includes(s.type),
+        );
+        doc.structures = doc.structures.filter(
+          (s) => !disabled.includes(s.type),
+        );
+        const warships = warshipsAllowed(config) ? [] : doc.warships;
+        if (warships.length > 0) doc.warships = [];
+        const alliances = alliancesAllowed(config) ? [] : doc.alliances;
+        if (alliances.length > 0) doc.alliances = [];
+        for (const s of structures) {
+          this.send({ type: "remove_structure", tile: s.tile });
+        }
+        for (const w of warships) {
+          this.send({ type: "remove_warship", tile: w.tile });
+        }
+        for (const nations of alliances) {
+          this.send({ type: "remove_alliance", nations });
+        }
+        // The old settings first: they allow what the rest puts back.
+        return [
+          { type: "set_config", config: before },
+          ...structures.map((structure): Edit => ({
+            type: "place_structure",
+            structure,
+          })),
+          ...warships.map((warship): Edit => ({
+            type: "place_warship",
+            warship,
+          })),
+          ...alliances.map((nations): Edit => ({
+            type: "add_alliance",
+            nations,
+          })),
+        ];
       }
       case "remove_structure": {
         checkTile(doc, edit.tile);

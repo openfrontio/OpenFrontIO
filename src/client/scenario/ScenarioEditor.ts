@@ -6,14 +6,15 @@
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
  * HUD layers as in game. Resizing the map rebuilds the engine. Its tools
- * so far are the terrain and territory brushes, the units tool and the
- * nations panel.
+ * are the terrain and territory brushes, the units tool, the nations panel
+ * and the settings panel.
  */
 
 import { SetNationCommandSchema } from "@openfront/engine-api/EditorCommands";
 import type { GameMap } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
+  Difficulty,
   GameMapSize,
   Structures,
   UnitType,
@@ -21,6 +22,10 @@ import {
 import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
 import { Config } from "@openfront/engine-lib/configuration/Config";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  type DoomsdayClockSpeed,
+} from "@openfront/engine-lib/game/DoomsdayClock";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { EventBus } from "@openfront/shared/EventBus";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
@@ -75,6 +80,8 @@ import {
   newNation,
   newScenarioDocument,
   resizeScenarioDocument,
+  type ScenarioConfig,
+  ScenarioConfigSchema,
   type ScenarioDocument,
   type ScenarioNation,
   WATER,
@@ -130,6 +137,31 @@ const UNIT_PROBLEMS: Record<UnitProblem, string> = {
   no_nation: "scenario_editor.warship_no_nation",
   land: "scenario_editor.warship_land",
   too_many: "scenario_editor.warship_too_many",
+};
+
+/** The units the settings can disable, as the lobby's settings list them. */
+const DISABLEABLE_UNITS: [UnitType, string][] = [
+  [UnitType.City, "unit_type.city"],
+  [UnitType.DefensePost, "unit_type.defense_post"],
+  [UnitType.Port, "unit_type.port"],
+  [UnitType.Warship, "unit_type.warship"],
+  [UnitType.TransportShip, "unit_type.boat"],
+  [UnitType.MissileSilo, "unit_type.missile_silo"],
+  [UnitType.SAMLauncher, "unit_type.sam_launcher"],
+  [UnitType.AtomBomb, "unit_type.atom_bomb"],
+  [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
+  [UnitType.MIRV, "unit_type.mirv"],
+  [UnitType.Factory, "unit_type.factory"],
+];
+
+/** The game's alliance duration in minutes, when the settings don't set one. */
+const DEFAULT_ALLIANCE_MINUTES = 5;
+
+/** What a settings change removed from the scenario, to say so. */
+type SettingsRemoved = {
+  structures: number;
+  warships: number;
+  alliances: number;
 };
 
 /** The flags a nation can take, as the flag picker lists them. */
@@ -209,6 +241,9 @@ export class ScenarioEditor extends LitElement {
   @state() private nationId: string | null = null;
   /** The Play button's menu: the nations to play as, or why there are none. */
   @state() private playMenu = false;
+  @state() private settingsOpen = false;
+  /** What the last settings change removed, if anything. */
+  @state() private settingsRemoved: SettingsRemoved | null = null;
   /**
    * A test game is being exported and started, or a version exported and
    * published: the export reads the document, which mustn't change meanwhile.
@@ -475,6 +510,7 @@ export class ScenarioEditor extends LitElement {
     if (redo ? !editor.canRedo() : !editor.canUndo()) return;
     if (redo) editor.redo();
     else editor.undo();
+    this.settingsRemoved = null;
     this.saveDraft();
     this.requestUpdate();
   }
@@ -498,6 +534,9 @@ export class ScenarioEditor extends LitElement {
     if (editor === null || this.status !== "ready" || this.starting) return;
     // A stroke still open ends first, as its own step.
     this.endStroke();
+    // Undo would now take back this edit, not the settings change the note
+    // describes. setSetting sets the note again after its own edit.
+    this.settingsRemoved = null;
     editor.apply(edit);
     editor.commit();
     this.saveDraft();
@@ -564,6 +603,58 @@ export class ScenarioEditor extends LitElement {
     const playable = this.doc?.nations.filter((n) => n.playable) ?? [];
     if (playable.length === 1) void this.testPlay(playable[0].id);
     else this.playMenu = !this.playMenu;
+    // The two open in the same place.
+    if (this.playMenu) this.settingsOpen = false;
+  }
+
+  // ---- Settings ----
+
+  private toggleSettings(): void {
+    this.settingsOpen = !this.settingsOpen;
+    this.settingsRemoved = null;
+    if (this.settingsOpen) this.playMenu = false;
+  }
+
+  /**
+   * Sets one setting, or with `undefined` leaves it to the game's default,
+   * as one undo step. A value that changes nothing or that the schema
+   * rejects puts the input back. The edit removes what the new settings
+   * don't allow, and the panel says how much.
+   */
+  private setSetting<K extends keyof ScenarioConfig>(
+    key: K,
+    value: ScenarioConfig[K] | undefined,
+  ): void {
+    const doc = this.doc;
+    if (doc === null) return;
+    const config: ScenarioConfig = { ...doc.config, [key]: value };
+    if (value === undefined) delete config[key];
+    if (
+      JSON.stringify(value) === JSON.stringify(doc.config[key]) ||
+      !ScenarioConfigSchema.safeParse(config).success
+    ) {
+      this.requestUpdate();
+      return;
+    }
+    const before = this.counts(doc);
+    this.applyEdit({ type: "set_config", config });
+    const after = this.counts(doc);
+    const removed = {
+      structures: before.structures - after.structures,
+      warships: before.warships - after.warships,
+      alliances: before.alliances - after.alliances,
+    };
+    this.settingsRemoved = Object.values(removed).some((n) => n > 0)
+      ? removed
+      : null;
+  }
+
+  private counts(doc: ScenarioDocument): SettingsRemoved {
+    return {
+      structures: doc.structures.length,
+      warships: doc.warships.length,
+      alliances: doc.alliances.length,
+    };
   }
 
   /**
@@ -773,6 +864,8 @@ export class ScenarioEditor extends LitElement {
     if (send === null || signal.aborted) return;
 
     this.editor = new DocumentEditor(doc, send);
+    // The new editor has no undo history to bring removed content back.
+    this.settingsRemoved = null;
     this.doc = doc;
     this.status = "ready";
     if (overlay !== null && gameView !== null) {
@@ -942,6 +1035,7 @@ export class ScenarioEditor extends LitElement {
     if (editor === null || this.status !== "ready" || this.starting) {
       return false;
     }
+    this.settingsRemoved = null;
     const terrain =
       this.terrainKind === "water"
         ? WATER
@@ -1412,6 +1506,13 @@ export class ScenarioEditor extends LitElement {
         ${this.renderSaveState()}
         <button
           class=${button}
+          aria-expanded=${this.settingsOpen}
+          @click=${() => this.toggleSettings()}
+        >
+          ${translateText("scenario_editor.settings")}
+        </button>
+        <button
+          class=${button}
           aria-expanded=${this.playMenu}
           ?disabled=${this.starting}
           @click=${() => this.onPlay()}
@@ -1447,6 +1548,7 @@ export class ScenarioEditor extends LitElement {
         </a>
       </div>
       ${this.playMenu ? this.renderPlayMenu() : nothing}
+      ${this.settingsOpen ? this.renderSettings() : nothing}
     `;
   }
 
@@ -1511,6 +1613,228 @@ export class ScenarioEditor extends LitElement {
         <button class=${button} @click=${() => (this.playMenu = false)}>
           ${translateText("common.cancel")}
         </button>
+      </div>
+    `;
+  }
+
+  /** The game settings, the lobby's options less what a scenario fixes. */
+  private renderSettings() {
+    const config = this.doc!.config;
+    const input = "rounded bg-zinc-800 px-2 py-1 text-white";
+    const target = (e: Event) => e.target as HTMLInputElement;
+    const check = (
+      key:
+        | "instantBuild"
+        | "infiniteGold"
+        | "infiniteTroops"
+        | "donateGold"
+        | "donateTroops",
+      label: string,
+    ) =>
+      html`<label class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          .checked=${live(config[key])}
+          @change=${(e: Event) => this.setSetting(key, target(e).checked)}
+        />
+        ${translateText(label)}
+      </label>`;
+    const disabled = config.disabledUnits ?? [];
+    const doomsday = config.doomsdayClock?.enabled === true;
+    const overtime = config.overtime?.enabled === true;
+    return html`
+      <!-- Inert while a test play starts, as the nations panel is. Above
+           the nations panel, which it overlaps on a narrow screen. -->
+      <div
+        class="absolute top-14 left-1/2 z-10 flex max-h-[calc(100%-4.5rem)] w-72 -translate-x-1/2 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        ?inert=${this.starting}
+      >
+        <h2 class="font-semibold">
+          ${translateText("scenario_editor.settings")}
+        </h2>
+        ${
+          this.settingsRemoved === null
+            ? nothing
+            : html`<p class="text-amber-300" role="status">
+                ${translateText(
+                  "scenario_editor.settings_removed",
+                  this.settingsRemoved,
+                )}
+              </p>`
+        }
+        <label class="flex flex-col gap-1">
+          ${translateText("difficulty.difficulty")}
+          <select
+            class=${input}
+            @change=${(e: Event) =>
+              this.setSetting(
+                "difficulty",
+                (e.target as HTMLSelectElement).value as Difficulty,
+              )}
+          >
+            ${Object.values(Difficulty).map(
+              (d) =>
+                html`<option value=${d} .selected=${d === config.difficulty}>
+                  ${translateText(`difficulty.${d.toLowerCase()}`)}
+                </option>`,
+            )}
+          </select>
+        </label>
+        ${check("instantBuild", "game_settings.instant_build")}
+        ${check("infiniteGold", "game_settings.infinite_gold")}
+        ${check("infiniteTroops", "game_settings.infinite_troops")}
+        ${check("donateGold", "host_modal.donate_gold")}
+        ${check("donateTroops", "host_modal.donate_troops")}
+        <label class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            .checked=${live(config.waterNukes === true)}
+            @change=${(e: Event) =>
+              this.setSetting("waterNukes", target(e).checked || undefined)}
+          />
+          ${translateText("game_settings.water_nukes")}
+        </label>
+        <div class="flex items-center gap-2">
+          <label class="flex flex-1 items-center gap-2">
+            <input
+              type="checkbox"
+              .checked=${live(doomsday)}
+              @change=${(e: Event) =>
+                this.setSetting(
+                  "doomsdayClock",
+                  target(e).checked
+                    ? { enabled: true, speed: "normal" }
+                    : undefined,
+                )}
+            />
+            ${translateText("game_settings.doomsday_clock")}
+          </label>
+          ${
+            doomsday
+              ? html`<select
+                  class=${input}
+                  @change=${(e: Event) =>
+                    this.setSetting("doomsdayClock", {
+                      enabled: true,
+                      speed: (e.target as HTMLSelectElement)
+                        .value as DoomsdayClockSpeed,
+                    })}
+                >
+                  ${DOOMSDAY_CLOCK_SPEEDS.map(
+                    (speed) =>
+                      html`<option
+                        value=${speed}
+                        .selected=${
+                          speed === (config.doomsdayClock?.speed ?? "normal")
+                        }
+                      >
+                        ${translateText(`doomsday_clock_speed.${speed}`)}
+                      </option>`,
+                  )}
+                </select>`
+              : nothing
+          }
+        </div>
+        ${this.numberSetting(
+          "game_settings.max_timer",
+          config.maxTimerValue ?? undefined,
+          { min: 1, max: 120, step: "1", start: 30 },
+          (v) => this.setSetting("maxTimerValue", v),
+        )}
+        ${this.numberSetting(
+          "game_settings.gold_multiplier",
+          config.goldMultiplier ?? undefined,
+          { min: 0.1, max: 1000, step: "any", start: 2 },
+          (v) => this.setSetting("goldMultiplier", v),
+        )}
+        ${this.numberSetting(
+          "game_settings.custom_alliances",
+          config.customAllianceDuration ?? undefined,
+          { min: 0, max: 15, step: "1", start: DEFAULT_ALLIANCE_MINUTES },
+          (v) => this.setSetting("customAllianceDuration", v),
+        )}
+        ${
+          config.customAllianceDuration === 0
+            ? html`<p class="text-zinc-400">
+                ${translateText("public_game_modifier.disable_alliances")}
+              </p>`
+            : nothing
+        }
+        ${this.numberSetting(
+          "game_settings.overtime",
+          overtime ? config.overtime?.startMinutes : undefined,
+          { min: 1, max: 120, step: "1", start: 30 },
+          (v) =>
+            this.setSetting(
+              "overtime",
+              v === undefined ? undefined : { enabled: true, startMinutes: v },
+            ),
+          // Enabled with no start minute set: the game's default.
+          overtime,
+        )}
+        <div class="flex flex-col gap-1 border-t border-zinc-700 pt-2">
+          ${translateText("game_settings.disable_units")}
+          ${DISABLEABLE_UNITS.map(
+            ([type, label]) =>
+              html`<label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  .checked=${live(disabled.includes(type))}
+                  @change=${(e: Event) => {
+                    const units = disabled.filter((u) => u !== type);
+                    if (target(e).checked) units.push(type);
+                    this.setSetting(
+                      "disabledUnits",
+                      units.length > 0 ? units : undefined,
+                    );
+                  }}
+                />
+                ${translateText(label)}
+              </label>`,
+          )}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * A setting that is either the game's default or a number: a checkbox
+   * that sets it, to `start`, or clears it, and the number beside it.
+   */
+  private numberSetting(
+    label: string,
+    value: number | undefined,
+    range: { min: number; max: number; step: string; start: number },
+    set: (value: number | undefined) => void,
+    on = value !== undefined,
+  ) {
+    return html`
+      <div class="flex items-center gap-2">
+        <label class="flex flex-1 items-center gap-2">
+          <input
+            type="checkbox"
+            .checked=${live(on)}
+            @change=${(e: Event) =>
+              set(
+                (e.target as HTMLInputElement).checked
+                  ? range.start
+                  : undefined,
+              )}
+          />
+          ${translateText(label)}
+        </label>
+        <input
+          type="number"
+          min=${range.min}
+          max=${range.max}
+          step=${range.step}
+          class="w-20 rounded bg-zinc-800 px-2 py-1 text-white disabled:opacity-50"
+          aria-label=${translateText(label)}
+          ?disabled=${!on}
+          .value=${live(on ? String(value ?? range.start) : "")}
+          @change=${(e: Event) =>
+            set((e.target as HTMLInputElement).valueAsNumber)}
+        />
       </div>
     `;
   }
