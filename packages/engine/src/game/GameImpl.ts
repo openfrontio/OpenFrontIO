@@ -53,6 +53,7 @@ import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
 import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
 import {
   readVersioned,
+  SnapshotError,
   snapshotType,
   VersionedSchema,
   zInt,
@@ -1809,6 +1810,14 @@ export class GameImpl implements Game {
 
   /** Registers a restored player shell before any state is filled in. */
   addRestoredPlayer(player: PlayerImpl, id: PlayerID, smallID: number): void {
+    // Snapshots store players in small id order, as allPlayers() lists them,
+    // and a tile holds its owner's small id in 12 bits.
+    if (smallID !== this._playersBySmallID.length + 1 || smallID > 0xfff) {
+      throw new SnapshotError(`player ${id} has small id ${smallID}`);
+    }
+    if (this._players.has(id)) {
+      throw new SnapshotError(`player ${id} is stored twice`);
+    }
     this._players.set(id, player);
     this._playersBySmallID[smallID - 1] = player;
   }
@@ -1835,7 +1844,20 @@ export class GameImpl implements Game {
       }),
     );
     this.planDrivenUnitIds = new Set(s.planDrivenUnitIds);
-    this.unitGrid.restoreSnapshot(s.unitGrid, (i) => r.unit(i));
+    let gridUnits = 0;
+    this.unitGrid.restoreSnapshot(s.unitGrid, (i) => {
+      const u = r.unit(i);
+      if (this._unitMap.get(u.id()) !== u) {
+        throw new SnapshotError(
+          `unit grid holds a unit ${u.id()} the game does not`,
+        );
+      }
+      gridUnits++;
+      return u;
+    });
+    if (gridUnits !== this._unitMap.size) {
+      throw new SnapshotError("unit grid differs from the game's units");
+    }
     this.playerTeams = [...s.playerTeams];
     this.botTeam = s.botTeam;
     this._isPaused = s.isPaused;
@@ -1866,6 +1888,81 @@ export class GameImpl implements Game {
     (this._stats as StatsImpl).restoreSnapshot(
       readVersioned(StatsSnapshot, s.stats),
     );
+    this.checkRestoredState(s);
+  }
+
+  /**
+   * Snapshots are untrusted (shared scenarios). Rejects one whose records
+   * each parse but disagree with each other in ways play never produces and
+   * the next ticks would crash or loop on.
+   */
+  private checkRestoredState(s: GameState): void {
+    const players = this._playersBySmallID;
+    if (this.nextPlayerID !== players.length + 1) {
+      throw new SnapshotError(
+        `next player id is ${this.nextPlayerID} with ${players.length} players`,
+      );
+    }
+    const execs = new Set([...this.execs, ...this.unInitExecs]);
+    if (execs.size !== this.execs.length + this.unInitExecs.length) {
+      throw new SnapshotError("an execution is listed twice");
+    }
+
+    // Each live unit is listed once, by its owner, and the game lists it.
+    if (this._unitMap.size !== s.units.length) {
+      throw new SnapshotError("two units share an id");
+    }
+    let ownedUnits = 0;
+    for (const p of players) {
+      for (const u of p.units()) {
+        if (u.owner() !== p || !u.isActive()) {
+          throw new SnapshotError(`${p.id()} lists unit ${u.id()}`);
+        }
+        if (this._unitMap.get(u.id()) !== u) {
+          throw new SnapshotError(`unit ${u.id()} is missing from the game`);
+        }
+        ownedUnits++;
+      }
+    }
+    if (ownedUnits !== this._unitMap.size) {
+      throw new SnapshotError("the game's units differ from the players'");
+    }
+
+    // An alliance is between two players, and both list it once.
+    const listings = new Map<Alliance, number>();
+    for (const p of players) {
+      const allies = new Set<Player>();
+      for (const a of p.alliances()) {
+        const other = a.requestor() === p ? a.recipient() : a.requestor();
+        if (other === p || (a.recipient() !== p && a.requestor() !== p)) {
+          throw new SnapshotError(`${p.id()} lists an alliance not its own`);
+        }
+        if (allies.has(other)) {
+          throw new SnapshotError(`${p.id()} is allied twice to ${other.id()}`);
+        }
+        allies.add(other);
+        listings.set(a, (listings.get(a) ?? 0) + 1);
+      }
+    }
+    for (const count of listings.values()) {
+      if (count !== 2) {
+        throw new SnapshotError("an alliance is listed by only one player");
+      }
+    }
+
+    // As createAllianceRequest leaves them: one per pair, between players
+    // who aren't allies.
+    const pairs = new Set<string>();
+    for (const ar of this.allianceRequests) {
+      const [a, b] = [ar.requestor(), ar.recipient()];
+      const pair = [a.smallID(), b.smallID()].sort((x, y) => x - y).join();
+      if (a === b || a.isAlliedWith(b) || pairs.has(pair)) {
+        throw new SnapshotError(
+          `invalid alliance request from ${a.id()} to ${b.id()}`,
+        );
+      }
+      pairs.add(pair);
+    }
   }
 
   conquerPlayer(conqueror: Player, conquered: Player) {

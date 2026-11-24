@@ -15,6 +15,7 @@ import {
   SnapshotType,
   Versioned,
   VersionedSchema,
+  withRestoreTileCount,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
 import { EngineConfig } from "../configuration/EngineConfig";
@@ -270,6 +271,14 @@ export interface RestoreDeps {
  * call executeNextTick as usual, without re-running GameRunner.init.
  */
 export function restoreGame(bytes: Uint8Array, deps: RestoreDeps): Game {
+  // Every tile ref the snapshot stores must be on the map it restores onto.
+  return withRestoreTileCount(
+    deps.gameMap.width() * deps.gameMap.height(),
+    () => restoreGameOnMap(bytes, deps),
+  );
+}
+
+function restoreGameOnMap(bytes: Uint8Array, deps: RestoreDeps): Game {
   const root = decodeRoot(bytes);
   const gameConfig = GameConfigSchema.parse(root.gameConfig);
   const config = deps.config(gameConfig);
@@ -404,7 +413,20 @@ export function restoreGame(bytes: Uint8Array, deps: RestoreDeps): Game {
   const map = deps.gameMap;
   for (const p of playerShells) {
     const id = p.smallID();
-    for (const tile of p.tiles()) map.setOwnerID(tile, id);
+    for (const tile of p.tiles()) {
+      if (map.hasOwner(tile)) {
+        throw new SnapshotError(`tile ${tile} has two owners`);
+      }
+      if (!map.isLand(tile) || map.isImpassable(tile)) {
+        throw new SnapshotError(`${p.id()} owns tile ${tile}, not land`);
+      }
+      map.setOwnerID(tile, id);
+    }
+    for (const tile of p.borderTiles()) {
+      if (!p.tiles().has(tile)) {
+        throw new SnapshotError(`${p.id()} has border tile ${tile} unowned`);
+      }
+    }
   }
   return game;
 }

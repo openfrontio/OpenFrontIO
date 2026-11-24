@@ -8,11 +8,16 @@ import {
 import { z } from "zod";
 import type { SnapshotReader } from "./SnapshotContext";
 
+// Player and client ids key plain objects (stats, view data). One that names
+// an Object.prototype member, such as "__proto__", would reach the prototype.
+const zObjectKey = () =>
+  z.string().refine((k) => !(k in Object.prototype), "reserved id");
+
 export const PlayerInfoSchema = z.object({
   name: z.string(),
   playerType: z.enum(PlayerType),
-  clientID: z.string().nullable(),
-  id: z.string(),
+  clientID: zObjectKey().nullable(),
+  id: zObjectKey(),
   isLobbyCreator: z.boolean(),
   clanTag: z.string().nullable(),
   friends: z.array(z.string()),

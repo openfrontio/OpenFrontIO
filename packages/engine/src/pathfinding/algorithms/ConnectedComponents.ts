@@ -1,6 +1,7 @@
 // Connected Component Labeling using flood-fill
 
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+import { SnapshotError } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { DebugSpan } from "../../utilities/DebugSpan";
 
 export const LAND_MARKER = 0xff; // Uint8Array sentinel — upgraded to 0xFFFF on Uint16Array promotion
@@ -67,11 +68,37 @@ export class ConnectedComponents {
 
   /** Replaces initialize() when restoring a snapshot. */
   restoreSnapshot(s: ConnectedComponentsState): void {
+    ConnectedComponents.checkSnapshot(s, this.numTiles);
     this.componentIds = s.componentIds.slice();
     this._componentSizes = s.componentSizes as number[];
     this.parents = [...s.parents];
     this.maxId = s.maxId;
     this.landMarker = s.landMarker;
+  }
+
+  /**
+   * Snapshots are untrusted: a cycle in parents would hang find(), and a
+   * label past maxId would index past it.
+   */
+  private static checkSnapshot(
+    s: ConnectedComponentsState,
+    numTiles: number,
+  ): void {
+    const ids = s.componentIds;
+    const wide = ids instanceof Uint16Array;
+    // A Uint8Array is promoted before it is given id 253 (see initialize).
+    const valid =
+      ids.length === numTiles &&
+      s.landMarker === (wide ? LAND_MARKER_WIDE : LAND_MARKER) &&
+      s.maxId >= 0 &&
+      s.maxId <= (wide ? LAND_MARKER_WIDE : 252) &&
+      s.parents.length === s.maxId + 1 &&
+      // Stored as roots, so every parent is its own parent.
+      s.parents.every((p) => p >= 0 && p <= s.maxId && s.parents[p] === p) &&
+      ids.every((id) => id <= s.maxId || id === s.landMarker);
+    if (!valid) {
+      throw new SnapshotError("water components are inconsistent");
+    }
   }
 
   initialize(): void {

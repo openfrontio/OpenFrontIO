@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  SnapshotError,
   zInt,
   zNum,
   zRef,
@@ -15,9 +16,13 @@ import {
   WaterPathFinder,
 } from "../pathfinding/PathFinder";
 import { AirPathFinder } from "../pathfinding/PathFinder.Air";
-import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
+import {
+  getParabolaControlPoints,
+  ParabolaUniversalPathFinder,
+} from "../pathfinding/PathFinder.Parabola";
 import { PathFinderStepper } from "../pathfinding/PathFinderStepper";
 import { SteppingPathFinder } from "../pathfinding/types";
+import { DistanceBasedBezierCurve } from "../utilities/Line";
 import type { SnapshotReader, SnapshotWriter } from "./SnapshotContext";
 
 /**
@@ -32,6 +37,18 @@ export const TileStepperSchema = z.object({
   lastTo: zTile().nullable(),
 });
 export type TileStepperState = z.infer<typeof TileStepperSchema>;
+
+/** A stepper's position must index its path: next() returns path[pathIndex]. */
+function checkStepper(s: {
+  path: ArrayLike<unknown> | null;
+  pathIndex: number;
+}) {
+  if (s.path !== null && (s.pathIndex < 0 || s.pathIndex > s.path.length)) {
+    throw new SnapshotError(
+      `path index ${s.pathIndex} is off a path of ${s.path.length}`,
+    );
+  }
+}
 
 function asStepper<T>(pf: SteppingPathFinder<T>): PathFinderStepper<T> {
   if (!(pf instanceof PathFinderStepper)) {
@@ -55,6 +72,7 @@ export function setTileStepperState(
   pf: SteppingPathFinder<TileRef>,
   s: TileStepperState,
 ): void {
+  checkStepper(s);
   asStepper(pf).setState({
     path: s.path === null ? null : s.path.slice(),
     pathIndex: s.pathIndex,
@@ -114,6 +132,7 @@ export function restoreStationStepper(
   s: StationStepperState,
   r: SnapshotReader,
 ): SteppingPathFinder<TrainStation> {
+  checkStepper(s);
   const pf = PathFinding.Stations(game);
   asStepper(pf).setState({
     path: s.path === null ? null : s.path.map((i) => r.station(i)),
@@ -152,6 +171,7 @@ export function restoreWaterPathFinder(
   game: Game,
   s: WaterPathFinderState,
 ): WaterPathFinder {
+  checkStepper(s.stepper);
   return WaterPathFinder.fromState(game, {
     ...s,
     stepper: {
@@ -192,7 +212,55 @@ export function restoreParabola(
   game: Game,
   s: ParabolaState,
 ): ParabolaUniversalPathFinder {
+  checkParabola(game, s);
   const pf = UniversalPathFinding.Parabola(game);
   pf.setState(s);
   return pf;
+}
+
+/**
+ * The curve's points are its whole flight, computed on restore, so they must
+ * be the ones next() would have made: arbitrary ones could size it at
+ * millions of points. Its position must be on it.
+ */
+function checkParabola(game: Game, s: ParabolaState): void {
+  const increment = s.options?.increment;
+  if (increment !== undefined && !(increment > 0 && increment < Infinity)) {
+    throw new SnapshotError(`invalid parabola increment ${increment}`);
+  }
+  if (s.curve === null) return;
+  const map = game.map();
+  const [p0] = s.curve.points;
+  if (s.lastTo === null || !map.isValidCoord(p0.x, p0.y)) {
+    throw new SnapshotError("parabola curve has no start or end");
+  }
+  const from = map.ref(p0.x, p0.y);
+  const expected = getParabolaControlPoints(
+    map,
+    from,
+    s.lastTo,
+    s.options ?? undefined,
+  );
+  if (
+    expected.some(
+      (p, i) => p.x !== s.curve!.points[i].x || p.y !== s.curve!.points[i].y,
+    )
+  ) {
+    throw new SnapshotError("parabola curve is not the one to its target");
+  }
+  const { currentIndex, accumulatedDistanceScaled } = s.curve;
+  const points = new DistanceBasedBezierCurve(
+    expected[0],
+    expected[1],
+    expected[2],
+    expected[3],
+    increment ?? 3,
+  ).getAllPoints().length;
+  if (
+    currentIndex < 0 ||
+    currentIndex >= Math.max(points, 1) ||
+    accumulatedDistanceScaled < 0
+  ) {
+    throw new SnapshotError("parabola position is off its curve");
+  }
 }

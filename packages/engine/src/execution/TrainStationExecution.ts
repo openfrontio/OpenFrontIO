@@ -14,14 +14,14 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
-import { TrainExecution } from "./TrainExecution";
+import { TRAIN_CARS, TrainExecution } from "./TrainExecution";
 
 export class TrainStationExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
   private random: PseudoRandom;
   private station: TrainStation | null = null;
-  private numCars: number = 5;
+  private numCars: number = TRAIN_CARS;
   private lastSpawnTick: number = 0;
   private ticksCooldown: number = 10; // Minimum cooldown between two trains
   constructor(
@@ -152,7 +152,7 @@ const TrainStationExecStateSchema = z.object({
   spawnTrains: z.boolean().optional(),
   random: zRandom().nullable(),
   station: zRef().nullable(),
-  numCars: zInt(),
+  numCars: zInt().min(0).max(TRAIN_CARS),
   lastSpawnTick: zInt(),
   ticksCooldown: zInt(),
 });

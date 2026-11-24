@@ -2,8 +2,8 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
+  zFinite,
   zInt,
-  zNum,
   zPlayerRef,
   zRandom,
   zRef,
@@ -901,7 +901,7 @@ const WarshipExecutionStateSchema = z.object({
   alreadySentShell: z.array(zRef()),
   lastManualMoveTickRetreatDisabled: zInt(),
   lastObservedPatrolTile: zTile().optional(),
-  activeHealingRemainder: zNum(),
+  activeHealingRemainder: zFinite(),
   lastEmittedCombat: z.boolean(),
 });
 type WarshipExecutionState = z.infer<typeof WarshipExecutionStateSchema>;
