@@ -38,7 +38,7 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
-import { sessionUncertain, userAuth } from "./Auth";
+import { currentPublicId, sessionUncertain, userAuth } from "./Auth";
 import {
   cardItemName,
   type CardItem,
@@ -741,12 +741,19 @@ export type InPlacePurchase =
  * profile is broadcast: the end screen marks it bought here first, so no
  * render sees it owned but not bought here (which would drop it and rebuild
  * the block).
+ *
+ * `signedInAs`, when given, is the account (currentPublicId) that opened the
+ * confirm: the purchase is only sent as that account. A sign-in in another
+ * tab replaces the refresh cookie, so a JWT refresh here could otherwise
+ * buy as the other account. A different account (or none) answers
+ * `signed_out`, with nothing sent.
  */
 export async function purchaseCosmeticInPlace(
   resolved: ResolvedCosmetic,
   method: "hard" | "soft",
   placement?: StorePlacement,
   onOwned?: () => void,
+  signedInAs?: string | null,
 ): Promise<InPlacePurchase> {
   const c = resolved.cosmetic;
   if (!c || resolved.type === "subscription" || resolved.type === "pack") {
@@ -767,6 +774,10 @@ export async function purchaseCosmeticInPlace(
       kind:
         session === false && !sessionUncertain() ? "signed_out" : "unreachable",
     };
+  }
+  const bound = signedInAs !== undefined;
+  if (bound && (signedInAs === null || userMe.player.publicId !== signedInAs)) {
+    return { kind: "signed_out" };
   }
   const wallet = userMe.player.currency;
   const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
@@ -803,6 +814,14 @@ export async function purchaseCosmeticInPlace(
     }
     return { kind: "unconfirmed" };
   };
+
+  // Checked again right before the buy, once the token is fresh: this read
+  // is the refresh purchaseWithCurrency would otherwise make, and it can pick
+  // up another tab's sign-in (CardSaveQueue does the same for a card save).
+  if (bound) {
+    await userAuth();
+    if (currentPublicId() !== signedInAs) return { kind: "signed_out" };
+  }
 
   let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;
   try {
