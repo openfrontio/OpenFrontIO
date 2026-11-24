@@ -14,14 +14,12 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
 // refresh's answer goes through Auth.ts's own handling. Otherwise, like the
 // real one, a token expired or within 3 minutes of expiry is refreshed only
 // when asked to (shouldRefresh, the default).
-// `publicId` is the account currentPublicId() reports; `switchTo` is an
-// account a refresh picks up from another tab's sign-in.
+// `publicId` is the account currentPublicId() reports.
 const auth = vi.hoisted(() => ({
   session: true,
   real: false,
   expired: false,
   publicId: "p1" as string | null,
-  switchTo: null as string | null,
 }));
 vi.mock("../../src/client/Auth", async (importOriginal) => {
   const real = await importOriginal<typeof import("../../src/client/Auth")>();
@@ -32,7 +30,6 @@ vi.mock("../../src/client/Auth", async (importOriginal) => {
     ),
     userAuth: vi.fn(async (shouldRefresh = true) => {
       if (auth.real) return real.userAuth(shouldRefresh);
-      if (auth.switchTo !== null) auth.publicId = auth.switchTo;
       if (!auth.session) return false;
       if (auth.expired) {
         if (!shouldRefresh) return false;
@@ -101,7 +98,6 @@ describe("buying on the end screen", () => {
     clearPendingPurchase();
     auth.expired = false;
     auth.publicId = "p1";
-    auth.switchTo = null;
   });
 
   it("a success refreshes in place: no reload, the fresh profile broadcast", async () => {
@@ -331,9 +327,17 @@ describe("buying on the end screen", () => {
     expect(purchaseWithCurrency).not.toHaveBeenCalled();
   });
 
-  it("a token refresh picks up another tab's account just before the buy: nothing sent", async () => {
+  it("a token refresh inside the purchase picks up another tab's account: signed out", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
-    auth.switchTo = "p2";
+    // As the real one does: the guard is asked once the token is read.
+    vi.mocked(purchaseWithCurrency).mockImplementation(
+      async (_type, _name, _method, _palette, _placement, stillWanted) => {
+        auth.publicId = "p2";
+        return stillWanted?.() === false
+          ? { ok: false, code: "cancelled" }
+          : { ok: true };
+      },
+    );
     const outcome = await purchaseCosmeticInPlace(
       STORM,
       "hard",
@@ -342,7 +346,7 @@ describe("buying on the end screen", () => {
       "p1",
     );
     expect(outcome.kind).toBe("signed_out");
-    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+    expect(broadcasts).toHaveLength(0);
   });
 
   it("no session: signed out, nothing bought", async () => {
