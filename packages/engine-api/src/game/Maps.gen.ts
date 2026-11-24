@@ -2134,6 +2134,9 @@ export const maps: readonly MapInfo[] = [
       { name: "Porte de Versailles" },
       { name: "Parc Monceau" },
     ],
+    author: "eauchs",
+    descriptionKey: "map_description.paris",
+    location: { lat: 48.9, lon: 2.35 },
   },
   {
     id: "Passage",
