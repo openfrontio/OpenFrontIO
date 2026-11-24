@@ -1,6 +1,8 @@
 # MapGenerator
 
-This is a go-based tool to generate map files for OpenFront.
+This folder holds the source of every map: `assets/maps/<mapname>/image.png` and its `info.json`. `npm run gen-maps` turns them into the map files the game loads.
+
+The generator is TypeScript. Its terrain rules are a library in `../packages/engine-lib/src/mapgen/`, which the engine and the scenario editor use too. The command-line tool around it (files, PNG, WebP, codegen) is in `../scripts/gen-maps/`.
 
 The map generator reads PNG files and converts pixels into terrain based primarily on the **Blue** channel.
 Because only blue values are used, grayscale and other formats are fully supported. Many maps in `assets/maps/<mapname>` are grayscale.
@@ -10,10 +12,8 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
 ## Installation
 
-1. Install go <https://go.dev/doc/install>
-2. Go to map-generator folder: `cd map-generator`
-3. Install dependencies: `go mod download`
-4. Run the generator for all maps: `go run .`
+1. Install the repo's dependencies from the root directory: `npm run inst`
+2. Run the generator for all maps: `npm run gen-maps`
 
 ## Creating a new map
 
@@ -22,23 +22,23 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 1. Create a new folder in `assets/maps/<map_name>`
 2. Create `assets/maps/<map_name>/image.png`
 3. Create `assets/maps/<map_name>/info.json` (see below)
-4. Run the generator for your map: `go run . --maps=<map_name>`
+4. Run the generator for your map: `npm run gen-maps -- --maps=<map_name>`
 
-   By default, `go run .` will process all defined maps.
+   By default, `npm run gen-maps` will process all defined maps.
 
    Use `--maps` to process a single map:
 
-   `go run . --maps=fourislands`
+   `npm run gen-maps -- --maps=fourislands`
 
    To process a subset of maps, pass a comma-separated list:
 
-   `go run . --maps=northamerica,world`
+   `npm run gen-maps -- --maps=northamerica,world`
 
 5. Find the output folder at `../resources/maps/<map_name>`
 
-`go run .` formats every file it writes with Oxfmt as its last step (shelling out to `npx oxfmt --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx oxfmt` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+`npm run gen-maps` formats every file it writes with Oxfmt as its last step (shelling out to `npx oxfmt --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx oxfmt` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
 
-`npm run gen-maps` (from the root directory) is equivalent to `go run .` for all maps.
+`npm run gen-maps` also regenerates `info.schema.json` (`npm run gen-map-schema`).
 
 ## Output Files
 
@@ -52,22 +52,26 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 
 ## Command Line Flags
 
+Pass flags after `--`: `npm run gen-maps -- --maps=world`.
+
 - `--maps`: Optional comma-separated list of maps to process.
-  - ex: `go run . --maps=world,eastasia,big_plains`
+  - ex: `npm run gen-maps -- --maps=world,eastasia,big_plains`
+- `--workers`: Number of maps to process at once (default 4). Lower it to use less memory.
+- `--timings`: Prints how long each map took, slowest first.
 
 ### Logging
 
 - `--log-level`: Explicitly sets the log level.
-  - ex: `go run . --log-level=debug`
+  - ex: `npm run gen-maps -- --log-level=debug`
   - values: `ALL`, `DEBUG`, `INFO` (default), `WARN`, `ERROR`.
 - `--verbose` or `-v`: Adds additional logging and prefixes logs with the `[mapname]`. Alias of `--log-level=DEBUG`.
-- `--debug-performance`: Adds additional logging for performance-based recommendations, sets `--log-level=DEBUG`.
-- `--debug-removal`: Adds additional logging of removed island and lake position/size, sets `--log-level=DEBUG`.
+- `--log-performance`: Adds additional logging for performance-based recommendations, sets `--log-level=DEBUG`.
+- `--log-removal`: Adds additional logging of removed island and lake position/size, sets `--log-level=DEBUG`.
 
-The Generator outputs logs using `slog` with standard log-levels, and an additional ALL level.
+The Generator outputs logs with standard log-levels, and an additional ALL level.
 
-The `--verbose`, `-v`, `--debug-performance`, and `--debug-removal` flags all set the log level to `DEBUG`.
-`debug-performance` and `debug-removal` are opt-in on top of the debug log level, as they can produce wordy output. You must pass the specific flag to see the corresponding logs if the `log-level` is set to `DEBUG`.
+The `--verbose`, `-v`, `--log-performance`, and `--log-removal` flags all set the log level to `DEBUG`.
+`log-performance` and `log-removal` are opt-in on top of the debug log level, as they can produce wordy output. You must pass the specific flag to see the corresponding logs if the `log-level` is set to `DEBUG`.
 
 Setting `--log-level=ALL` will output all possible logs, including all `DEBUG` tiers, regardless of whether the specific flags are passed.
 
@@ -79,10 +83,10 @@ thumbnail and binary files. To create this `png` input file, you can crop the wo
 1. [Download world map (warning very large file)](https://drive.google.com/file/d/1W2oMPj1L5zWRyPhh8LfmnY3_kve-FBR2/view?usp=sharing)
 2. Crop the file (recommend Gimp)
 
-If you are doing work in image editing software or using automated tools, `./map_generator.go` contains documentation for:
+If you are doing work in image editing software or using automated tools, `../packages/engine-lib/src/mapgen/` contains documentation for:
 
-- `Pixel` -> `Terrain Type & Magnitude` mapping in `GenerateMap`
-- `Terrain Type` -> `Thumbnail Color` mapping in `getThumbnailColor`
+- `Pixel` -> `Terrain Type & Magnitude` mapping in `imageTerrain` (`GenerateMap.ts`)
+- `Terrain Type` -> `Thumbnail Color` mapping in `thumbnailPixels` (`Thumbnail.ts`)
 
 ### Impassable Terrain
 
@@ -185,7 +189,7 @@ Each nation object has:
 
 Layers are image overlays rendered between terrain and territory, useful for decorations. Each layer is authored as a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`, with the same dimensions as `image.png` (the generator crops it to a multiple of 4 along with the map).
 
-The generator does not ship the PNG. It writes two lossy WebP files (quality 90) to `../resources/maps/<map_name>/`: `<id>.webp` at full map size and `<id>.4x.webp` at `map4x` size (half width and height, box-filtered), which Compact games load instead of downscaling the full image on the device. Lossy WebP is roughly 9x smaller than PNG on photographic layers and indistinguishable at the game's nearest-neighbour rendering, but it is lossy: don't rely on exact colour values surviving the encode. Which tiles a layer covers is decided by the terrain type and the `placement` field, not by the image, so that is unaffected. The encoder is the wasm libwebp embedded in the generator so that output is byte-identical on every machine; `npm run gen-maps` passes `-tags nodynamic` to force it, and `go run .` warns if it picked up a system libwebp instead.
+The generator does not ship the PNG. It writes two lossy WebP files (quality 90) to `../resources/maps/<map_name>/`: `<id>.webp` at full map size and `<id>.4x.webp` at `map4x` size (half width and height, box-filtered), which Compact games load instead of downscaling the full image on the device. Lossy WebP is roughly 9x smaller than PNG on photographic layers and indistinguishable at the game's nearest-neighbour rendering, but it is lossy: don't rely on exact colour values surviving the encode. Which tiles a layer covers is decided by the terrain type and the `placement` field, not by the image, so that is unaffected. The encoder is libwebp built to wasm (`../scripts/gen-maps/vendor/webp.wasm`), so the output is byte-identical on every machine.
 
 | Field       | Required | Description                                                                                                                                           |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -233,20 +237,5 @@ For Performance Reasons:
 
 ## 🛠️ Development Tools
 
-- **Format map-generator code**:
-
-  ```bash
-  go fmt .
-  ```
-
-- **Output Map Generator Documentation**:
-
-  ```bash
-  go doc -cmd -u -all
-  ```
-
-  The map-generator is a cli tool, to get any visibility, we pass `-cmd`. It also
-  does not expose any API, so we use `-u` and `-all` to show all documentation for
-  unexposed values.
-
-  _Known Bug_ Using `-http` does not respect the other flags and only renders the README
+- **Format the generator's code**: `npm run format` from the root directory.
+- **Test it**: `npx vitest tests/core/mapgen --run`. The parity test generates a few small maps and compares them with the shipped files byte for byte; `MAPGEN_PARITY=all` runs every map. CI also runs `npm run gen-maps` and fails if anything changes.

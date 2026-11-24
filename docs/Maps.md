@@ -1,6 +1,6 @@
 # Maps
 
-OpenFront maps are created and maintained with the Go-based [MapGenerator](../map-generator/README.md).
+OpenFront maps are created and maintained with the [MapGenerator](../map-generator/README.md).
 
 See the MapGenerator README for information about
 

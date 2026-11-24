@@ -25,8 +25,8 @@ function findUnsortedObjects(value: unknown, objectPath: string): string[] {
 
 // en.json keys are kept alphabetically sorted at every level. This keeps the
 // file deterministic, gives translation PRs stable insertion points, and lets
-// the map-generator rewrite it with a plain JSON round-trip (Go's
-// encoding/json sorts object keys on marshal).
+// the map generator rewrite it with a plain JSON round-trip (its goJSON
+// sorts object keys, as Go's encoding/json did).
 // Other language files are managed by Crowdin and are not checked.
 test("en.json keys are alphabetically sorted at every level", () => {
   const content = JSON.parse(fs.readFileSync(EN_JSON, "utf8"));

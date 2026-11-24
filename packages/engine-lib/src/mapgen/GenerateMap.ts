@@ -11,8 +11,8 @@ import {
 } from "./TerrainBytes";
 import { thumbnailPixels } from "./Thumbnail";
 
-const MIN_ISLAND_SIZE = 30;
-const MIN_LAKE_SIZE = 200;
+export const MIN_ISLAND_SIZE = 30;
+export const MIN_LAKE_SIZE = 200;
 
 /**
  * A map's image.png, decoded. "nrgba8": 8-bit RGBA, not premultiplied.

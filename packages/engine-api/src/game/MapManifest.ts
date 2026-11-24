@@ -23,7 +23,7 @@ const specialModifierKeys = [
 ] as const;
 
 // Fails to compile when this list and the generated SpecialModifierKey
-// union (map-generator/codegen.go) stop matching in either direction.
+// union (scripts/gen-maps/codegen.ts) stop matching in either direction.
 type ListedModifierKey = (typeof specialModifierKeys)[number];
 const modifierKeysMatchCodegen: [
   Exclude<SpecialModifierKey, ListedModifierKey>,

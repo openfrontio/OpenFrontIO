@@ -625,13 +625,6 @@ are shareable.
 - **Web purchase**: another way to set the same account flag. The editor is
   already in every build.
 - Units, team scenarios, triggers.
-- **Map generator in TypeScript.** With terrain derivation in the engine, the
-  Go generator and the engine are two implementations of the same rules.
-  Rewriting the generator on top of the engine's code would leave one. It is
-  not needed for the editor. The constraint is that CI regenerates every
-  stock map and fails on any byte difference, so the rewrite has to reproduce
-  the current files exactly, thumbnails included, or regenerate all of them
-  in one change.
 
 ## Open questions
 
