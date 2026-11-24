@@ -312,10 +312,16 @@ export class InventoryModal extends BaseModal {
     userMeResponse?: UserMeResponse | false,
   ): Promise<void> {
     const loadId = ++this.inventoryLoadId;
-    // Only the first load shows the loading state. A refresh (the
-    // /users/@me a card save broadcasts) updates in place: the skeleton
-    // would unmount the Player card tab and lose its slot and Reset.
-    if (this.cosmetics === null || this.ownershipState !== "loaded") {
+    // A first load, or a sign-out (userMeResponse false), shows the loading
+    // state: the old account's items mustn't stay live while userAuth()
+    // checks. A refresh (the /users/@me a card save broadcasts) updates in
+    // place: the skeleton would unmount the Player card tab and lose its
+    // slot and Reset.
+    if (
+      this.cosmetics === null ||
+      this.ownershipState !== "loaded" ||
+      userMeResponse === false
+    ) {
       this.isLoading = true;
       this.ownershipState = "loading";
     }
