@@ -9,6 +9,7 @@
 import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
 import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import type { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { thumbnailPixels as mapThumbnailPixels } from "@openfront/engine-lib/mapgen/Thumbnail";
 import { WorkerClient } from "../WorkerClient";
 import { editorStartInfo } from "./EditorEngine";
 import {
@@ -116,36 +117,13 @@ function copyFiles(files: MapFiles): MapFiles {
 
 /**
  * The thumbnail's RGBA pixels, as the map generator draws a stock map's
- * (createMapThumbnail): half the 4x map's size, one pixel per other tile,
+ * (mapgen/Thumbnail): half the 4x map's size, one pixel per other tile,
  * water and impassable transparent.
  */
 export function thumbnailPixels(files: MapFiles): ImageData["data"] {
-  const { width: w4, height: h4 } = files.manifest.map4x;
-  const terrain = files.map4xBin!;
-  const w = Math.max(1, Math.floor(w4 / 2));
-  const h = Math.max(1, Math.floor(h4 / 2));
-  const pixels = new Uint8ClampedArray(w * h * 4);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const b = terrain[Math.min(2 * y, h4 - 1) * w4 + Math.min(2 * x, w4 - 1)];
-      pixels.set(thumbnailColor(b), (y * w + x) * 4);
-    }
-  }
-  return pixels;
-}
-
-// The generator's getThumbnailColor, on a terrain byte: the land bit, the
-// shoreline bit, and the magnitude, which is 31 for impassable.
-function thumbnailColor(b: number): readonly number[] {
-  const magnitude = b & 0x1f;
-  if ((b & 0x80) === 0 || magnitude === 31) return [0, 0, 0, 0];
-  if (b & 0x40) return [204, 203, 158, 255];
-  if (magnitude < 10) return [190, 220 - 2 * magnitude, 138, 255];
-  if (magnitude < 20) {
-    return [200 + 2 * magnitude, 183 + 2 * magnitude, 138 + 2 * magnitude, 255];
-  }
-  const grey = Math.floor(230 + magnitude / 2);
-  return [grey, grey, grey, 255];
+  const { width, height } = files.manifest.map4x;
+  const { rgba } = mapThumbnailPixels(files.map4xBin!, width, height);
+  return new Uint8ClampedArray(rgba.buffer);
 }
 
 /** The thumbnail as webp, at the generator's quality. */

@@ -28,10 +28,44 @@ export function terrainKind(b: number): number {
 export const KIND = Uint8Array.from({ length: 256 }, (_, b) => terrainKind(b));
 
 /**
- * The map generator's downscale (createMiniMap) of a w x h map's authored
- * terrain to (w >> 1) x (h >> 1): a tile is water if any of its four tiles
- * is, else impassable if any is, else land at the elevation of the last,
- * (1,1). Returns the authored bytes; DeriveTerrain derives the rest.
+ * The map generator's downscale (createMiniMap) of a map of width w: the
+ * authored byte of the tile (mx, my) of the map half its size. Water if any
+ * of its four tiles is, else impassable if any is, else land at the
+ * elevation of the last, (1,1).
+ */
+export function downscaledTile(
+  terrain: Uint8Array,
+  w: number,
+  mx: number,
+  my: number,
+): number {
+  const s = 2 * my * w + 2 * mx;
+  const a = KIND[terrain[s]];
+  const b = KIND[terrain[s + w]];
+  const c = KIND[terrain[s + 1]];
+  const d = KIND[terrain[s + w + 1]];
+  if (
+    a === KIND_WATER ||
+    b === KIND_WATER ||
+    c === KIND_WATER ||
+    d === KIND_WATER
+  ) {
+    return 0;
+  }
+  if (
+    a === KIND_IMPASSABLE ||
+    b === KIND_IMPASSABLE ||
+    c === KIND_IMPASSABLE ||
+    d === KIND_IMPASSABLE
+  ) {
+    return IMPASSABLE_BYTE;
+  }
+  return terrain[s + w + 1] & (LAND_BIT | MAGNITUDE_MASK);
+}
+
+/**
+ * downscaledTile of every tile: a w x h map's authored terrain at
+ * (w >> 1) x (h >> 1). DeriveTerrain derives the rest.
  */
 export function downscaleTerrain(
   terrain: Uint8Array,
@@ -43,29 +77,7 @@ export function downscaleTerrain(
   const out = new Uint8Array(mw * mh);
   for (let my = 0, t = 0; my < mh; my++) {
     for (let mx = 0; mx < mw; mx++, t++) {
-      const s = 2 * my * w + 2 * mx;
-      const a = KIND[terrain[s]];
-      const b = KIND[terrain[s + w]];
-      const c = KIND[terrain[s + 1]];
-      const d = KIND[terrain[s + w + 1]];
-      if (
-        a === KIND_WATER ||
-        b === KIND_WATER ||
-        c === KIND_WATER ||
-        d === KIND_WATER
-      ) {
-        continue; // out[t] = 0, water
-      }
-      if (
-        a === KIND_IMPASSABLE ||
-        b === KIND_IMPASSABLE ||
-        c === KIND_IMPASSABLE ||
-        d === KIND_IMPASSABLE
-      ) {
-        out[t] = IMPASSABLE_BYTE;
-      } else {
-        out[t] = terrain[s + w + 1] & (LAND_BIT | MAGNITUDE_MASK);
-      }
+      out[t] = downscaledTile(terrain, w, mx, my);
     }
   }
   return out;
