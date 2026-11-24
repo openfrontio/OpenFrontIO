@@ -164,6 +164,36 @@ describe("AccountModal — after a prestige", () => {
     );
   });
 
+  it("a card owner's header still offers Prestige", async () => {
+    // The player card replaces the compact profile card for an owner; the
+    // Prestige press must not go with it.
+    const me = userMe(AT_100, [REWARD]);
+    me.player.flares = ["playerCard:standard"];
+    (modal as unknown as { userMeResponse: UserMeResponse }).userMeResponse =
+      me;
+    await settle();
+    expect(modal.querySelector("[data-account-card-header]")).not.toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
+    await modal.loadPrestigeFlow();
+    const press = modal.querySelector<HTMLButtonElement>(
+      "[data-account-card-header] [data-account-prestige]",
+    );
+    expect(press?.textContent).toContain("prestige.button");
+    press!.click();
+    await vi.waitFor(() =>
+      expect((flow() as unknown as PrestigeFlow).isOpen).toBe(true),
+    );
+  });
+
+  it("a card owner who can't prestige sees the XP bar, no Prestige", async () => {
+    const me = userMe({ ...AT_100, canPrestige: false });
+    me.player.flares = ["playerCard:standard"];
+    (modal as unknown as { userMeResponse: UserMeResponse }).userMeResponse =
+      me;
+    await settle();
+    expect(modal.querySelector("[data-account-prestige]")).toBeNull();
+  });
+
   it("fetches the prestige flow when /users/@me lands, not on render", async () => {
     const load = vi.fn(async () => undefined);
     modal.loadPrestigeFlow = load;

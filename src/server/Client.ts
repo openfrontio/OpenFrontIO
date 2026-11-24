@@ -5,6 +5,7 @@ import {
   type LevelBadge,
   packLevelBadge,
 } from "@openfront/shared/LevelBadgeWire";
+import type { PlayerCard } from "@openfront/shared/PlayerCardSchemas";
 import {
   ClientDevice,
   ClientPlatform,
@@ -51,6 +52,9 @@ export class Client {
     // undefined for guests, players who hide their level, or when the API sent
     // no progress. Display-only.
     public readonly levelBadge: LevelBadge | undefined = undefined,
+    // The player's card as checked at join (resolveCard); undefined without
+    // the card. Display-only.
+    public readonly card: PlayerCard | undefined = undefined,
   ) {
     this.wireLevelBadge = packLevelBadge(levelBadge);
   }

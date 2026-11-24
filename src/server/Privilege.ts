@@ -4,8 +4,15 @@ import { isTemporaryUsername } from "@openfront/shared/ApiSchemas";
 import {
   Cosmetics,
   findEffectForSlot,
+  cardTrackerNamedByStat,
+  ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
 import { decodePatternData } from "@openfront/shared/PatternDecoder";
+import {
+  MAX_CARD_TRACKERS,
+  PlayerCard,
+  PlayerCardRefs,
+} from "@openfront/shared/PlayerCardSchemas";
 import {
   PlayerColor,
   PlayerCosmeticRefs,
@@ -50,6 +57,16 @@ type CosmeticResult =
 
 export interface PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult;
+  /**
+   * The player's card as other players get it, or undefined when they don't
+   * own the card. Each equipped item must be owned and still in the catalogue;
+   * one that isn't is dropped on its own, never the whole card.
+   */
+  resolveCard(
+    flares: string[],
+    refs: PlayerCardRefs | null | undefined,
+    publicId: string | undefined,
+  ): PlayerCard | undefined;
   /**
    * Decide whether a player may wear the given clan tag. Members keep their
    * tag; impersonated or unverifiable tags are dropped. `ownedClanTags` are
@@ -142,6 +159,52 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     }
 
     return { type: "allowed", cosmetics };
+  }
+
+  resolveCard(
+    flares: string[],
+    refs: PlayerCardRefs | null | undefined,
+    publicId: string | undefined,
+  ): PlayerCard | undefined {
+    if (!ownsPlayerCard(flares)) return undefined;
+    const card: PlayerCard = { trackers: [] };
+    const owned = (flare: string) => flares.includes(flare);
+    const background = refs?.background;
+    if (
+      background !== undefined &&
+      this.cosmetics.cardBackgrounds?.[background] !== undefined &&
+      owned(`cardBackground:${background}`)
+    ) {
+      card.background = background;
+    }
+    const title = refs?.title;
+    if (
+      title !== undefined &&
+      this.cosmetics.cardTitles?.[title] !== undefined &&
+      owned(`cardTitle:${title}`)
+    ) {
+      card.title = title;
+    }
+    const taunt = refs?.taunt;
+    if (
+      taunt !== undefined &&
+      this.cosmetics.taunts?.[taunt] !== undefined &&
+      owned(`taunt:${taunt}`)
+    ) {
+      card.taunt = taunt;
+    }
+    // Like every other slot: owned AND still in the catalogue, under the one
+    // tracker rule (named by its stat, so the flare cardTracker:<name> is
+    // cardTracker:<stat>).
+    const inCatalogue = (stat: string) => {
+      const entry = this.cosmetics.cardTrackers?.[stat];
+      return entry !== undefined && cardTrackerNamedByStat(entry);
+    };
+    card.trackers = (refs?.trackers ?? [])
+      .filter((t) => inCatalogue(t.stat) && owned(`cardTracker:${t.stat}`))
+      .slice(0, MAX_CARD_TRACKERS);
+    if (publicId !== undefined) card.publicId = publicId;
+    return card;
   }
 
   // slot = effectType (trails) or nukeType (nuke explosions); see effectTypeForSlot.
@@ -257,6 +320,19 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 }
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
+  // Without the catalogue no equipped item can be checked, so an owner's card
+  // shows bare (name, flag and badge) rather than unverified items.
+  resolveCard(
+    flares: string[],
+    _refs: PlayerCardRefs | null | undefined,
+    publicId: string | undefined,
+  ): PlayerCard | undefined {
+    if (!ownsPlayerCard(flares)) return undefined;
+    return publicId === undefined
+      ? { trackers: [] }
+      : { trackers: [], publicId };
+  }
+
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
     // Catalog cosmetics can't be resolved without the cosmetics data, but the
     // verified intent isn't a catalog item — pass it through; the Worker's
