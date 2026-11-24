@@ -317,11 +317,12 @@ export class InventoryModal extends BaseModal {
     // checks. A refresh (the /users/@me a card save broadcasts) updates in
     // place: the skeleton would unmount the Player card tab and lose its
     // slot and Reset.
-    if (
+    const refresh = !(
       this.cosmetics === null ||
       this.ownershipState !== "loaded" ||
       userMeResponse === false
-    ) {
+    );
+    if (!refresh) {
       this.isLoading = true;
       this.ownershipState = "loading";
     }
@@ -332,6 +333,10 @@ export class InventoryModal extends BaseModal {
         this.loadOwnership(userMeResponse),
       ]);
       if (loadId !== this.inventoryLoadId) return;
+      // A refresh whose fetch failed keeps the catalogue already shown, as
+      // refreshCatalog does: the error view would unmount the Player card
+      // tab. A first load or a sign-out has none to keep.
+      if (cosmetics === null && refresh && this.cosmetics !== null) return;
       this.cosmetics = cosmetics;
       if (cosmetics !== null) this.catalogFetchedAt = Date.now();
       this.loadFailed = cosmetics === null;

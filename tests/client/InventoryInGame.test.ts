@@ -385,6 +385,35 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("my-card-tab")).toBeNull();
     });
 
+    it("a card save's refresh whose catalogue fetch fails keeps the card tab on screen", async () => {
+      await open("card");
+      const myCard = modal.querySelector("my-card-tab")!;
+      myCard
+        .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+        .click();
+      await settle(modal);
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      cardSaved(myCard);
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: makeUser(OWNED) }),
+      );
+      await settle(modal);
+      expect(fetchCosmetics).toHaveBeenLastCalledWith();
+      expect(modal.querySelector("[data-inventory-state='error']")).toBeNull();
+      expect(modal.querySelector("my-card-tab")).toBe(myCard);
+      expect(
+        myCard.querySelector("[data-my-card-slot='trackers']")!.className,
+      ).toContain("bg-sky-600");
+    });
+
+    it("the first load's failed catalogue fetch still shows the error view", async () => {
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      await open("card");
+      expect(
+        modal.querySelector("[data-inventory-state='error']"),
+      ).not.toBeNull();
+    });
+
     it("a card save shows in a remade card tab even when the refresh failed", async () => {
       await open("card");
       cardSaved(modal.querySelector("my-card-tab")!);
