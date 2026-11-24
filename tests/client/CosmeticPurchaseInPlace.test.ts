@@ -14,13 +14,25 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
 // refresh's answer goes through Auth.ts's own handling. Otherwise, like the
 // real one, a token expired or within 3 minutes of expiry is refreshed only
 // when asked to (shouldRefresh, the default).
-const auth = vi.hoisted(() => ({ session: true, real: false, expired: false }));
+// `publicId` is the account currentPublicId() reports; `switchTo` is an
+// account a refresh picks up from another tab's sign-in.
+const auth = vi.hoisted(() => ({
+  session: true,
+  real: false,
+  expired: false,
+  publicId: "p1" as string | null,
+  switchTo: null as string | null,
+}));
 vi.mock("../../src/client/Auth", async (importOriginal) => {
   const real = await importOriginal<typeof import("../../src/client/Auth")>();
   return {
     ...real,
+    currentPublicId: vi.fn(() =>
+      auth.real ? real.currentPublicId() : auth.publicId,
+    ),
     userAuth: vi.fn(async (shouldRefresh = true) => {
       if (auth.real) return real.userAuth(shouldRefresh);
+      if (auth.switchTo !== null) auth.publicId = auth.switchTo;
       if (!auth.session) return false;
       if (auth.expired) {
         if (!shouldRefresh) return false;
@@ -88,6 +100,8 @@ describe("buying on the end screen", () => {
     document.removeEventListener("userMeResponse", onUserMe);
     clearPendingPurchase();
     auth.expired = false;
+    auth.publicId = "p1";
+    auth.switchTo = null;
   });
 
   it("a success refreshes in place: no reload, the fresh profile broadcast", async () => {
@@ -285,6 +299,50 @@ describe("buying on the end screen", () => {
       kind: "insufficient",
       info: { shortfall: 500, canTopUp: false, leavesGame: true },
     });
+  });
+
+  it("bound to the account that opened the confirm: that account buys", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({ ok: true } as never);
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      "p1",
+    );
+    expect(outcome.kind).toBe("owned");
+    expect(purchaseWithCurrency).toHaveBeenCalledOnce();
+  });
+
+  it("another account signed in since the confirm opened: nothing sent, the sign-in error", async () => {
+    auth.publicId = "p2";
+    vi.mocked(getUserMe).mockResolvedValue({
+      player: { publicId: "p2", flares: [], currency: { hard: 900 } },
+    } as never);
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      "p1",
+    );
+    expect(outcome.kind).toBe("signed_out");
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+  });
+
+  it("a token refresh picks up another tab's account just before the buy: nothing sent", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    auth.switchTo = "p2";
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      "p1",
+    );
+    expect(outcome.kind).toBe("signed_out");
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
   });
 
   it("no session: signed out, nothing bought", async () => {
