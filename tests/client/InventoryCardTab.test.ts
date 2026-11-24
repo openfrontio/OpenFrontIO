@@ -10,9 +10,10 @@ vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
 }));
 // Signed in as the fixture player (Auth's currentPublicId).
+const session = vi.hoisted(() => ({ id: "p1" as string | null }));
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
-  currentPublicId: () => "p1",
+  currentPublicId: () => session.id,
 }));
 const shop = vi.hoisted(() => ({
   buy: vi.fn(),
@@ -149,6 +150,7 @@ beforeEach(() => {
   api.save.mockReset();
   shop.buy.mockReset();
   shop.check.mockReset();
+  session.id = "p1";
 });
 afterEach(() => {
   tab?.remove();
@@ -575,6 +577,28 @@ describe("<inventory-card-tab> without the card", () => {
     expect(
       StorePlacementSchema.safeParse(shop.buy.mock.calls[0][2]).success,
     ).toBe(true);
+  });
+
+  it("a buy is sent only as the account signed in now", async () => {
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(NO_CARD, null));
+    await buyButton().onPurchaseHard();
+    expect(shop.buy.mock.calls[0][4]).toBe("p1");
+  });
+
+  it("a buy is sent as the account that opened the confirm, not one signed in since", async () => {
+    shop.check.mockResolvedValue({ ok: true, balance: 5000 });
+    shop.buy.mockResolvedValue({ kind: "signed_out" });
+    await render(userMe(NO_CARD, null));
+    const button = buyButton() as unknown as {
+      preflight: (m: "hard" | "soft") => Promise<unknown>;
+      onPurchaseHard: () => Promise<unknown>;
+    };
+    await button.preflight("hard");
+    // Another tab signs in as someone else while the confirm is open.
+    session.id = "p2";
+    await button.onPurchaseHard();
+    expect(shop.buy.mock.calls[0][4]).toBe("p1");
   });
 
   it("See it in the Store asks for the card in the Store", async () => {

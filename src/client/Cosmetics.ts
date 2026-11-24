@@ -831,7 +831,7 @@ export async function purchaseCosmeticInPlace(
 
   // Checked again right before the buy, once the token is fresh: this read
   // is the refresh purchaseWithCurrency would otherwise make, and it can pick
-  // up another tab's sign-in (CardSaveQueue does the same for a card save).
+  // up another tab's sign-in (CardEditor does the same for a card save).
   if (bound) {
     await userAuth();
     if (currentPublicId() !== signedInAs) return { kind: "signed_out" };
