@@ -15,6 +15,8 @@ import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import { cardRefsFromLoadout } from "./CardLoadoutApi";
+import type { CardSavedDetail } from "./CardSaveQueue";
 import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import {
@@ -72,6 +74,7 @@ import {
   EFFECTS_KEY,
   FLAG_KEY,
   MAX_LOADOUTS,
+  normalizedFlagKey,
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
@@ -132,7 +135,10 @@ function sameLoadout(a: CosmeticLoadout, b: CosmeticLoadout): boolean {
   const effectsB = Object.entries(b.effects).sort();
   return (
     a.pattern === b.pattern &&
-    a.flag === b.flag &&
+    // A loadout saved before the country: prefix holds a bare code that
+    // getFlag has since migrated in the live look.
+    (a.flag === null ? null : normalizedFlagKey(a.flag)) ===
+      (b.flag === null ? null : normalizedFlagKey(b.flag)) &&
     a.crown === b.crown &&
     JSON.stringify(effectsA) === JSON.stringify(effectsB)
   );
@@ -306,9 +312,14 @@ export class InventoryModal extends BaseModal {
     userMeResponse?: UserMeResponse | false,
   ): Promise<void> {
     const loadId = ++this.inventoryLoadId;
-    this.isLoading = true;
+    // Only the first load shows the loading state. A refresh (the
+    // /users/@me a card save broadcasts) updates in place: the skeleton
+    // would unmount the Player card tab and lose its slot and Reset.
+    if (this.cosmetics === null || this.ownershipState !== "loaded") {
+      this.isLoading = true;
+      this.ownershipState = "loading";
+    }
     this.loadFailed = false;
-    this.ownershipState = "loading";
     try {
       const [cosmetics] = await Promise.all([
         this.loadCatalog(),
@@ -331,6 +342,21 @@ export class InventoryModal extends BaseModal {
       }
     }
   }
+
+  /** A card save landed: keep this copy in step, even if the /users/@me
+   * refresh after it fails, or a remade card tab (and its next save) would
+   * hold the loadout from before. */
+  private onCardSaved = (event: CustomEvent<CardSavedDetail>): void => {
+    const me = this.userMeResponse;
+    if (!me || me.player.publicId !== event.detail.publicId) return;
+    this.userMeResponse = {
+      ...me,
+      player: {
+        ...me.player,
+        card: cardRefsFromLoadout(event.detail.loadout, me.player.card),
+      },
+    };
+  };
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     await this.loadInventory(userMeResponse);
@@ -1190,6 +1216,7 @@ export class InventoryModal extends BaseModal {
       return html`<inventory-card-tab
         class="block p-3"
         .userMe=${this.userMeResponse === false ? null : this.userMeResponse}
+        @card-saved=${this.onCardSaved}
         @change-flag=${() => this.setActiveTab("flags")}
       ></inventory-card-tab>`;
     }

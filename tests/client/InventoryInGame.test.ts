@@ -324,6 +324,65 @@ describe("Inventory In game tab", () => {
       expect(myCard.placement).toEqual({ kind: "inventory", subTab: "card" });
     });
 
+    // What a successful card save does: card-saved, then a fresh /users/@me.
+    const SAVED_CARD = {
+      background: "bg_saved",
+      title: null,
+      taunt: null,
+      trackers: ["wins"],
+    };
+    function cardSaved(from: Element) {
+      from.dispatchEvent(
+        new CustomEvent("card-saved", {
+          detail: { publicId: "in-game-test-player", loadout: SAVED_CARD },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+
+    it("a card save's refresh keeps the same card tab on the same slot", async () => {
+      await open("card");
+      const myCard = modal.querySelector("my-card-tab")!;
+      myCard
+        .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+        .click();
+      await settle(modal);
+      cardSaved(myCard);
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: makeUser(OWNED) }),
+      );
+      // Mid-refresh too: no loading skeleton in its place.
+      await modal.updateComplete;
+      expect(modal.querySelector("my-card-tab")).toBe(myCard);
+      await settle(modal);
+      expect(modal.querySelector("my-card-tab")).toBe(myCard);
+      expect(
+        myCard.querySelector("[data-my-card-slot='trackers']")!.className,
+      ).toContain("bg-sky-600");
+    });
+
+    it("a card save shows in a remade card tab even when the refresh failed", async () => {
+      await open("card");
+      cardSaved(modal.querySelector("my-card-tab")!);
+      // No userMeResponse: the refresh after the save failed.
+      modal
+        .querySelector<HTMLButtonElement>('[data-inventory-top-tab="ingame"]')!
+        .click();
+      await settle(modal);
+      modal
+        .querySelector<HTMLButtonElement>('[data-inventory-top-tab="card"]')!
+        .click();
+      await settle(modal);
+      const remade = modal.querySelector("my-card-tab") as unknown as {
+        userMe: UserMeResponse;
+      };
+      expect(remade.userMe.player.card).toEqual({
+        background: "bg_saved",
+        trackers: [{ stat: "wins", value: 0 }],
+      });
+    });
+
     it("switches between the two tabs and back to the last category", async () => {
       await open("crowns");
       modal
@@ -422,11 +481,48 @@ describe("Inventory In game tab", () => {
           "skins",
         ),
       ).toBe(tilesWithItems.length);
-      // Colour swatches are full-size touch targets.
-      for (const swatch of modal.querySelectorAll("[data-variant-key]")) {
+      // One swatch per colour, the default look included; each a full-size
+      // touch target.
+      const swatches = [
+        ...tile(modal, "pattern:plain").querySelectorAll<HTMLElement>(
+          "[data-variant-key]",
+        ),
+      ];
+      expect(
+        swatches.map((swatch) => swatch.dataset.variantKey).sort(),
+      ).toEqual(["pattern:plain", "pattern:plain:blue", "pattern:plain:red"]);
+      for (const swatch of swatches) {
         expect(swatch.className).toMatch(/(^| )h-11( |$)/);
         expect(swatch.className).toMatch(/(^| )w-11( |$)/);
       }
+    });
+
+    it("a pattern with one colour still offers its default look", async () => {
+      const catalog = makeCatalog() as unknown as {
+        patterns: Record<string, Record<string, unknown>>;
+        colorPalettes: Record<string, unknown>;
+      };
+      catalog.patterns.plain.colorPalettes = [
+        { name: "red", isArchived: false },
+      ];
+      catalog.colorPalettes = {
+        red: { name: "red", primaryColor: "#f00", secondaryColor: "#000" },
+      };
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        catalog as unknown as Cosmetics,
+      );
+      await open("skins", makeUser([...OWNED, "pattern:plain:red"]));
+      const plainTile = tile(modal, "pattern:plain");
+      const fallback = plainTile.querySelector<HTMLButtonElement>(
+        '[data-variant-key="pattern:plain"]',
+      );
+      expect(fallback).not.toBeNull();
+      expect(fallback!.getAttribute("aria-label")).toBe(
+        "territory_patterns.pattern.default",
+      );
+      expect(
+        plainTile.querySelector('[data-variant-key="pattern:plain:red"]'),
+      ).not.toBeNull();
     });
 
     it("on phones, says what was equipped in its own status line", async () => {
@@ -492,7 +588,8 @@ describe("Inventory In game tab", () => {
         hard.querySelector("[data-tile-list-price]")!.textContent,
       ).toContain("400");
       const soft = sale.querySelector('[data-tile-price="soft"]')!;
-      expect(soft.textContent).toContain("1,800");
+      // In the runtime's locale ("1.800" under de-DE), as the tile shows it.
+      expect(soft.textContent).toContain((1800).toLocaleString());
       expect(
         sale.querySelector("[data-tile-sale-label]")!.textContent,
       ).toContain("Winter sale");
@@ -582,6 +679,16 @@ describe("Inventory In game tab", () => {
       await settle(modal);
       expect(new UserSettings().getSelectedCrownName()).toBe("gold_crown");
       expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
+    });
+
+    it("a loadout saved with a legacy country flag isn't edited once the flag migrates", async () => {
+      const settings = new UserSettings();
+      settings.setFlag("us"); // saved before the country: prefix
+      settings.addLoadout(); // 01 holds "us"
+      expect(settings.getLoadout("01")?.flag).toBe("us");
+      expect(settings.getFlag()).toBe("country:us"); // migrates the live key
+      await open("crowns");
+      expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
     });
 
     it("shows <name> · edited with Update when the look differs", async () => {
@@ -694,6 +801,39 @@ describe("Inventory In game tab", () => {
       expect(
         rows[1].querySelector("[data-effect-row-item]")!.textContent,
       ).toContain("inventory.effect_default");
+    });
+
+    it("each Change and Close button names its effect type", async () => {
+      const lang = document.createElement("lang-selector");
+      const translations = {
+        "inventory.effect_change": "Change",
+        "common.close": "Close",
+        "inventory.effect_change_slot": "Change {slot}",
+        "inventory.effect_close_slot": "Close {slot}",
+        "inventory.effect_slot.transportShipTrail": "Ship trail",
+      };
+      Object.assign(lang, {
+        translations,
+        defaultTranslations: translations,
+        currentLang: "en",
+      });
+      document.body.appendChild(lang);
+      try {
+        await open("effects");
+        const button = () =>
+          modal.querySelector<HTMLButtonElement>(
+            '[data-effect-row="transportShipTrail"] [data-effect-row-change]',
+          )!;
+        // The visible word stays; the name says which type it opens.
+        expect(button().textContent!.trim()).toBe("Change");
+        expect(button().getAttribute("aria-label")).toBe("Change Ship trail");
+        button().click();
+        await settle(modal);
+        expect(button().textContent!.trim()).toBe("Close");
+        expect(button().getAttribute("aria-label")).toBe("Close Ship trail");
+      } finally {
+        lang.remove();
+      }
     });
 
     it("Change opens that type's grid inline, and equipping works there", async () => {

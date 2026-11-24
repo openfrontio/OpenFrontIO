@@ -78,6 +78,37 @@ describe("end-screen purchase button", () => {
     );
   });
 
+  it("the balance line keeps the confirmed item's price when the button is reused", async () => {
+    const b = await mountButton({
+      preflight: ok(500),
+      onPurchaseHard: vi.fn(async () => undefined),
+    });
+    hardButton(b).click();
+    await settle(b);
+    // A grid rendered by position hands this element another item.
+    Object.assign(b, { itemName: "Other item", priceHard: 999 });
+    await b.updateComplete;
+    expect(confirmBox(b)!.message).toBe(
+      'store.confirm_purchase_body_left:{"item":"Storm Front","amount":320,"currency":"cosmetics.hard","left":180}',
+    );
+  });
+
+  it("the item is the one tapped, even if the button is reused during the balance read", async () => {
+    let answer!: (r: { ok: true; balance: number }) => void;
+    const b = await mountButton({
+      preflight: () => new Promise((r) => (answer = r)),
+      onPurchaseHard: vi.fn(async () => undefined),
+    });
+    hardButton(b).click();
+    Object.assign(b, { itemName: "Other item", priceHard: 999 });
+    await b.updateComplete;
+    answer({ ok: true, balance: 500 });
+    await settle(b);
+    expect(confirmBox(b)!.message).toBe(
+      'store.confirm_purchase_body_left:{"item":"Storm Front","amount":320,"currency":"cosmetics.hard","left":180}',
+    );
+  });
+
   it("stale balance short, fresh balance enough: the confirm shows, nothing charged", async () => {
     // Whatever an older copy of the balance said, the tap reads it fresh.
     const preflight = vi.fn(ok(500));

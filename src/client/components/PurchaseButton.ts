@@ -362,12 +362,15 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** Currency purchase awaiting confirmation, if any. Its amount is read
-   * when the dialog renders, so a sale ending while it is open shows (and
+  /** Currency purchase awaiting confirmation, if any. The item's prices
+   * are taken when it opens: a grid rendered by position can hand this
+   * element another item meanwhile. The amount is worked out from them when
+   * the dialog renders, so a sale ending while it is open shows (and
    * charges) the price at that moment. */
   @state() private confirmingPurchase: {
     method: "hard" | "soft";
     itemName: string;
+    item: PricedItem;
     handler: () => Promise<PurchaseResult>;
     // From the preflight's fresh read, for "you'll have N left".
     balance?: number;
@@ -434,19 +437,27 @@ export class PurchaseButton extends LitElement {
 
   protected updated(changed: Map<PropertyKey, unknown>) {
     super.updated(changed);
-    if (changed.has("promotion")) this.scheduleSaleEnd();
+    if (changed.has("promotion") || changed.has("confirmingPurchase")) {
+      this.scheduleSaleEnd();
+    }
   }
 
   /** Re-render when the sale ends, so the price switches to the list price
    * at the same moment everywhere it's shown. */
   private scheduleSaleEnd() {
     this.clearSaleEndTimer();
-    const endsAt = saleEndsAt(this.pricedItem);
-    if (endsAt === null) return;
-    const wait = endsAt - Date.now();
-    if (wait <= 0 || wait > 2 ** 31 - 1) return;
+    // The shown item's sale, and an open dialog's item's (it may be another
+    // item by now): the first one still to come.
+    const now = Date.now();
+    const ends = [this.pricedItem, this.confirmingPurchase?.item]
+      .map((item) => (item === undefined ? null : saleEndsAt(item)))
+      .filter((at): at is number => at !== null && at > now);
+    if (ends.length === 0) return;
+    const wait = Math.min(...ends) - now;
+    if (wait > 2 ** 31 - 1) return;
     this.saleEndTimer = setTimeout(() => {
       this.saleEndTimer = null;
+      this.scheduleSaleEnd();
       this.requestUpdate();
     }, wait + 1);
   }
@@ -467,9 +478,13 @@ export class PurchaseButton extends LitElement {
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
     this.lastMethod = method;
+    // Taken at the tap, before the balance read: a grid rendered by position
+    // can hand this element another item while it is out.
+    const itemName = this.itemName;
+    const item = this.pricedItem;
     const preflight = this.preflight;
     if (preflight === null) {
-      this.confirmingPurchase = { method, itemName: this.itemName, handler };
+      this.confirmingPurchase = { method, itemName, item, handler };
       return;
     }
     // Busy while the balance is read, so a second tap can't start another.
@@ -479,7 +494,8 @@ export class PurchaseButton extends LitElement {
         if (check.ok) {
           this.confirmingPurchase = {
             method,
-            itemName: this.itemName,
+            itemName,
+            item,
             handler,
             balance: check.balance,
           };
@@ -495,13 +511,17 @@ export class PurchaseButton extends LitElement {
       });
   }
 
-  /** The confirm box's question, with the balance after when known. */
-  private confirmMessage(
-    method: "hard" | "soft",
-    itemName: string,
-    balance: number | undefined,
-  ): string {
-    const amount = this.shown(method)?.price ?? 0;
+  /** The confirm box's question, with the balance after when known. The
+   * amount comes from the item captured with the dialog, never this
+   * element's live props. */
+  private confirmMessage(pending: {
+    method: "hard" | "soft";
+    itemName: string;
+    item: PricedItem;
+    balance?: number;
+  }): string {
+    const { method, itemName, item, balance } = pending;
+    const amount = shownPrice(item, method)?.price ?? 0;
     const currency = translateText(
       method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
     );
@@ -715,11 +735,7 @@ export class PurchaseButton extends LitElement {
         this.confirmingPurchase
           ? html`<confirm-dialog
               .heading=${translateText("store.confirm_purchase_title")}
-              .message=${this.confirmMessage(
-                this.confirmingPurchase.method,
-                this.confirmingPurchase.itemName,
-                this.confirmingPurchase.balance,
-              )}
+              .message=${this.confirmMessage(this.confirmingPurchase)}
               variant="warning"
               @confirm=${() => {
                 const pending = this.confirmingPurchase;

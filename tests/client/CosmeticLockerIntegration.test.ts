@@ -248,12 +248,16 @@ describe("Cosmetic locker integration", () => {
     new UserSettings().setSelectedPatternName(blueKey);
     inventory.open({ tab: "skins" });
     await inventory.updateComplete;
+    // cardFor finds the group by any of its variants, so check which one
+    // the tile shows, not only that it is equipped.
     expect(cardFor(inventory, blueKey)?.state).toBe("equipped");
+    expect(cardFor(inventory, blueKey)?.activeVariantKey).toBe(blueKey);
 
     new UserSettings().setSelectedPatternName(greenKey);
     window.dispatchEvent(new CustomEvent(settingsEvent));
     await inventory.updateComplete;
     expect(cardFor(inventory, greenKey)?.state).toBe("equipped");
+    expect(cardFor(inventory, greenKey)?.activeVariantKey).toBe(greenKey);
   });
 
   it("keeps accessible controls and phone layout markers across both surfaces", async () => {
