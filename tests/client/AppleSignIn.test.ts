@@ -93,9 +93,15 @@ describe("appleServicesId", () => {
     expect(appleServicesId()).toBe("io.openfront.web.staging");
   });
 
-  it("is null where no Services ID is configured", () => {
+  it("is the prod Services ID on the prod site", () => {
     setBootstrapConfig("openfront.io");
     stubLocation("https://openfront.io/");
+    expect(appleServicesId()).toBe("io.openfront.web");
+  });
+
+  it("is null where no Services ID is configured", () => {
+    setBootstrapConfig("localhost");
+    stubLocation("https://localhost/");
     expect(appleServicesId()).toBeNull();
   });
 
