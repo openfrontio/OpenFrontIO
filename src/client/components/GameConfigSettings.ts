@@ -242,6 +242,7 @@ export class GameConfigSettings extends LitElement {
   @property({ attribute: false }) settings?: GameConfigSettingsData;
   @property({ attribute: false }) sectionGapClass = "space-y-6";
   @state() private mapSearchQuery = "";
+  @state() private advancedExpanded = false;
 
   createRenderRoot() {
     return this;
@@ -255,6 +256,35 @@ export class GameConfigSettings extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private toggleAdvanced = () => {
+    this.advancedExpanded = !this.advancedExpanded;
+  };
+
+  private renderAdvancedToggle(): TemplateResult {
+    const expanded = this.advancedExpanded;
+    return html`<button
+      type="button"
+      aria-expanded=${expanded}
+      data-advanced-settings-toggle
+      @click=${this.toggleAdvanced}
+      class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold text-white uppercase tracking-wider transition-all duration-200 active:scale-[0.99] ${
+        expanded ? "bg-malibu-blue/20 border-malibu-blue/50" : INACTIVE_CARD
+      }"
+    >
+      <svg
+        class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+          expanded ? "rotate-90" : ""
+        }"
+        viewBox="0 0 12 12"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M4 2l5 4-5 4z" />
+      </svg>
+      ${translateText("game_settings.advanced_settings")}
+    </button>`;
   }
 
   private handleMapSearchInput = (event: Event) => {
@@ -572,103 +602,117 @@ export class GameConfigSettings extends LitElement {
                 </section>
               `
         }
-        ${renderSection(
-          OPTIONS_ICON,
-          "text-orange-400",
-          "bg-orange-500/20",
-          settings.options.titleKey,
-          html`
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div
-                class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${
-                  settings.options.bots.value > 0 ? ACTIVE_CARD : INACTIVE_CARD
-                }"
-              >
-                <fluent-slider
-                  min="0"
-                  max=${MAX_BOTS}
-                  step="1"
-                  .value=${settings.options.bots.value}
-                  labelKey=${settings.options.bots.labelKey}
-                  disabledKey=${settings.options.bots.disabledKey}
-                  @value-changed=${this.handleBotsChanged}
-                ></fluent-slider>
-                <div role="status" aria-live="polite">
-                  ${
-                    settings.options.bots.value > 400
-                      ? html`<p class="mt-2 text-xs text-amber-300 text-center">
-                          ${translateText("game_settings.bots_high_warning")}
-                        </p>`
-                      : nothing
-                  }
-                </div>
-              </div>
-
-              ${
-                settings.options.nations && !settings.options.nations.hidden
-                  ? html`<div
-                      class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${
-                        settings.options.nations.value > 0
-                          ? ACTIVE_CARD
-                          : INACTIVE_CARD
-                      }"
-                    >
-                      <fluent-slider
-                        min="0"
-                        max="400"
-                        step="1"
-                        .value=${settings.options.nations.value}
-                        .defaultValue=${settings.options.nations.defaultValue}
-                        defaultLabelKey="common.map_default"
-                        labelKey=${settings.options.nations.labelKey}
-                        disabledKey=${settings.options.nations.disabledKey}
-                        @value-changed=${this.handleNationsChanged}
-                      ></fluent-slider>
-                    </div>`
-                  : nothing
-              }
-              ${settings.options.toggles.map((toggle) =>
-                this.renderOptionToggle(toggle),
-              )}
-              ${settings.options.inputCards}
-            </div>
-          `,
-        )}
+        ${this.renderAdvancedToggle()}
         ${
-          settings.hostCheats?.visible
-            ? renderSection(
-                HOST_CHEATS_ICON,
-                "text-yellow-400",
-                "bg-yellow-500/20",
-                settings.hostCheats.titleKey,
-                html`
-                  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    ${settings.hostCheats.toggles.map((toggle) =>
-                      renderTextCardButton(
-                        translateText(toggle.labelKey),
-                        toggle.checked,
-                        () => this.handleHostCheatToggle(toggle),
-                        "p-4 text-center",
-                      ),
-                    )}
-                    ${settings.hostCheats.inputCards}
-                  </div>
-                `,
-              )
+          this.advancedExpanded
+            ? html`<div class=${this.sectionGapClass}>
+                ${renderSection(
+                  OPTIONS_ICON,
+                  "text-orange-400",
+                  "bg-orange-500/20",
+                  settings.options.titleKey,
+                  html`
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div
+                        class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${
+                          settings.options.bots.value > 0
+                            ? ACTIVE_CARD
+                            : INACTIVE_CARD
+                        }"
+                      >
+                        <fluent-slider
+                          min="0"
+                          max=${MAX_BOTS}
+                          step="1"
+                          .value=${settings.options.bots.value}
+                          labelKey=${settings.options.bots.labelKey}
+                          disabledKey=${settings.options.bots.disabledKey}
+                          @value-changed=${this.handleBotsChanged}
+                        ></fluent-slider>
+                        <div role="status" aria-live="polite">
+                          ${
+                            settings.options.bots.value > 400
+                              ? html`<p
+                                  class="mt-2 text-xs text-amber-300 text-center"
+                                >
+                                  ${translateText("game_settings.bots_high_warning")}
+                                </p>`
+                              : nothing
+                          }
+                        </div>
+                      </div>
+
+                      ${
+                        settings.options.nations &&
+                        !settings.options.nations.hidden
+                          ? html`<div
+                              class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${
+                                settings.options.nations.value > 0
+                                  ? ACTIVE_CARD
+                                  : INACTIVE_CARD
+                              }"
+                            >
+                              <fluent-slider
+                                min="0"
+                                max="400"
+                                step="1"
+                                .value=${settings.options.nations.value}
+                                .defaultValue=${settings.options.nations.defaultValue}
+                                defaultLabelKey="common.map_default"
+                                labelKey=${settings.options.nations.labelKey}
+                                disabledKey=${settings.options.nations.disabledKey}
+                                @value-changed=${this.handleNationsChanged}
+                              ></fluent-slider>
+                            </div>`
+                          : nothing
+                      }
+                      ${settings.options.toggles.map((toggle) =>
+                        this.renderOptionToggle(toggle),
+                      )}
+                      ${settings.options.inputCards}
+                    </div>
+                  `,
+                )}
+                ${
+                  settings.hostCheats?.visible
+                    ? renderSection(
+                        HOST_CHEATS_ICON,
+                        "text-yellow-400",
+                        "bg-yellow-500/20",
+                        settings.hostCheats.titleKey,
+                        html`
+                          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            ${settings.hostCheats.toggles.map((toggle) =>
+                              renderTextCardButton(
+                                translateText(toggle.labelKey),
+                                toggle.checked,
+                                () => this.handleHostCheatToggle(toggle),
+                                "p-4 text-center",
+                              ),
+                            )}
+                            ${settings.hostCheats.inputCards}
+                          </div>
+                        `,
+                      )
+                    : nothing
+                }
+                ${renderSection(
+                  ENABLES_ICON,
+                  "text-teal-400",
+                  "bg-teal-500/20",
+                  settings.unitTypes.titleKey,
+                  html`
+                    <div
+                      class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
+                    >
+                      ${this.renderUnitTypeOptions(settings.unitTypes.disabledUnits)}
+                    </div>
+                  `,
+                  "space-y-6 pb-6",
+                )}
+              </div>`
             : nothing
         }
-        ${renderSection(
-          ENABLES_ICON,
-          "text-teal-400",
-          "bg-teal-500/20",
-          settings.unitTypes.titleKey,
-          html`
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              ${this.renderUnitTypeOptions(settings.unitTypes.disabledUnits)}
-            </div>
-          `,
-          "space-y-6 pb-6",
-        )}
       </div>
     `;
   }
