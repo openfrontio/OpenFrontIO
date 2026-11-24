@@ -6,19 +6,29 @@
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
  * HUD layers as in game. Resizing the map rebuilds the engine. Its tools
- * so far are the terrain and territory brushes and the nations panel.
+ * are the terrain and territory brushes, the units tool, the nations panel
+ * and the settings panel.
  */
 
 import { SetNationCommandSchema } from "@openfront/engine-api/EditorCommands";
 import type { GameMap } from "@openfront/engine-api/game/GameMap";
-import { Cell, GameMapSize } from "@openfront/engine-api/game/GameTypes";
+import {
+  Cell,
+  Difficulty,
+  GameMapSize,
+  Structures,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
 import { Config } from "@openfront/engine-lib/configuration/Config";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  type DoomsdayClockSpeed,
+} from "@openfront/engine-lib/game/DoomsdayClock";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { EventBus } from "@openfront/shared/EventBus";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
-import { generateID } from "@openfront/shared/SharedUtil";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
@@ -58,15 +68,20 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  allianceIndex,
+  alliancesAllowed,
   IMPASSABLE,
   isScenarioSize,
   land,
   MAX_NATIONS,
   MAX_SIDE,
+  MAX_WARSHIPS,
   MAX_ELEVATION,
   newNation,
   newScenarioDocument,
   resizeScenarioDocument,
+  type ScenarioConfig,
+  ScenarioConfigSchema,
   type ScenarioDocument,
   type ScenarioNation,
   WATER,
@@ -74,24 +89,100 @@ import {
 import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
 import { exportScenario } from "./ScenarioExport";
+import {
+  createScenario,
+  listMyScenarios,
+  loadScenarioDocument,
+  moveDraftToAccount,
+  type MyScenario,
+  publishScenarioVersion,
+  type ScenarioApiError,
+  ScenarioSaver,
+} from "./ScenariosApi";
 import { scenarioGameStart } from "./ScenarioStart";
 import {
   type BrushStroke,
   TerrainStroke,
   TerritoryStroke,
 } from "./TerrainBrush";
+import { unitClick, type UnitPick, type UnitProblem } from "./UnitTool";
 
 const WHEEL_ZOOM = 1.0015;
 const MAX_BRUSH_RADIUS = 50;
 /** How far, in CSS px, a finger moves before its touch is a stroke. */
 const TOUCH_SLOP = 8;
 
-type Tool = "pan" | "terrain" | "territory";
+type Tool = "pan" | "terrain" | "territory" | "units";
 type TerrainKind = "water" | "land" | "impassable";
 type NationFields = Omit<Extract<Edit, { type: "set_nation" }>, "type" | "id">;
 
+/** How far from a unit, in CSS px, a click still hits it. */
+const UNIT_REACH = 10;
+const MAX_STRUCTURE_LEVEL = 100;
+
+const UNIT_NAMES: Record<UnitPick, string> = {
+  [UnitType.City]: "unit_type.city",
+  [UnitType.DefensePost]: "unit_type.defense_post",
+  [UnitType.SAMLauncher]: "unit_type.sam_launcher",
+  [UnitType.MissileSilo]: "unit_type.missile_silo",
+  [UnitType.Port]: "unit_type.port",
+  [UnitType.Factory]: "unit_type.factory",
+  [UnitType.Warship]: "unit_type.warship",
+};
+
+const UNIT_PROBLEMS: Record<UnitProblem, string> = {
+  disabled: "scenario_editor.unit_disabled",
+  unowned: "scenario_editor.structure_unowned",
+  no_shore: "scenario_editor.structure_no_shore",
+  no_nation: "scenario_editor.warship_no_nation",
+  land: "scenario_editor.warship_land",
+  too_many: "scenario_editor.warship_too_many",
+};
+
+/** The units the settings can disable, as the lobby's settings list them. */
+const DISABLEABLE_UNITS: [UnitType, string][] = [
+  [UnitType.City, "unit_type.city"],
+  [UnitType.DefensePost, "unit_type.defense_post"],
+  [UnitType.Port, "unit_type.port"],
+  [UnitType.Warship, "unit_type.warship"],
+  [UnitType.TransportShip, "unit_type.boat"],
+  [UnitType.MissileSilo, "unit_type.missile_silo"],
+  [UnitType.SAMLauncher, "unit_type.sam_launcher"],
+  [UnitType.AtomBomb, "unit_type.atom_bomb"],
+  [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
+  [UnitType.MIRV, "unit_type.mirv"],
+  [UnitType.Factory, "unit_type.factory"],
+];
+
+/** The game's alliance duration in minutes, when the settings don't set one. */
+const DEFAULT_ALLIANCE_MINUTES = 5;
+
+/** What a settings change removed from the scenario, to say so. */
+type SettingsRemoved = {
+  structures: number;
+  warships: number;
+  alliances: number;
+};
+
 /** The flags a nation can take, as the flag picker lists them. */
 const FLAGS = Countries.filter((c) => c.code !== "xx" && c.restricted !== true);
+
+const API_ERRORS: Record<ScenarioApiError, string> = {
+  unauthorized: "scenario_editor.error_unauthorized",
+  entitlement: "scenario_editor.error_entitlement",
+  limit: "scenario_editor.error_limit",
+  conflict: "scenario_editor.error_conflict",
+  rejected: "scenario_editor.error_rejected",
+  not_found: "scenario_editor.draft_not_found",
+  request_failed: "scenario_editor.error_request_failed",
+};
+
+function apiErrorText(error: ScenarioApiError): string {
+  return translateText(API_ERRORS[error]);
+}
+
+/** A new scenario's width and height until the author picks others. */
+const DEFAULT_SIDE = 1000;
 
 /** Copies of the files' maps: the client and the worker each take theirs. */
 function copyMapFiles(files: MapFiles): MapFiles {
@@ -118,10 +209,17 @@ export class ScenarioEditor extends LitElement {
 
   @state() private status: "start" | "loading" | "ready" | "error" = "start";
   @state() private error = "";
-  @state() private drafts: DraftInfo[] = [];
+  /** The account's scenarios. */
+  @state() private drafts: MyScenario[] = [];
+  /** Why the account's scenarios couldn't be listed. */
+  @state() private listError = "";
+  /** Drafts kept in this browser before they were saved to the API. */
+  @state() private localDrafts: DraftInfo[] = [];
+  /** The local draft being moved to the account. */
+  @state() private moving: string | null = null;
   @state() private name = "";
-  @state() private width = 1000;
-  @state() private height = 1000;
+  @state() private width = DEFAULT_SIDE;
+  @state() private height = DEFAULT_SIDE;
   @state() private stockMap = "";
   /** The picked stock map's size, once its manifest is in. */
   @state() private stockSize: { width: number; height: number } | null = null;
@@ -131,19 +229,36 @@ export class ScenarioEditor extends LitElement {
   @state() private elevation = 0;
   /** In tiles; 0 paints one tile. */
   @state() private brushRadius = 2;
+  @state() private unitType: UnitPick = UnitType.City;
+  @state() private structureLevel = 1;
+  /** Why the units tool's last click placed nothing. */
+  @state() private unitProblem: UnitProblem | null = null;
   /**
    * The nation picked in the nations panel, which the territory brush
-   * paints; null, or a nation since removed, erases.
+   * paints (null, or a nation since removed, erases) and the units tool
+   * places warships for.
    */
   @state() private nationId: string | null = null;
   /** The Play button's menu: the nations to play as, or why there are none. */
   @state() private playMenu = false;
-  /** A test game is being exported and started. */
+  @state() private settingsOpen = false;
+  /** What the last settings change removed, if anything. */
+  @state() private settingsRemoved: SettingsRemoved | null = null;
+  /**
+   * A test game is being exported and started, or a version exported and
+   * published: the export reads the document, which mustn't change meanwhile.
+   */
   @state() private starting = false;
+  @state() private publishing = false;
+  /** The version this session last published. */
+  @state() private publishedVersion: number | null = null;
 
   @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
   private editor: DocumentEditor | null = null;
+  /** The document the session started from: saved until it has an editor. */
+  private sessionDoc: ScenarioDocument | null = null;
+  private saver: ScenarioSaver | null = null;
   private session: Session | null = null;
   private camera: ReplayCamera | null = null;
   private gestures: CameraGestures | null = null;
@@ -161,6 +276,12 @@ export class ScenarioEditor extends LitElement {
      */
     confirmed: boolean;
   } | null = null;
+  /**
+   * The units tool's press, which places or removes on release unless
+   * it moved (a drag pans) or a second finger came (a pinch).
+   */
+  private pendingClick: { pointerId: number; x: number; y: number } | null =
+    null;
   /** Where the pointer is over the map, in CSS px; null when off it. */
   private hover: { x: number; y: number } | null = null;
   /** Sends pointer moves to the HUD (InputHandler does this in game). */
@@ -176,6 +297,14 @@ export class ScenarioEditor extends LitElement {
     window.addEventListener("keydown", (e) => this.onKey(e), {
       signal: this.abort.signal,
     });
+    // Saves wait a few seconds after an edit: leaving before one asks first.
+    window.addEventListener(
+      "beforeunload",
+      (e) => {
+        if (this.saver?.pending()) e.preventDefault();
+      },
+      { signal: this.abort.signal },
+    );
     if (this.draftId !== null) {
       void this.openDraft(this.draftId);
     } else {
@@ -186,33 +315,85 @@ export class ScenarioEditor extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.abort.abort();
+    void this.saver?.flush();
     this.endSession();
   }
 
   private async listDrafts(): Promise<void> {
-    try {
-      this.drafts = await scenarioDrafts.list();
-    } catch (e) {
-      console.error("scenario editor: listing drafts failed:", e);
+    const [mine, local] = await Promise.all([
+      listMyScenarios(),
+      scenarioDrafts.list().catch((e: unknown) => {
+        console.error("scenario editor: listing local drafts failed:", e);
+        return [];
+      }),
+    ]);
+    if (typeof mine === "string") {
+      this.drafts = [];
+      this.listError = apiErrorText(mine);
+    } else {
+      this.drafts = mine;
+      this.listError = "";
     }
+    this.localDrafts = local;
+  }
+
+  /** Moves a draft from this browser to the account, then lists both again. */
+  private async moveDraft(id: string): Promise<void> {
+    if (this.moving !== null) return;
+    this.moving = id;
+    try {
+      const moved = await moveDraftToAccount(id);
+      if (typeof moved === "string") void showInGameAlert(apiErrorText(moved));
+    } catch (e) {
+      console.error("scenario editor: moving the draft failed:", e);
+      void showInGameAlert(translateText("scenario_editor.move_failed"));
+    } finally {
+      this.moving = null;
+    }
+    await this.listDrafts();
   }
 
   private async openDraft(id: string): Promise<void> {
     this.status = "loading";
     try {
-      const doc = await scenarioDrafts.load(id);
+      const loaded = await loadScenarioDocument(id);
       // Removed meanwhile (a lobby join): leave the URL and engine alone.
       if (this.abort.signal.aborted) return;
-      if (doc === undefined) {
-        this.fail(translateText("scenario_editor.draft_not_found"));
+      if (typeof loaded === "string") {
+        this.fail(apiErrorText(loaded));
+        return;
+      }
+      const doc = loaded ?? (await this.blankDraft(id));
+      if (this.abort.signal.aborted) return;
+      if (typeof doc === "string") {
+        this.fail(apiErrorText(doc));
         return;
       }
       this.setDraft(id);
-      await this.startSession(doc);
+      const session = this.startSession(doc);
+      if (loaded === null) this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: opening the draft failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
     }
+  }
+
+  /**
+   * A blank document for a draft whose first save never landed (the tab
+   * closed first), under the draft's name and description.
+   */
+  private async blankDraft(
+    id: string,
+  ): Promise<ScenarioDocument | ScenarioApiError> {
+    // Not a fallback name: saving the blank would rename the draft.
+    const mine = await listMyScenarios();
+    if (typeof mine === "string") return mine;
+    const scenario = mine.find((s) => s.id === id);
+    if (scenario === undefined) return "not_found";
+    // Not the create form's size, which may be half typed.
+    const doc = newScenarioDocument(scenario.name, DEFAULT_SIDE, DEFAULT_SIDE);
+    return { ...doc, meta: { ...doc.meta, description: scenario.description } };
   }
 
   private async createBlank(): Promise<void> {
@@ -232,18 +413,26 @@ export class ScenarioEditor extends LitElement {
     );
   }
 
-  /** Saves a new draft, names it in the URL and opens it. */
+  /**
+   * Creates a new draft on the API, names it in the URL and opens it. Its
+   * document saves as edits do, so a save that fails can be retried.
+   */
   private async create(
     begin: () => Promise<{ doc: ScenarioDocument; files?: MapFiles }>,
   ): Promise<void> {
     this.status = "loading";
     try {
       const { doc, files } = await begin();
-      const id = generateID();
-      await scenarioDrafts.save(id, doc);
+      const created = await createScenario(doc.meta);
       if (this.abort.signal.aborted) return;
-      this.setDraft(id);
-      await this.startSession(doc, files);
+      if (typeof created === "string") {
+        this.fail(apiErrorText(created));
+        return;
+      }
+      this.setDraft(created.id);
+      const session = this.startSession(doc, files);
+      this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: creating the draft failed:", e);
       this.fail(translateText("scenario_editor.create_failed"));
@@ -256,6 +445,11 @@ export class ScenarioEditor extends LitElement {
 
   private setDraft(id: string): void {
     this.draftId = id;
+    this.saver = new ScenarioSaver(
+      id,
+      () => this.editor?.doc ?? this.sessionDoc,
+      () => this.requestUpdate(),
+    );
     history.replaceState(
       history.state,
       "",
@@ -297,9 +491,10 @@ export class ScenarioEditor extends LitElement {
     this.status = "loading";
     try {
       const resized = resizeScenarioDocument(doc, this.width, this.height);
-      await scenarioDrafts.save(id, resized);
-      if (this.abort.signal.aborted) return;
-      await this.startSession(resized);
+      const session = this.startSession(resized);
+      // Saved from sessionDoc if the editor closes before the session starts.
+      this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: resizing failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
@@ -315,17 +510,13 @@ export class ScenarioEditor extends LitElement {
     if (redo ? !editor.canRedo() : !editor.canUndo()) return;
     if (redo) editor.redo();
     else editor.undo();
+    this.settingsRemoved = null;
     this.saveDraft();
     this.requestUpdate();
   }
 
   private saveDraft(): void {
-    const editor = this.editor;
-    const id = this.draftId;
-    if (editor === null || id === null) return;
-    void scenarioDrafts.save(id, editor.doc).catch((e: unknown) => {
-      console.error("scenario editor: saving the draft failed:", e);
-    });
+    this.saver?.changed();
   }
 
   // ---- Nations ----
@@ -343,6 +534,9 @@ export class ScenarioEditor extends LitElement {
     if (editor === null || this.status !== "ready" || this.starting) return;
     // A stroke still open ends first, as its own step.
     this.endStroke();
+    // Undo would now take back this edit, not the settings change the note
+    // describes. setSetting sets the note again after its own edit.
+    this.settingsRemoved = null;
     editor.apply(edit);
     editor.commit();
     this.saveDraft();
@@ -409,6 +603,58 @@ export class ScenarioEditor extends LitElement {
     const playable = this.doc?.nations.filter((n) => n.playable) ?? [];
     if (playable.length === 1) void this.testPlay(playable[0].id);
     else this.playMenu = !this.playMenu;
+    // The two open in the same place.
+    if (this.playMenu) this.settingsOpen = false;
+  }
+
+  // ---- Settings ----
+
+  private toggleSettings(): void {
+    this.settingsOpen = !this.settingsOpen;
+    this.settingsRemoved = null;
+    if (this.settingsOpen) this.playMenu = false;
+  }
+
+  /**
+   * Sets one setting, or with `undefined` leaves it to the game's default,
+   * as one undo step. A value that changes nothing or that the schema
+   * rejects puts the input back. The edit removes what the new settings
+   * don't allow, and the panel says how much.
+   */
+  private setSetting<K extends keyof ScenarioConfig>(
+    key: K,
+    value: ScenarioConfig[K] | undefined,
+  ): void {
+    const doc = this.doc;
+    if (doc === null) return;
+    const config: ScenarioConfig = { ...doc.config, [key]: value };
+    if (value === undefined) delete config[key];
+    if (
+      JSON.stringify(value) === JSON.stringify(doc.config[key]) ||
+      !ScenarioConfigSchema.safeParse(config).success
+    ) {
+      this.requestUpdate();
+      return;
+    }
+    const before = this.counts(doc);
+    this.applyEdit({ type: "set_config", config });
+    const after = this.counts(doc);
+    const removed = {
+      structures: before.structures - after.structures,
+      warships: before.warships - after.warships,
+      alliances: before.alliances - after.alliances,
+    };
+    this.settingsRemoved = Object.values(removed).some((n) => n > 0)
+      ? removed
+      : null;
+  }
+
+  private counts(doc: ScenarioDocument): SettingsRemoved {
+    return {
+      structures: doc.structures.length,
+      warships: doc.warships.length,
+      alliances: doc.alliances.length,
+    };
   }
 
   /**
@@ -421,13 +667,20 @@ export class ScenarioEditor extends LitElement {
     const editor = this.editor;
     const worker = this.session?.worker ?? null;
     const id = this.draftId;
-    if (editor === null || worker === null || id === null) return;
+    const saver = this.saver;
+    if (editor === null || worker === null || id === null || saver === null) {
+      return;
+    }
     if (this.status !== "ready" || this.starting) return;
     this.endStroke();
     this.playMenu = false;
     this.starting = true;
     try {
-      await scenarioDrafts.save(id, editor.doc);
+      const unsaved = await saver.flush();
+      if (unsaved !== null) {
+        void showInGameAlert(apiErrorText(unsaved));
+        return;
+      }
       const bundle = await exportScenario(
         editor.doc,
         (c) => worker.editorCommand(c),
@@ -460,6 +713,64 @@ export class ScenarioEditor extends LitElement {
     }
   }
 
+  // ---- Publish ----
+
+  /**
+   * Saves the draft, then exports it and publishes it as the next version.
+   * The API numbers versions from 1 and takes only the next one, which the
+   * bundle's header names.
+   */
+  private async publish(): Promise<void> {
+    const editor = this.editor;
+    const worker = this.session?.worker ?? null;
+    const id = this.draftId;
+    const saver = this.saver;
+    if (editor === null || worker === null || id === null || saver === null) {
+      return;
+    }
+    if (this.status !== "ready" || this.starting) return;
+    this.endStroke();
+    this.playMenu = false;
+    this.starting = true;
+    this.publishing = true;
+    try {
+      const unsaved = await saver.flush();
+      if (unsaved !== null) {
+        void showInGameAlert(apiErrorText(unsaved));
+        return;
+      }
+      const mine = await listMyScenarios();
+      if (typeof mine === "string") {
+        void showInGameAlert(apiErrorText(mine));
+        return;
+      }
+      const scenario = mine.find((s) => s.id === id);
+      if (scenario === undefined) {
+        void showInGameAlert(apiErrorText("not_found"));
+        return;
+      }
+      const version = (scenario.latestVersion ?? 0) + 1;
+      const bundle = await exportScenario(
+        editor.doc,
+        (c) => worker.editorCommand(c),
+        { scenario: { id, version }, gitCommit: ClientEnv.gitCommit() },
+      );
+      const published = await publishScenarioVersion(id, bundle);
+      if (this.abort.signal.aborted) return;
+      if (typeof published === "string") {
+        void showInGameAlert(apiErrorText(published));
+        return;
+      }
+      this.publishedVersion = published.version;
+    } catch (e) {
+      console.error("scenario editor: publishing failed:", e);
+      void showInGameAlert(translateText("scenario_editor.publish_failed"));
+    } finally {
+      this.starting = false;
+      this.publishing = false;
+    }
+  }
+
   // ---- The engine and the view ----
 
   /**
@@ -473,6 +784,7 @@ export class ScenarioEditor extends LitElement {
   ): Promise<void> {
     this.endSession();
     this.status = "loading";
+    this.sessionDoc = doc;
     this.doc = null;
     this.editor = null;
     this.width = doc.width;
@@ -552,6 +864,8 @@ export class ScenarioEditor extends LitElement {
     if (send === null || signal.aborted) return;
 
     this.editor = new DocumentEditor(doc, send);
+    // The new editor has no undo history to bring removed content back.
+    this.settingsRemoved = null;
     this.doc = doc;
     this.status = "ready";
     if (overlay !== null && gameView !== null) {
@@ -665,6 +979,7 @@ export class ScenarioEditor extends LitElement {
     session.worker?.cleanup();
     // A stroke still open is dropped with the editor it paints through.
     this.stroke = null;
+    this.pendingClick = null;
     this.camera = null;
     this.gestures = null;
     // The overlay listens on the bus; a new one leaves the old listeners.
@@ -675,6 +990,7 @@ export class ScenarioEditor extends LitElement {
 
   // With a brush tool, the primary button or a single finger paints.
   // The other buttons and two fingers move the camera, as in pan mode.
+  // With the units tool, a click places or removes and a drag pans.
 
   private onPointerDown(e: PointerEvent): void {
     const el = e.currentTarget as HTMLElement;
@@ -689,6 +1005,12 @@ export class ScenarioEditor extends LitElement {
       if (stroke.confirmed) this.endStroke();
       else this.stroke = null;
       this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
+    } else if (this.tool === "units") {
+      // A second finger makes the first one's press a pinch.
+      this.pendingClick =
+        e.button === 0 && this.gestures?.active === false
+          ? { pointerId: e.pointerId, x, y }
+          : null;
     } else if (
       this.tool !== "pan" &&
       e.button === 0 &&
@@ -713,6 +1035,7 @@ export class ScenarioEditor extends LitElement {
     if (editor === null || this.status !== "ready" || this.starting) {
       return false;
     }
+    this.settingsRemoved = null;
     const terrain =
       this.terrainKind === "water"
         ? WATER
@@ -763,6 +1086,13 @@ export class ScenarioEditor extends LitElement {
   private onPointerMove(e: PointerEvent): void {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     this.hover = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const click = this.pendingClick;
+    if (
+      click?.pointerId === e.pointerId &&
+      Math.hypot(this.hover.x - click.x, this.hover.y - click.y) > TOUCH_SLOP
+    ) {
+      this.pendingClick = null;
+    }
     const stroke = this.stroke;
     if (stroke?.pointerId === e.pointerId) {
       if ((e.buttons & 1) !== 0) {
@@ -792,6 +1122,7 @@ export class ScenarioEditor extends LitElement {
   }
 
   private onPointerCancel(e: PointerEvent): void {
+    this.pendingClick = null;
     // A cancelled touch, as palm rejection sends, is not a lift: if it
     // hasn't painted yet, it paints nothing.
     if (this.stroke?.pointerId === e.pointerId && !this.stroke.confirmed) {
@@ -802,9 +1133,40 @@ export class ScenarioEditor extends LitElement {
 
   private onPointerUp(e: PointerEvent): void {
     if (this.stroke?.pointerId === e.pointerId) this.endStroke();
+    const click = this.pendingClick;
+    if (click?.pointerId === e.pointerId) {
+      this.pendingClick = null;
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      this.clickUnit(click.x, click.y, rect);
+    }
     this.gestures?.up(e.pointerId);
     // A finger lifted leaves nothing to preview the brush under.
     if (e.pointerType !== "mouse") this.hover = null;
+  }
+
+  /** The units tool's click at (x, y): places or removes a unit. */
+  private clickUnit(x: number, y: number, rect: DOMRect): void {
+    const doc = this.doc;
+    const camera = this.camera;
+    if (doc === null || camera === null) return;
+    const world = camera.worldAt(x, y, rect.width, rect.height);
+    const tx = Math.floor(world.x);
+    const ty = Math.floor(world.y);
+    if (tx < 0 || ty < 0 || tx >= doc.width || ty >= doc.height) return;
+    const result = unitClick(
+      doc,
+      ty * doc.width + tx,
+      this.placedType(doc),
+      this.structureLevel,
+      this.selectedNation()?.id ?? null,
+      UNIT_REACH / camera.zoom,
+    );
+    if (typeof result === "string") {
+      this.unitProblem = result;
+      return;
+    }
+    this.unitProblem = null;
+    this.applyEdit(result);
   }
 
   private setBrushRadius(radius: number): void {
@@ -827,8 +1189,10 @@ export class ScenarioEditor extends LitElement {
     // The centre tile's centre, on screen; the disc reaches radius + 0.5.
     const cx = (Math.floor(world.x) + 0.5 - camera.x) * camera.zoom + w / 2;
     const cy = (Math.floor(world.y) + 0.5 - camera.y) * camera.zoom + h / 2;
-    // A stroke keeps the radius it started with.
-    const radius = this.stroke?.brush.radius ?? this.brushRadius;
+    // A stroke keeps the radius it started with. A unit takes a tile.
+    const radius =
+      this.stroke?.brush.radius ??
+      (this.tool === "units" ? 0 : this.brushRadius);
     const size = (2 * radius + 1) * camera.zoom;
     el.style.display = "block";
     el.style.left = `${cx - size / 2}px`;
@@ -985,6 +1349,11 @@ export class ScenarioEditor extends LitElement {
         ${translateText("scenario_editor.title")}
       </h1>
       ${
+        this.listError !== ""
+          ? html`<p class="mb-4 text-sm text-red-400">${this.listError}</p>`
+          : nothing
+      }
+      ${
         this.drafts.length > 0
           ? html`
               <h2 class="mb-2 font-semibold">
@@ -1000,8 +1369,48 @@ export class ScenarioEditor extends LitElement {
                       >
                         ${d.name}
                         <span class="text-sm text-zinc-400">
-                          ${new Date(d.savedAt).toLocaleString()}
+                          ${
+                            d.latestVersion === null
+                              ? translateText("scenario_editor.unpublished")
+                              : translateText("scenario_editor.version", {
+                                  version: d.latestVersion,
+                                })
+                          }
                         </span>
+                      </button>
+                    </li>
+                  `,
+                )}
+              </ul>
+            `
+          : nothing
+      }
+      ${
+        this.localDrafts.length > 0
+          ? html`
+              <h2 class="mb-1 font-semibold">
+                ${translateText("scenario_editor.local_drafts")}
+              </h2>
+              <p class="mb-2 text-sm text-zinc-400">
+                ${translateText("scenario_editor.local_drafts_hint")}
+              </p>
+              <ul class="mb-4 flex flex-col gap-1">
+                ${this.localDrafts.map(
+                  (d) => html`
+                    <li
+                      class="flex items-center gap-2 rounded bg-zinc-800 px-3 py-2"
+                    >
+                      <span class="min-w-0 flex-1 truncate">${d.name}</span>
+                      <button
+                        class=${button}
+                        ?disabled=${this.moving !== null}
+                        @click=${() => void this.moveDraft(d.id)}
+                      >
+                        ${translateText(
+                          this.moving === d.id
+                            ? "scenario_editor.moving"
+                            : "scenario_editor.move_to_account",
+                        )}
                       </button>
                     </li>
                   `,
@@ -1094,14 +1503,44 @@ export class ScenarioEditor extends LitElement {
         >
           ${translateText("scenario_editor.resize")}
         </button>
+        ${this.renderSaveState()}
         <button
-          class="${button} ml-auto"
+          class=${button}
+          aria-expanded=${this.settingsOpen}
+          @click=${() => this.toggleSettings()}
+        >
+          ${translateText("scenario_editor.settings")}
+        </button>
+        <button
+          class=${button}
           aria-expanded=${this.playMenu}
           ?disabled=${this.starting}
           @click=${() => this.onPlay()}
         >
           ${translateText(
-            this.starting ? "scenario_editor.starting" : "scenario_editor.play",
+            this.starting && !this.publishing
+              ? "scenario_editor.starting"
+              : "scenario_editor.play",
+          )}
+        </button>
+        ${
+          this.publishedVersion !== null
+            ? html`<span class="text-sm text-green-400">
+                ${translateText("scenario_editor.published", {
+                  version: this.publishedVersion,
+                })}
+              </span>`
+            : nothing
+        }
+        <button
+          class=${button}
+          ?disabled=${this.starting}
+          @click=${() => void this.publish()}
+        >
+          ${translateText(
+            this.publishing
+              ? "scenario_editor.publishing"
+              : "scenario_editor.publish",
           )}
         </button>
         <a class=${button} href=${homeHref()}>
@@ -1109,7 +1548,35 @@ export class ScenarioEditor extends LitElement {
         </a>
       </div>
       ${this.playMenu ? this.renderPlayMenu() : nothing}
+      ${this.settingsOpen ? this.renderSettings() : nothing}
     `;
+  }
+
+  /** Whether the draft is saved, and why not if a save failed. */
+  private renderSaveState() {
+    const saver = this.saver;
+    if (saver === null) return nothing;
+    const error = saver.error;
+    if (error !== null) {
+      return html`
+        <span class="ml-auto text-sm text-red-400">
+          ${translateText("scenario_editor.save_failed", {
+            error: apiErrorText(error),
+          })}
+        </span>
+        <button
+          class="rounded bg-zinc-700 px-3 py-1 hover:bg-zinc-600"
+          @click=${() => void saver.flush()}
+        >
+          ${translateText("scenario_editor.retry")}
+        </button>
+      `;
+    }
+    return html`<span class="ml-auto text-sm text-zinc-400">
+      ${translateText(
+        saver.pending() ? "scenario_editor.saving" : "scenario_editor.saved",
+      )}
+    </span>`;
   }
 
   /** The playable nations to test play as, or why there are none. */
@@ -1150,6 +1617,228 @@ export class ScenarioEditor extends LitElement {
     `;
   }
 
+  /** The game settings, the lobby's options less what a scenario fixes. */
+  private renderSettings() {
+    const config = this.doc!.config;
+    const input = "rounded bg-zinc-800 px-2 py-1 text-white";
+    const target = (e: Event) => e.target as HTMLInputElement;
+    const check = (
+      key:
+        | "instantBuild"
+        | "infiniteGold"
+        | "infiniteTroops"
+        | "donateGold"
+        | "donateTroops",
+      label: string,
+    ) =>
+      html`<label class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          .checked=${live(config[key])}
+          @change=${(e: Event) => this.setSetting(key, target(e).checked)}
+        />
+        ${translateText(label)}
+      </label>`;
+    const disabled = config.disabledUnits ?? [];
+    const doomsday = config.doomsdayClock?.enabled === true;
+    const overtime = config.overtime?.enabled === true;
+    return html`
+      <!-- Inert while a test play starts, as the nations panel is. Above
+           the nations panel, which it overlaps on a narrow screen. -->
+      <div
+        class="absolute top-14 left-1/2 z-10 flex max-h-[calc(100%-4.5rem)] w-72 -translate-x-1/2 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        ?inert=${this.starting}
+      >
+        <h2 class="font-semibold">
+          ${translateText("scenario_editor.settings")}
+        </h2>
+        ${
+          this.settingsRemoved === null
+            ? nothing
+            : html`<p class="text-amber-300" role="status">
+                ${translateText(
+                  "scenario_editor.settings_removed",
+                  this.settingsRemoved,
+                )}
+              </p>`
+        }
+        <label class="flex flex-col gap-1">
+          ${translateText("difficulty.difficulty")}
+          <select
+            class=${input}
+            @change=${(e: Event) =>
+              this.setSetting(
+                "difficulty",
+                (e.target as HTMLSelectElement).value as Difficulty,
+              )}
+          >
+            ${Object.values(Difficulty).map(
+              (d) =>
+                html`<option value=${d} .selected=${d === config.difficulty}>
+                  ${translateText(`difficulty.${d.toLowerCase()}`)}
+                </option>`,
+            )}
+          </select>
+        </label>
+        ${check("instantBuild", "game_settings.instant_build")}
+        ${check("infiniteGold", "game_settings.infinite_gold")}
+        ${check("infiniteTroops", "game_settings.infinite_troops")}
+        ${check("donateGold", "host_modal.donate_gold")}
+        ${check("donateTroops", "host_modal.donate_troops")}
+        <label class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            .checked=${live(config.waterNukes === true)}
+            @change=${(e: Event) =>
+              this.setSetting("waterNukes", target(e).checked || undefined)}
+          />
+          ${translateText("game_settings.water_nukes")}
+        </label>
+        <div class="flex items-center gap-2">
+          <label class="flex flex-1 items-center gap-2">
+            <input
+              type="checkbox"
+              .checked=${live(doomsday)}
+              @change=${(e: Event) =>
+                this.setSetting(
+                  "doomsdayClock",
+                  target(e).checked
+                    ? { enabled: true, speed: "normal" }
+                    : undefined,
+                )}
+            />
+            ${translateText("game_settings.doomsday_clock")}
+          </label>
+          ${
+            doomsday
+              ? html`<select
+                  class=${input}
+                  @change=${(e: Event) =>
+                    this.setSetting("doomsdayClock", {
+                      enabled: true,
+                      speed: (e.target as HTMLSelectElement)
+                        .value as DoomsdayClockSpeed,
+                    })}
+                >
+                  ${DOOMSDAY_CLOCK_SPEEDS.map(
+                    (speed) =>
+                      html`<option
+                        value=${speed}
+                        .selected=${
+                          speed === (config.doomsdayClock?.speed ?? "normal")
+                        }
+                      >
+                        ${translateText(`doomsday_clock_speed.${speed}`)}
+                      </option>`,
+                  )}
+                </select>`
+              : nothing
+          }
+        </div>
+        ${this.numberSetting(
+          "game_settings.max_timer",
+          config.maxTimerValue ?? undefined,
+          { min: 1, max: 120, step: "1", start: 30 },
+          (v) => this.setSetting("maxTimerValue", v),
+        )}
+        ${this.numberSetting(
+          "game_settings.gold_multiplier",
+          config.goldMultiplier ?? undefined,
+          { min: 0.1, max: 1000, step: "any", start: 2 },
+          (v) => this.setSetting("goldMultiplier", v),
+        )}
+        ${this.numberSetting(
+          "game_settings.custom_alliances",
+          config.customAllianceDuration ?? undefined,
+          { min: 0, max: 15, step: "1", start: DEFAULT_ALLIANCE_MINUTES },
+          (v) => this.setSetting("customAllianceDuration", v),
+        )}
+        ${
+          config.customAllianceDuration === 0
+            ? html`<p class="text-zinc-400">
+                ${translateText("public_game_modifier.disable_alliances")}
+              </p>`
+            : nothing
+        }
+        ${this.numberSetting(
+          "game_settings.overtime",
+          overtime ? config.overtime?.startMinutes : undefined,
+          { min: 1, max: 120, step: "1", start: 30 },
+          (v) =>
+            this.setSetting(
+              "overtime",
+              v === undefined ? undefined : { enabled: true, startMinutes: v },
+            ),
+          // Enabled with no start minute set: the game's default.
+          overtime,
+        )}
+        <div class="flex flex-col gap-1 border-t border-zinc-700 pt-2">
+          ${translateText("game_settings.disable_units")}
+          ${DISABLEABLE_UNITS.map(
+            ([type, label]) =>
+              html`<label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  .checked=${live(disabled.includes(type))}
+                  @change=${(e: Event) => {
+                    const units = disabled.filter((u) => u !== type);
+                    if (target(e).checked) units.push(type);
+                    this.setSetting(
+                      "disabledUnits",
+                      units.length > 0 ? units : undefined,
+                    );
+                  }}
+                />
+                ${translateText(label)}
+              </label>`,
+          )}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * A setting that is either the game's default or a number: a checkbox
+   * that sets it, to `start`, or clears it, and the number beside it.
+   */
+  private numberSetting(
+    label: string,
+    value: number | undefined,
+    range: { min: number; max: number; step: string; start: number },
+    set: (value: number | undefined) => void,
+    on = value !== undefined,
+  ) {
+    return html`
+      <div class="flex items-center gap-2">
+        <label class="flex flex-1 items-center gap-2">
+          <input
+            type="checkbox"
+            .checked=${live(on)}
+            @change=${(e: Event) =>
+              set(
+                (e.target as HTMLInputElement).checked
+                  ? range.start
+                  : undefined,
+              )}
+          />
+          ${translateText(label)}
+        </label>
+        <input
+          type="number"
+          min=${range.min}
+          max=${range.max}
+          step=${range.step}
+          class="w-20 rounded bg-zinc-800 px-2 py-1 text-white disabled:opacity-50"
+          aria-label=${translateText(label)}
+          ?disabled=${!on}
+          .value=${live(on ? String(value ?? range.start) : "")}
+          @change=${(e: Event) =>
+            set((e.target as HTMLInputElement).valueAsNumber)}
+        />
+      </div>
+    `;
+  }
+
   private renderTools() {
     const editor = this.editor!;
     const button =
@@ -1171,10 +1860,11 @@ export class ScenarioEditor extends LitElement {
         class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
         ?inert=${this.starting}
       >
-        <div class="flex gap-1">
+        <div class="grid grid-cols-2 gap-1">
           ${tool("pan", "scenario_editor.tool_pan")}
           ${tool("terrain", "scenario_editor.tool_terrain")}
           ${tool("territory", "scenario_editor.tool_territory")}
+          ${tool("units", "scenario_editor.tool_units")}
         </div>
         <div class="flex gap-1">
           <button
@@ -1222,8 +1912,9 @@ export class ScenarioEditor extends LitElement {
               `
             : nothing
         }
+        ${this.tool === "units" ? this.renderUnitTool() : nothing}
         ${
-          this.tool !== "pan"
+          this.tool === "terrain" || this.tool === "territory"
             ? html`
                 <label
                   class="flex flex-col gap-1"
@@ -1250,9 +1941,107 @@ export class ScenarioEditor extends LitElement {
     `;
   }
 
+  /** The unit types the document's settings allow. */
+  private unitTypes(doc: ScenarioDocument): UnitPick[] {
+    const disabled = doc.config.disabledUnits ?? [];
+    const types: UnitPick[] = [...Structures.types, UnitType.Warship];
+    return types.filter((t) => !disabled.includes(t));
+  }
+
+  /** The picked type, or the first allowed one if the picked one is not. */
+  private placedType(doc: ScenarioDocument): UnitPick {
+    const types = this.unitTypes(doc);
+    return types.includes(this.unitType)
+      ? this.unitType
+      : (types[0] ?? this.unitType);
+  }
+
+  /**
+   * The units tool's type, a structure's level or the nation a warship is
+   * placed for, and why a click placed nothing.
+   */
+  private renderUnitTool() {
+    const doc = this.doc!;
+    const types = this.unitTypes(doc);
+    const picked = this.placedType(doc);
+    const warship = picked === UnitType.Warship;
+    const levels = !warship && picked !== UnitType.DefensePost;
+    const nation = this.selectedNation();
+    return html`
+      <label class="flex flex-col gap-1">
+        ${translateText("scenario_editor.unit_type")}
+        <select
+          class="rounded bg-zinc-800 px-2 py-1 text-white"
+          @change=${(e: Event) => {
+            this.unitType = (e.target as HTMLSelectElement).value as UnitPick;
+            this.unitProblem = null;
+          }}
+        >
+          ${types.map(
+            (t) =>
+              html`<option value=${t} .selected=${t === picked}>
+                ${translateText(UNIT_NAMES[t])}
+              </option>`,
+          )}
+        </select>
+      </label>
+      ${
+        warship
+          ? nation === null
+            ? nothing
+            : html`<p>
+                ${translateText("scenario_editor.warship_for", {
+                  nation: nation.name,
+                })}
+              </p>`
+          : html`<label
+              class="flex flex-col gap-1 ${levels ? "" : "opacity-50"}"
+            >
+              ${translateText("scenario_editor.structure_level")}
+              <input
+                type="number"
+                min="1"
+                max=${MAX_STRUCTURE_LEVEL}
+                step="1"
+                class="rounded bg-zinc-800 px-2 py-1 text-white"
+                ?disabled=${!levels}
+                .value=${live(String(levels ? this.structureLevel : 1))}
+                @change=${(e: Event) => {
+                  const level = (e.target as HTMLInputElement).valueAsNumber;
+                  if (Number.isInteger(level)) {
+                    this.structureLevel = Math.max(
+                      1,
+                      Math.min(MAX_STRUCTURE_LEVEL, level),
+                    );
+                  }
+                  this.requestUpdate();
+                }}
+              />
+            </label>`
+      }
+      <p class="text-zinc-400">
+        ${translateText(
+          warship
+            ? "scenario_editor.warship_hint"
+            : "scenario_editor.structure_hint",
+        )}
+      </p>
+      ${
+        this.unitProblem === null
+          ? nothing
+          : html`<p class="text-red-400">
+              ${translateText(UNIT_PROBLEMS[this.unitProblem], {
+                max: MAX_WARSHIPS,
+              })}
+            </p>`
+      }
+    `;
+  }
+
   /**
    * The nations: picking one makes it what the territory brush paints, or
-   * nobody to erase, and the picked one's fields are edited below the list.
+   * nobody to erase, and whose warships the units tool places, and the
+   * picked one's fields are edited below the list.
    */
   private renderNations() {
     const doc = this.doc!;
@@ -1375,12 +2164,47 @@ export class ScenarioEditor extends LitElement {
           />
           ${translateText("scenario_editor.playable")}
         </label>
+        ${this.renderAllies(n)}
         <button
           class="rounded bg-red-700 px-2 py-1 hover:bg-red-600"
           @click=${() => this.applyEdit({ type: "remove_nation", id: n.id })}
         >
           ${translateText("scenario_editor.remove_nation")}
         </button>
+      </div>
+    `;
+  }
+
+  /** The nations `n` is allied with from the start, as one checkbox each. */
+  private renderAllies(n: ScenarioNation) {
+    const doc = this.doc!;
+    const others = doc.nations.filter((other) => other.id !== n.id);
+    if (others.length === 0 || !alliancesAllowed(doc.config)) return nothing;
+    return html`
+      <div
+        class="flex flex-col gap-1"
+        title=${translateText("scenario_editor.allies_hint")}
+      >
+        ${translateText("scenario_editor.allies")}
+        <ul class="flex max-h-40 flex-col gap-1 overflow-y-auto">
+          ${others.map((other) => {
+            const allied = allianceIndex(doc, n.id, other.id) !== -1;
+            return html`<li>
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  .checked=${live(allied)}
+                  @change=${() =>
+                    this.applyEdit({
+                      type: allied ? "remove_alliance" : "add_alliance",
+                      nations: [n.id, other.id],
+                    })}
+                />
+                <span class="truncate">${other.name}</span>
+              </label>
+            </li>`;
+          })}
+        </ul>
       </div>
     `;
   }

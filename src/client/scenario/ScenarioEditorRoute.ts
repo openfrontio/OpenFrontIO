@@ -1,10 +1,17 @@
 /**
  * The scenario editor's URL hash: `#scenario-editor` for its start screen,
- * `#scenario-editor=<draftID>` for a draft. Kept out of ScenarioEditor so
- * Main can check it without loading the editor.
+ * `#scenario-editor=<draftID>` for a draft, the API's id for it. Kept out of
+ * ScenarioEditor so Main and the menu can use it without loading the editor.
  */
 
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
+
+/**
+ * The account flare that lets a player create and publish scenarios
+ * (docs/ScenarioEditor.md, "Entitlement"). The API checks it; the client
+ * only shows the editor's menu entry for it.
+ */
+export const SCENARIO_EDITOR_FLARE = "scenario_editor";
 
 const HASH = "#scenario-editor";
 
