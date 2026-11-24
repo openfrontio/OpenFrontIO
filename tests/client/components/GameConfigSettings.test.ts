@@ -21,7 +21,6 @@ const settings: GameConfigSettingsData = {
   gameMode: { selected: GameMode.FFA },
   teamCount: { selected: 2 },
   options: {
-    titleKey: "game_settings.options",
     bots: { value: 0, labelKey: "game_settings.bots", disabledKey: "x" },
     toggles: [{ labelKey: "game_settings.instant_build", checked: false }],
     inputCards: [],
