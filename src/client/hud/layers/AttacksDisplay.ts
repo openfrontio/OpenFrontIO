@@ -243,7 +243,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.incomingAttacks.map(
       (attack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full hud-panel sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<span class="inline-flex items-center"
@@ -294,7 +294,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.outgoingAttacks.map(
       (attack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full hud-panel sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<span class="inline-flex items-center"
@@ -337,7 +337,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.outgoingLandAttacks.map(
       (landAttack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full hud-panel sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<span class="inline-flex items-center"
@@ -413,7 +413,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.outgoingBoats.map(
       (boat) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full hud-panel sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
@@ -454,7 +454,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.incomingBoats.map(
       (boat) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full hud-panel sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
