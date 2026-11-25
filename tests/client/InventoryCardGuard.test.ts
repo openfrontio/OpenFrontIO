@@ -975,6 +975,21 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(cardEditor().isSeededWith(b)).toBe(true);
   });
 
+  it("a profile that names no account isn't taken for another account's", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    const fresh = owner();
+    delete (fresh.player as { publicId?: string }).publicId;
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse,
+    ).toBe(fresh);
+  });
+
   it("a profile while the session's account is unknown for now is still shown", async () => {
     modal.open({ tab: "card" });
     await settle(modal);

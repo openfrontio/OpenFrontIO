@@ -438,13 +438,16 @@ export class InventoryModal extends BaseModal {
   async onUserMe(userMeResponse: UserMeResponse | false) {
     // A profile of an account the session is known not to be signed in as
     // (one that answered after a switch) is never shown, in place or as a
-    // load. An account unknown for now (a token refresh failed) isn't
-    // another account: that profile is taken as before.
+    // load. An account unknown for now (a token refresh failed), or a
+    // profile that names none, isn't another account: that profile is
+    // taken as before.
     if (userMeResponse !== false) {
       const signedInAs = currentPublicId();
+      const readAs = userMeResponse.player.publicId;
       if (
         signedInAs !== null &&
-        userMeResponse.player.publicId !== signedInAs
+        readAs !== undefined &&
+        readAs !== signedInAs
       ) {
         return;
       }
