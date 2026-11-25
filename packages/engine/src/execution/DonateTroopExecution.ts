@@ -5,7 +5,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
-  zNum,
+  zFinite,
   zPlayerRef,
   zRandom,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
@@ -170,7 +170,7 @@ const DonateTroopsStateSchema = z.object({
   random: zRandom().nullable(),
   sender: zPlayerRef(),
   recipientID: z.string(),
-  troops: zNum().nullable(),
+  troops: zFinite().nullable(),
 });
 type DonateTroopsState = z.infer<typeof DonateTroopsStateSchema>;
 

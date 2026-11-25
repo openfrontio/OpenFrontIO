@@ -7,6 +7,7 @@ import {
 import { adjustForTeams } from "@openfront/engine-lib/game/TeamAssignment";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
+import type { PlayerCardRefs } from "@openfront/shared/PlayerCardSchemas";
 import { generateID, replacer } from "@openfront/shared/SharedUtil";
 import {
   ClientMessage,
@@ -919,6 +920,7 @@ export async function startWorker() {
         let ownedClanTags: string[] = [];
         let trusted = false;
         let levelBadge: LevelBadge | undefined;
+        let cardRefs: PlayerCardRefs | null | undefined;
         let accountUsername:
           | {
               username?: string | null;
@@ -960,6 +962,7 @@ export async function startWorker() {
           // Display-only: the roster badge comes from this lookup alone, never
           // from the join message. None when the player hides their level.
           levelBadge = levelBadgeForPlayer(result.response.player);
+          cardRefs = result.response.player.card;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -1048,6 +1051,9 @@ export async function startWorker() {
           clientMsg.platform,
           clientMsg.device,
           levelBadge,
+          privilegeRefresher
+            .get()
+            .resolveCard(flares ?? [], cardRefs, publicId),
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

@@ -16,6 +16,7 @@ import {
   LEVEL_BADGE_MAX_LEVEL,
   LEVEL_BADGE_MAX_PRESTIGE,
 } from "./LevelBadgeWire";
+import { UserMeCardSchema } from "./PlayerCardSchemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -748,6 +749,13 @@ export const UserMeResponseSchema = z.object({
     // reads as absent: drift in this cosmetic field must never fail the whole
     // /users/@me parse, which would make the player look signed out.
     progress: ProgressSchema.optional().catch(undefined),
+    // The player card loadout. Null without the card; a malformed one reads
+    // as absent (the game server parses this at join, so it must never fail
+    // the whole parse).
+    card: UserMeCardSchema.nullable().optional().catch(undefined),
+    // "Mute taunts": turns off every card taunt for this player. Fails closed:
+    // a malformed value reads as muted. (Taunts are held back; schema only.)
+    tauntsMuted: z.boolean().optional().catch(true),
     // "Hide my level": true when the player opted out of showing their level
     // to others. They still earn XP and see their own level; the game server
     // then leaves the badge off their lobby roster entry. Optional so an older
@@ -1733,8 +1741,21 @@ export const StorePlacementSubTabSchema = z.enum([
   "patterns",
   "flags",
   "crowns",
+  // Player card items.
+  "card",
 ]);
 export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+// The Inventory's tabs: its In game categories, and its Player card tab.
+export const StorePlacementInventorySubTabSchema = z.enum([
+  "skins",
+  "flags",
+  "crowns",
+  "effects",
+  "card",
+]);
+export type StorePlacementInventorySubTab = z.infer<
+  typeof StorePlacementInventorySubTabSchema
+>;
 // The Featured tab's sections. Featured is a kind of its own, not a tab: the
 // section says which slot an item was seen or bought in. The client never
 // sends `{ kind: "tab", tab: "featured" }`. Mirrors the API's copy.
@@ -1757,6 +1778,13 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("flash") }),
   z.object({ kind: z.literal("affiliate") }),
   z.object({ kind: z.literal("post_game") }),
+  // "Get {name}'s look" on the eliminated-by screen.
+  z.object({ kind: z.literal("card_loadout") }),
+  // The Inventory's buy dialog.
+  z.object({
+    kind: z.literal("inventory"),
+    subTab: StorePlacementInventorySubTabSchema,
+  }),
   z.object({
     kind: z.literal("featured"),
     section: StorePlacementFeaturedSectionSchema,

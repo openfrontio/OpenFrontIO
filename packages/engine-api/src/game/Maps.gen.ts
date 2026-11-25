@@ -2066,6 +2066,8 @@ export const maps: readonly MapInfo[] = [
     categories: ["europe", "asia", "africa", "countries"],
     defaultNationCount: 46,
     themes: ["europe", "asia", "africa"],
+    author: "halil1054",
+    descriptionKey: "map_description.ottomanempire",
     location: { lat: 39, lon: 29 },
   },
   {
@@ -2135,6 +2137,9 @@ export const maps: readonly MapInfo[] = [
       { name: "Porte de Versailles" },
       { name: "Parc Monceau" },
     ],
+    author: "eauchs",
+    descriptionKey: "map_description.paris",
+    location: { lat: 48.9, lon: 2.35 },
   },
   {
     id: "Passage",
@@ -2449,6 +2454,8 @@ export const maps: readonly MapInfo[] = [
     categories: ["countries", "europe", "asia"],
     defaultNationCount: 30,
     themes: ["europe", "asia"],
+    author: "halil1054",
+    descriptionKey: "map_description.turkiye",
     location: { lat: 39, lon: 35 },
   },
   {

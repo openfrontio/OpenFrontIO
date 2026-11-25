@@ -19,6 +19,8 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
+import { isCardItemType } from "./components/card/CardItems";
+import { cardStoreItems } from "./components/card/CardStoreGrid";
 import "./components/CosmeticCard";
 import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -45,7 +47,6 @@ import {
   activeSale,
   isNew,
   newUntilMs,
-  currentPrice,
   fetchCosmetics,
   cosmeticsCacheIsStale,
   getCachedCosmetics,
@@ -56,7 +57,6 @@ import {
   ownedPackItems,
   purchaseCosmetic,
   resolveCosmetics,
-  saleHasEnded,
   ResolvedCosmetic,
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
@@ -66,6 +66,7 @@ import {
   reportPendingSteamAuthorizations,
   sellsOnlyThroughPlay,
 } from "./Payments";
+import { type PricedItem, shownPrice } from "./ShownPrice";
 import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
@@ -141,6 +142,7 @@ const COSMETICS_SUB_TABS = [
   "patterns",
   "flags",
   "crowns",
+  "card",
 ] as const satisfies readonly StorePlacementSubTab[];
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
@@ -148,6 +150,10 @@ type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 export function subTabForItem(itemKey: string): CosmeticsSubTab {
   if (itemKey.startsWith("crown:")) return "crowns";
   if (itemKey.startsWith("flag:")) return "flags";
+  const type = itemKey.split(":")[0];
+  // Held-back titles and taunts aren't card item types here: their links open
+  // the default.
+  if (isCardItemType(type)) return "card";
   return "patterns";
 }
 
@@ -525,8 +531,8 @@ export class StoreModal extends BaseModal {
     const pack = resolved.cosmetic as Pack;
     return (
       this.playPrice(resolved) !== null ||
-      currentPrice(pack, "hard") !== undefined ||
-      currentPrice(pack, "soft") !== undefined
+      shownPrice(pack, "hard") !== null ||
+      shownPrice(pack, "soft") !== null
     );
   }
 
@@ -571,6 +577,8 @@ export class StoreModal extends BaseModal {
         ? saleFirst(all.filter(groupOnSale))
         : newestFirst(all.filter(groupIsNew));
     }
+    // The Card sub-tab draws its own grid (<card-store-grid>).
+    if (tab === "card") return [];
     return saleFirst(
       tab === "flags" ? flags : tab === "crowns" ? crowns : skins,
     );
@@ -847,12 +855,15 @@ export class StoreModal extends BaseModal {
   private visibleCosmeticsSubTabs(): CosmeticsSubTab[] {
     const hasNew = this.cosmeticsGroups("new").length > 0;
     const hasSale = this.cosmeticsGroups("sale").length > 0;
+    const hasCard = cardStoreItems(this.cosmetics).length > 0;
     return COSMETICS_SUB_TABS.filter(
       (tab) =>
         // The selected one stays while groupsForTab holds it for a pending
         // catalog fetch, so the bar still shows where the player is.
         tab === this.cosmeticsSubTab ||
-        ((tab !== "new" || hasNew) && (tab !== "sale" || hasSale)),
+        ((tab !== "new" || hasNew) &&
+          (tab !== "sale" || hasSale) &&
+          (tab !== "card" || hasCard)),
     );
   }
 
@@ -959,7 +970,7 @@ export class StoreModal extends BaseModal {
       priceSoft?: number;
       listPriceHard?: number;
       listPriceSoft?: number;
-      promotion?: { endsAt: string };
+      promotion?: PricedItem["promotion"];
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
@@ -988,11 +999,11 @@ export class StoreModal extends BaseModal {
     const dollarPrice = playPrice ?? subscriptionDollarPrice;
     // The price as the server charges it now: once the item's own sale has
     // ended that is its list price, whatever the catalog in hand says.
-    const saleEnded = priced !== null && saleHasEnded(priced);
-    const priceHard =
-      isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
-    const priceSoft =
-      isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
+    // Read through the same shownPrice as the Inventory; the button also
+    // gets the promotion, so it switches to the list price when the sale
+    // ends while the Store is open.
+    const hard = isPurchasable && priced ? shownPrice(priced, "hard") : null;
+    const soft = isPurchasable && priced ? shownPrice(priced, "soft") : null;
     // Resolved when clicked, from the card holding the button, so a purchase
     // from the flash hero is placed as flash.
     // Analytics must never break a purchase: a throw means no placement.
@@ -1031,18 +1042,11 @@ export class StoreModal extends BaseModal {
       .product=${product}
       .dollarPrice=${dollarPrice}
       .inlineCheckout=${inlineCheckout}
-      .priceHard=${priceHard ?? null}
-      .priceSoft=${priceSoft ?? null}
-      .listPriceHard=${
-        priceHard !== undefined && !saleEnded
-          ? (priced?.listPriceHard ?? null)
-          : null
-      }
-      .listPriceSoft=${
-        priceSoft !== undefined && !saleEnded
-          ? (priced?.listPriceSoft ?? null)
-          : null
-      }
+      .priceHard=${hard?.price ?? null}
+      .priceSoft=${soft?.price ?? null}
+      .listPriceHard=${hard?.listPrice ?? null}
+      .listPriceSoft=${soft?.listPrice ?? null}
+      .promotion=${priced?.promotion ?? null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
       .dollarLabelKey=${
@@ -1058,12 +1062,8 @@ export class StoreModal extends BaseModal {
       .onPurchaseDollar=${
         product || dollarPrice ? () => purchase("dollar") : undefined
       }
-      .onPurchaseHard=${
-        priceHard !== undefined ? () => purchase("hard") : undefined
-      }
-      .onPurchaseSoft=${
-        priceSoft !== undefined ? () => purchase("soft") : undefined
-      }
+      .onPurchaseHard=${hard !== null ? () => purchase("hard") : undefined}
+      .onPurchaseSoft=${soft !== null ? () => purchase("soft") : undefined}
     ></purchase-button>`;
   }
 
@@ -1157,21 +1157,31 @@ export class StoreModal extends BaseModal {
         })}
       </div>
       ${
-        flash
-          ? html`${this.renderFlashHero(flash)}
-            ${(() => {
-              // With the flash item the only thing on sale, the hero is the
-              // whole tab: no "No skins available" under it.
-              const rest = this.visibleGroups.filter(
-                (group) => group !== flash,
-              );
-              return rest.length > 0
-                ? this.renderBrowser(rest, { emptyTranslationKey: emptyKey })
-                : nothing;
-            })()}`
-          : this.renderBrowser(this.visibleGroups, {
-              emptyTranslationKey: emptyKey,
-            })
+        this.cosmeticsSubTab === "card"
+          ? html`<card-store-grid
+              .cosmetics=${this.cosmetics}
+              .flares=${
+                this.userMeResponse === false
+                  ? []
+                  : (this.userMeResponse.player.flares ?? [])
+              }
+              .tracker=${this.tracker ?? null}
+            ></card-store-grid>`
+          : flash
+            ? html`${this.renderFlashHero(flash)}
+              ${(() => {
+                // With the flash item the only thing on sale, the hero is the
+                // whole tab: no "No skins available" under it.
+                const rest = this.visibleGroups.filter(
+                  (group) => group !== flash,
+                );
+                return rest.length > 0
+                  ? this.renderBrowser(rest, { emptyTranslationKey: emptyKey })
+                  : nothing;
+              })()}`
+            : this.renderBrowser(this.visibleGroups, {
+                emptyTranslationKey: emptyKey,
+              })
       }
       ${this.renderPackDialog()}
     `;
