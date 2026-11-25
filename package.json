@@ -43,7 +43,7 @@
     "lint:fix": "oxlint --fix",
     "lint:github": "oxlint --format=github",
     "prepare": "husky",
-    "gen-maps": "tsx scripts/gen-maps/main.ts && npm run gen-map-schema",
+    "gen-maps": "npm run gen-map-schema && tsx scripts/gen-maps/main.ts",
     "gen-map-schema": "tsx scripts/genMapInfoSchema.ts && npx --no-install oxfmt --write map-generator/info.schema.json",
     "inst": "npm ci --ignore-scripts"
   },

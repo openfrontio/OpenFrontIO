@@ -38,7 +38,14 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
       `failed to read map file ${inputPath}: ${(e as Error).message}`,
     );
   }
-  const sourceImg = decodePNGConfig(imageBuffer);
+  let sourceImg: ReturnType<typeof decodePNGConfig>;
+  try {
+    sourceImg = decodePNGConfig(imageBuffer);
+  } catch (e) {
+    throw new Error(
+      `failed to decode map file ${inputPath}: ${(e as Error).message}`,
+    );
+  }
 
   const manifestPath = join(inDir, "info.json");
   let manifest: Record<string, unknown>;
@@ -72,16 +79,19 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
   manifest.map4x = dims(result.map4x);
   manifest.map16x = dims(result.map16x);
 
-  const mapDir = join(outputMapDir(isTest), name);
-  mkdirSync(mapDir, { recursive: true });
-  writeFileSync(join(mapDir, "map.bin"), result.map.terrain);
-  writeFileSync(join(mapDir, "map4x.bin"), result.map4x.terrain);
-  writeFileSync(join(mapDir, "map16x.bin"), result.map16x.terrain);
+  // Every output is encoded before any is written, so a map that fails
+  // (a layer PNG that doesn't decode, a thumbnail too big for WebP) leaves
+  // its previous files as they were.
+  const outputs: [string, Uint8Array][] = [
+    ["map.bin", result.map.terrain],
+    ["map4x.bin", result.map4x.terrain],
+    ["map16x.bin", result.map16x.terrain],
+  ];
   const thumb = result.thumbnail;
-  writeFileSync(
-    join(mapDir, "thumbnail.webp"),
+  outputs.push([
+    "thumbnail.webp",
     encodeWebP(thumb.rgba, thumb.width, thumb.height, thumbnailWebPQuality),
-  );
+  ]);
 
   if (Array.isArray(manifest.layers)) {
     for (const layer of manifest.layers) {
@@ -125,26 +135,29 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
       const { width, height } = result.map;
       const full = cropToNRGBA(img, width, height);
       img = null;
-      writeFileSync(
-        join(mapDir, layerID + ".webp"),
+      outputs.push([
+        layerID + ".webp",
         encodeWebP(full, width, height, layerWebPQuality),
-      );
+      ]);
       const hw = result.map4x.width;
       const hh = result.map4x.height;
-      writeFileSync(
-        join(mapDir, layerID + ".4x.webp"),
+      outputs.push([
+        layerID + ".4x.webp",
         encodeWebP(
           downscaleHalf(full, width, hw, hh),
           hw,
           hh,
           layerWebPQuality,
         ),
-      );
+      ]);
     }
   }
 
   for (const key of ["$schema", "author", "description", "location"])
     delete manifest[key];
+  const mapDir = join(outputMapDir(isTest), name);
+  mkdirSync(mapDir, { recursive: true });
+  for (const [file, data] of outputs) writeFileSync(join(mapDir, file), data);
   const outPath = join(mapDir, "manifest.json");
   writeFileSync(outPath, goJSON(manifest, "  ", true));
   return outPath;
