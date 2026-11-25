@@ -338,6 +338,39 @@ describe("Inventory: unsaved card changes guard", () => {
       expect(storeOpens).toHaveLength(0);
     });
 
+    it("Back to another path and query, then a same-page move while it asks: Discard closes at Back's whole URL", async () => {
+      await openWithChange();
+      // Back lands on /?view=home...
+      history.replaceState(null, "", "/?view=home");
+      modalRouter.closeCurrent();
+      await settle(modal);
+      // ...and another same-document move changes path, query and hash.
+      history.replaceState(null, "", "/other?view=other#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      await click("[data-card-guard-discard]");
+      expect(modal.isOpen()).toBe(false);
+      expect(window.location.pathname).toBe("/");
+      expect(window.location.search).toBe("?view=home");
+      expect(window.location.hash).toBe("");
+      expect(storeOpens).toHaveLength(0);
+    });
+
+    it("a route to the Store with a query, then a move while it asks: Discard opens the Store at that whole URL", async () => {
+      await openWithChange();
+      history.replaceState(null, "", "/?ref=news#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      history.replaceState(null, "", "/elsewhere?ref=other");
+      modalRouter.closeCurrent();
+      await settle(modal);
+      await click("[data-card-guard-discard]");
+      expect(storeOpens).toHaveLength(1);
+      expect(window.location.pathname).toBe("/");
+      expect(window.location.search).toBe("?ref=news");
+      expect(window.location.hash).toBe("#modal=store&tab=packs");
+    });
+
     it("another route while the prompt is up, then Keep editing: the Inventory stays, and its hash comes back", async () => {
       await openWithChange();
       const hash = window.location.hash;
