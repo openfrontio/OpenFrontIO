@@ -265,6 +265,54 @@ describe("Inventory: unsaved card changes guard", () => {
       expect(window.location.hash).not.toContain("tab=skins");
     });
 
+    // A popup (no pageId) over the Inventory page.
+    const popupOpens: unknown[] = [];
+    if (customElements.get("guard-test-popup") === undefined) {
+      customElements.define(
+        "guard-test-popup",
+        class extends HTMLElement {
+          open(args?: Record<string, unknown>) {
+            popupOpens.push(args);
+          }
+          close() {}
+        },
+      );
+    }
+    async function openPopupOverChange() {
+      document.body.appendChild(document.createElement("guard-test-popup"));
+      modalRouter.register("popup", { tag: "guard-test-popup" });
+      await openWithChange();
+      history.replaceState(null, "", "/#modal=popup");
+      expect(modalRouter.routeFromHash()).toBe(true);
+      await settle(modal);
+      await vi.waitFor(() => expect(popupOpens.length).toBeGreaterThan(0));
+    }
+
+    it("a route to another page from a popup over the Inventory asks the Inventory first", async () => {
+      await openPopupOverChange();
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      expect(q("[data-card-guard]")).not.toBeNull();
+      expect(storeOpens).toHaveLength(0);
+      await click("[data-card-guard-keep]");
+      expect(storeOpens).toHaveLength(0);
+      expect(modal.isOpen()).toBe(true);
+      expect(window.location.hash).toBe("#modal=popup");
+    });
+
+    it("once the popup closes, Back still asks the Inventory underneath", async () => {
+      await openPopupOverChange();
+      modalRouter.syncClosed("popup");
+      // The URL names the Inventory again.
+      expect(window.location.hash).toContain("modal=inventory");
+      await back();
+      expect(q("[data-card-guard]")).not.toBeNull();
+      expect(modal.isOpen()).toBe(true);
+      await click("[data-card-guard-keep]");
+      expect(window.location.hash).toContain("modal=inventory");
+    });
+
     it("Back with an unsaved change, then Discard: closes, and the change is gone", async () => {
       await openWithChange();
       await back();
