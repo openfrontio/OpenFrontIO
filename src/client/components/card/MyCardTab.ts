@@ -27,6 +27,7 @@ import {
   purchaseCosmetic,
   type ResolvedCosmetic,
 } from "../../Cosmetics";
+import { COSMETICS_CHANGED } from "../../Experiments";
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
@@ -104,8 +105,17 @@ export class MyCardTab extends LitElement {
     return this;
   }
 
+  /** A new catalogue is in use (a store-experiment group changed, or a
+   * price_changed refusal reloaded it): price from it, as the Store does,
+   * so a retry sends the price now and doesn't loop on the 409. */
+  private onCosmeticsChanged = (e: Event): void => {
+    const cosmetics = (e as CustomEvent<Cosmetics | null>).detail;
+    if (cosmetics) this.cosmetics = cosmetics;
+  };
+
   connectedCallback(): void {
     super.connectedCallback();
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     void getPlayerCosmetics()
       .then((c) => (this.flag = c.flag))
       .catch(() => {});
@@ -117,6 +127,11 @@ export class MyCardTab extends LitElement {
         })
         .catch(() => {});
     }
+  }
+
+  disconnectedCallback(): void {
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
+    super.disconnectedCallback();
   }
 
   protected willUpdate(): void {
@@ -283,8 +298,10 @@ export class MyCardTab extends LitElement {
       .promotion=${prices.promotion ?? null}
       .rarity=${String(item.rarity)}
       .itemName=${cardItemName(type, item)}
-      .onPurchaseHard=${() => purchaseCosmetic(r, "hard", this.placement)}
-      .onPurchaseSoft=${() => purchaseCosmetic(r, "soft", this.placement)}
+      .onPurchaseHard=${(shown?: number) =>
+        purchaseCosmetic(r, "hard", this.placement, shown)}
+      .onPurchaseSoft=${(shown?: number) =>
+        purchaseCosmetic(r, "soft", this.placement, shown)}
     ></purchase-button>`;
   }
 

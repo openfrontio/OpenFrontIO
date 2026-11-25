@@ -50,6 +50,7 @@ const { showInGameAlert } = await import("../../src/client/InGameModal");
 const { checkInPlacePurchase, purchaseCosmetic, purchaseCosmeticInPlace } =
   await import("../../src/client/Cosmetics");
 const { invalidateUserMe } = await import("../../src/client/Api");
+const { translateText } = await import("../../src/client/Utils");
 const { clearPendingPurchase, peekPendingPurchase, rememberPendingPurchase } =
   await import("../../src/client/components/inventory/PendingEquip");
 
@@ -252,6 +253,106 @@ describe("buying on the end screen", () => {
     expect((outcome as { notice?: string }).notice).toBeDefined();
   });
 
+  it("sends the price the confirm showed; a price_changed refusal says so, nothing charged", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "price_changed",
+      amount: 360,
+    } as never);
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      undefined,
+      300,
+    );
+    expect(purchaseWithCurrency).toHaveBeenCalledWith(
+      "cardBackground",
+      "bg_storm_front",
+      "hard",
+      undefined,
+      undefined,
+      { expectedAmount: 300, platform: "web" },
+      expect.any(Function),
+    );
+    // Explained with the Store's message, never "couldn't confirm".
+    expect(outcome.kind).toBe("handled");
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      translateText("store.price_changed"),
+    );
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  // The box showed 300 and the price is 320 now (a sale ended): a balance of
+  // 310 covers what was shown, so the buy is sent and the server decides
+  // (price_changed), rather than a top-up for a price never shown.
+  it("checks the balance against the lower of the shown and current price", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(310, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({ ok: true } as never);
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      undefined,
+      300,
+    );
+    expect(purchaseWithCurrency).toHaveBeenCalled();
+    expect(outcome.kind).not.toBe("insufficient");
+  });
+
+  it("judges the re-read against the shown price too", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(310, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "insufficient_balance",
+    } as never);
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      undefined,
+      300,
+    );
+    // 310 still covers what was shown: no shortfall to quote.
+    expect(outcome.kind).toBe("failed");
+  });
+
+  it("the charged-different notice compares with the price shown", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    const buy = (charged: number) => {
+      vi.mocked(purchaseWithCurrency).mockResolvedValueOnce({
+        ok: true,
+        amount: charged,
+      } as never);
+      return purchaseCosmeticInPlace(
+        STORM,
+        "hard",
+        undefined,
+        undefined,
+        undefined,
+        300,
+      );
+    };
+    // Charged what the box showed (though the catalogue now says 320).
+    expect(((await buy(300)) as { notice?: string }).notice).toBeUndefined();
+    // Charged the price now, not what was shown: say so.
+    expect(((await buy(320)) as { notice?: string }).notice).toBeDefined();
+  });
+
+  it("with no shown price, the price check is the price now", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({ ok: true } as never);
+    await purchaseCosmeticInPlace(STORM, "hard");
+    expect(vi.mocked(purchaseWithCurrency).mock.calls[0]?.[5]).toEqual({
+      expectedAmount: 320,
+      platform: "web",
+    });
+  });
+
   it("charged the price shown: owned, no notice", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     vi.mocked(purchaseWithCurrency).mockResolvedValue({
@@ -331,7 +432,15 @@ describe("buying on the end screen", () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     // As the real one does: the guard is asked once the token is read.
     vi.mocked(purchaseWithCurrency).mockImplementation(
-      async (_type, _name, _method, _palette, _placement, stillWanted) => {
+      async (
+        _type,
+        _name,
+        _method,
+        _palette,
+        _placement,
+        _priceCheck,
+        stillWanted,
+      ) => {
         auth.publicId = "p2";
         return stillWanted?.() === false
           ? { ok: false, code: "cancelled" }

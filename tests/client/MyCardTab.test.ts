@@ -18,6 +18,7 @@ import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { resetCardSavesForTests } from "../../src/client/CardSaveQueue";
 import { MyCardTab } from "../../src/client/components/card/MyCardTab";
+import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 
 beforeEach(() => {
   resetCardSavesForTests();
@@ -521,6 +522,8 @@ describe("<my-card-tab>", () => {
       expect.anything(),
       "hard",
       undefined,
+      // Called straight, with no confirm box: no shown amount.
+      undefined,
     );
   });
 
@@ -539,7 +542,49 @@ describe("<my-card-tab>", () => {
       expect.anything(),
       "soft",
       { kind: "inventory", subTab: "card" },
+      undefined,
     );
+  });
+
+  it("sends the confirmed price, and after a price_changed reload the retry sends the new one", async () => {
+    await render(userMe(OWNER, SAVED));
+    // Confirms the tile's purchase button, as a player would.
+    const buyHard = async () => {
+      const button = tile("cardBackground:bg_frontline").querySelector(
+        "purchase-button",
+      ) as unknown as HTMLElement & {
+        priceHard: number | null;
+        requestCurrencyPurchase(method: "hard"): void;
+        updateComplete: Promise<unknown>;
+      };
+      button.requestCurrencyPurchase("hard");
+      await button.updateComplete;
+      button
+        .querySelector("confirm-dialog")!
+        .dispatchEvent(new CustomEvent("confirm"));
+      await settle();
+      return button;
+    };
+    // The first try gets 409 price_changed, whose reload announces the
+    // catalogue now in use (the group's price, 280).
+    const raised = structuredClone(COSMETICS) as Cosmetics;
+    (raised.cardBackgrounds!.bg_frontline as { priceHard: number }).priceHard =
+      280;
+    cosmeticsMod.purchase.mockImplementationOnce(async () => {
+      document.dispatchEvent(
+        new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+      );
+      return undefined;
+    });
+
+    await buyHard();
+    expect(cosmeticsMod.purchase.mock.calls[0]?.[3]).toBe(240);
+    await settle();
+
+    const retried = await buyHard();
+    expect(retried.priceHard).toBe(280);
+    expect(cosmeticsMod.purchase).toHaveBeenCalledTimes(2);
+    expect(cosmeticsMod.purchase.mock.calls[1]?.[3]).toBe(280);
   });
 
   it("a tracker whose name isn't its stat is never offered", async () => {

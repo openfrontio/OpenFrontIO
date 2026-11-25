@@ -48,6 +48,7 @@ describe("purchaseWithCurrency: stillWanted", () => {
       "hard",
       undefined,
       undefined,
+      undefined,
       asP1,
     );
 
