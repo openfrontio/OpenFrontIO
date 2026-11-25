@@ -1290,6 +1290,24 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(1);
   });
 
+  it("a failed save goes onto a card changed elsewhere meanwhile, keeping only its edits", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    const saving = editor.save();
+    // Another device changed the background meanwhile.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    finish({ ok: false, error: "failed" });
+    expect(await saving).toBe(false);
+    expect(editor.saveState).toBe("failed");
+    // Retry sends Storm, which the player never touched, and their tracker.
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+    expect(editor.changeCount()).toBe(1);
+  });
+
   it("an older profile that lands during a save doesn't undo it", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));

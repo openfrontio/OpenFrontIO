@@ -844,6 +844,11 @@ export class CardEditor {
       this.droppedTo = null;
       if (droppedTo !== null) {
         this.draft = replayByItem(this.saved, droppedTo, this.draft);
+      } else {
+        // Kept for Retry: the player's edits (against the card it replaced)
+        // go onto the saved card, which a profile meanwhile may have made a
+        // newer one, so Retry never puts back what changed elsewhere.
+        this.draft = rebase(this.saved, replaced, this.draft);
       }
       this.saveState = droppedTo !== null ? "idle" : "failed";
       this.emit();
