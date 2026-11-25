@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { TICKS_PER_SECOND } from "../hud/GameTicks";
 import { keepPressKeysFromGame } from "../hud/HudKeys";
 import { COLUMN_MEANING } from "../hud/layers/ColumnTooltip";
 import "./OfIcon";
@@ -11,36 +12,98 @@ import {
 } from "../hud/layers/lib/StatsColumns";
 import { type ColumnId, type StatsTableKind } from "../StatsConstants";
 import { UserSettings } from "../UserSettings";
+import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
+import type { OfIconName } from "./OfIcon";
+import {
+  RankTrends,
+  RefreshClock,
+  RowMoves,
+  type Trend,
+} from "./StatsTableHistory";
+
+/** What a player is to you, shown after their name. */
+export type RowMark = "attack" | "traitor" | "ally" | "embargo" | "offline";
 
 export interface StatsRow {
   key: string;
   name: string;
   clanTag?: string | null;
+  /** The colour shown by the name, as a CSS colour. */
+  color?: string;
+  /** For a team: how many of its players are alive, out of how many. */
+  alive?: { count: number; total: number };
   values: ReadonlyMap<ColumnId, number>;
   emphasized?: boolean;
   pinned?: boolean;
+  /** At most two, most urgent first. */
+  marks?: readonly RowMark[];
+  /** How full the player's troops are, 0 to 1: draws the troop gauge. */
+  troopFill?: number;
   onClick?: () => void;
 }
 
-/** A row plus the rank it renders at (list-wide, not window-relative). */
+/**
+ * A row plus its rank (list-wide, not window-relative), which is not always
+ * its place in the list: the order holds while a mouse moves on it.
+ */
 interface PlacedRow {
   row: StatsRow;
   position: number;
+  leaving?: boolean;
+}
+
+/** An eliminated player's row closing at index `at` of the new list. */
+interface LeavingRow {
+  placed: PlacedRow;
+  at: number;
 }
 
 /**
- * What the list draws: a row, or a spacer `spacer` px tall standing for the
- * rows from index `from` that have no DOM.
+ * What the list draws: the row at index `index`, or a spacer `spacer` px
+ * tall standing for the rows from index `from` that have no DOM.
  */
-type ListItem = { spacer: number; from: number } | { placed: PlacedRow };
+type ListItem =
+  | { spacer: number; from: number }
+  | { placed: PlacedRow; index: number };
+
+/**
+ * Your row and the rows held with it: the list's indexes from `from` to
+ * before `to`, and the edge they rest on while their place is out of view.
+ */
+interface HeldBlock {
+  from: number;
+  to: number;
+  edge: "top" | "bottom" | null;
+}
 
 // Fallbacks cover the first render before measurement and jsdom (tests),
 // which reports zero element sizes.
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
+// Rows glide to a new rank. More rows in view than this changing place in
+// one refresh is a reshuffle (early in a game most rows trade places every
+// second): they snap. A row from further away glides the last few rows.
+const GLIDE_MAX_ROWS = 4;
+const GLIDE_MAX_DISTANCE = 3;
+const GLIDE: KeyframeAnimationOptions = {
+  duration: 220,
+  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+};
+// A mouse on the list holds the rows in place while it aims, which takes
+// about a second. One that has not moved for this long is parked there: the
+// rows go to their places again.
+const HOLD_STILL_MS = 3000;
+// A longer gap between two refreshes, at normal speed, is a jump of the clock
+// (a tab that slept; a replay says when it seeks): the rows did not move
+// there, they are there.
+const CLOCK_JUMP_TICKS = 30 * TICKS_PER_SECOND;
+const TREND_LABEL: Record<Trend, string> = {
+  up: "leaderboard.trend_up",
+  down: "leaderboard.trend_down",
+};
 // What each table is called, by a screen reader and in the column menu.
 export const TABLE_NAME: Record<StatsTableKind, string> = {
   player: "leaderboard.players_table",
@@ -48,15 +111,20 @@ export const TABLE_NAME: Record<StatsTableKind, string> = {
 };
 
 type RowState = "me" | "mate" | "other";
+type GaugeLevel = "ok" | "high" | "full";
+// The troop gauge warns from these shares of a player's max troops.
+const GAUGE_HIGH = 0.8;
+const GAUGE_FULL = 0.95;
 
 // Look. Sizes, colours, radii and spacing of each part live here, so a
 // change of look is one edit. The templates below only hold structure.
 
 // The table has no surface of its own: it sits on the panel. Scrollbars keep
 // a fixed colour so they still show over the map at 0% HUD opacity.
-// Names get more room on large windows, where it costs nothing.
+// Names get more room on large windows, where it costs nothing. The narrowest
+// phones drop the colour chips and their room.
 const TABLE =
-  "relative mt-1 text-xs md:text-[13px] text-white 2xl:[--stats-name:10rem]";
+  "relative mt-1 text-xs md:text-[13px] text-white 2xl:[--stats-name:10rem] max-[360px]:[--stats-chip:0px]";
 const SCROLLBAR =
   "[scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
 const HEADER = "h-5.5 md:h-6 lg:h-6.5 border-b border-white/15 font-bold";
@@ -103,10 +171,14 @@ const ROW = "h-6 md:h-7 pb-px not-last:border-b not-last:border-white/5";
 // the HUD opacity like the panel: the rows passing under it are hidden, or
 // blurred like the map below full opacity, so no text shows through yours.
 const ROW_STATE: Record<RowState, string> = {
-  me: "sticky top-0 bottom-0 z-1 bg-hud-panel bg-linear-to-r from-malibu-blue/25 to-malibu-blue/25 backdrop-blur-hud font-bold text-white",
+  me: "bg-hud-panel bg-linear-to-r from-malibu-blue/25 to-malibu-blue/25 backdrop-blur-hud font-bold text-white",
   mate: "font-bold text-white",
   other: "",
 };
+// A row that climbs is drawn over the rows it passes while it glides, but
+// under your row and the rows held with it (HOLD), which keep their z.
+const CLIMBING = "data-climbing:z-1 data-climbing:bg-hud-panel";
+const HELD_CLIMBING = "data-climbing:bg-hud-panel";
 // Only rows with a click get a hover, and only for a mouse: after a tap it
 // would stay lit.
 const ROW_HOVER: Record<RowState, string> = {
@@ -116,6 +188,32 @@ const ROW_HOVER: Record<RowState, string> = {
 };
 // Your row is also marked on its start edge.
 const ME_EDGE = "border-s-2 border-aquarius";
+// When you rank below the rows the list shows, the rows either side of
+// yours are held at the edge with it. Each row of that block sticks at its
+// own place in it, so held they rest one against the other, in order.
+const HOLD = "sticky z-2";
+const HOLD_TOP = [
+  "top-0",
+  "top-(--stats-row)",
+  "top-[calc(2*var(--stats-row))]",
+];
+const HOLD_BOTTOM = [
+  "bottom-0",
+  "bottom-(--stats-row)",
+  "bottom-[calc(2*var(--stats-row))]",
+];
+// Held, your neighbours hide the rows passing under them as yours does. The
+// hover lies over that fill instead of replacing it.
+const NEAR_HELD = "bg-hud-panel backdrop-blur-hud";
+const NEAR_HELD_HOVER =
+  "pointer-fine:hover:bg-linear-to-r pointer-fine:hover:from-white/6 pointer-fine:hover:to-white/6";
+// A dashed line on the held block's open side stands for the ranks between
+// it and the rows in view. Drawn apart from the row's own rule.
+const GAP: Record<"top" | "bottom", string> = {
+  bottom:
+    "before:absolute before:inset-x-1 before:top-0 before:border-t before:border-dashed before:border-white/30",
+  top: "after:absolute after:inset-x-1 after:bottom-0 after:border-b after:border-dashed after:border-white/30",
+};
 // 3px a side, as in the header: the default columns then fit in the panel's
 // width of before.
 const CELL = "flex min-w-0 items-center px-0.75 tabular-nums";
@@ -132,6 +230,15 @@ const CELL_SIZE: Partial<Record<ColumnId, string>> = {
 };
 // In other players' rows; yours and your teammates' are white throughout.
 const NAME_TONE = "font-medium text-white";
+// The player's or team's colour before the name. The dark hairline keeps a
+// pale colour apart from the map when the panel is see-through.
+const CHIP =
+  "me-1 size-2 shrink-0 rounded-xs inset-ring inset-ring-black/40 max-[360px]:hidden";
+// A team's players alive after its name, quieter than the name.
+// It holds its hidden label in place (relative): placed against the panel
+// instead, the labels of the rows under the list would stretch its scroll.
+const ALIVE = "relative ms-auto shrink-0 ps-1 text-[11px]";
+const ALIVE_TONE = "text-white/55";
 const CELL_TONE: Partial<Record<ColumnId, string>> = {
   rank: "text-white/55",
   player: NAME_TONE,
@@ -140,15 +247,68 @@ const CELL_TONE: Partial<Record<ColumnId, string>> = {
 const VALUE_TONE = "text-white/70";
 // Zeros, and the dash of a player without a clan, recede in every row.
 const ZERO_TONE = "text-white/40";
+// The marks after a name. The name gives way to them, so they always show.
+const ROW_MARK: Record<
+  RowMark,
+  { icon: OfIconName; tone: string; label: string }
+> = {
+  attack: {
+    icon: "sword",
+    tone: "text-red-400",
+    label: "leaderboard.mark_attacking_you",
+  },
+  traitor: {
+    icon: "traitor",
+    tone: "text-orange-400",
+    label: "leaderboard.mark_traitor",
+  },
+  ally: {
+    icon: "alliance",
+    tone: "text-green-400",
+    label: "leaderboard.mark_ally",
+  },
+  embargo: {
+    icon: "embargo",
+    tone: "text-amber-400",
+    label: "leaderboard.mark_embargo",
+  },
+  offline: {
+    icon: "disconnected",
+    tone: "text-white/50",
+    label: "leaderboard.mark_disconnected",
+  },
+};
+const ROW_MARK_BOX = "ms-1 flex shrink-0";
+const ROW_MARK_SIZE = 11;
 // Faint rules between columns, so none read as merged.
 const DIVIDER_CLASS = "border-s border-white/8";
 const HEADER_DIVIDER_CLASS = "border-s border-white/12";
+// How full a player's troops are: a line under the number in the Troops
+// column (in Max Troops when Troops is hidden), in the bottom bar's troop
+// blue, amber then red near the player's max. A pixel lower in the shorter
+// phone rows, so it clears the digits there too. Left out below 360px, where
+// the table is at its most crowded.
+const GAUGE =
+  "absolute inset-x-0.75 bottom-px md:bottom-0.5 h-[3px] overflow-hidden rounded-full bg-black/40 max-[360px]:hidden";
+const GAUGE_FILL: Record<GaugeLevel, string> = {
+  ok: "bg-malibu-blue",
+  high: "bg-amber-400",
+  full: "bg-red-500",
+};
 // A row nobody sees, holding each column's widest texts one per line: the
 // browser sizes every shared track from real glyphs. Bold like your row, with
 // the cells' padding and rules.
 const SIZER = "grid col-span-full h-0 overflow-hidden invisible";
 const SIZER_CELL =
   "flex flex-col px-0.75 font-bold tabular-nums whitespace-nowrap";
+// A small triangle before the rank; its shape and its colour both tell the
+// direction. The rank beside it never shrinks: three digits and the mark
+// take some of the cell's padding rather than lose a digit.
+const TREND = "me-px h-1 w-1.25 shrink-0 [&+span]:shrink-0";
+const TREND_SHAPE: Record<Trend, string> = {
+  up: "bg-green-400 [clip-path:polygon(50%_0,100%_100%,0_100%)]",
+  down: "bg-red-400 [clip-path:polygon(0_0,100%_0,50%_100%)]",
+};
 
 // An icon with a mark ("/m", the limit sign) is one box: the mark sits on
 // the icon's baseline. "/m" has a slot of its own fixed width, so the four
@@ -190,8 +350,27 @@ export function renderColumnVisual(column: ColumnDef, size: number) {
   </span>`;
 }
 
+function renderGauge(fill: number) {
+  const level: GaugeLevel =
+    fill >= GAUGE_FULL ? "full" : fill >= GAUGE_HIGH ? "high" : "ok";
+  return html`<div
+    class=${GAUGE}
+    aria-hidden="true"
+    data-gauge
+    data-gauge-level=${level}
+  >
+    <div
+      class="h-full ${GAUGE_FILL[level]}"
+      style="width: ${fill * 100}%"
+    ></div>
+  </div>`;
+}
+
 export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
+  // How many times faster than normal the game plays: a replay's playback
+  // speed. The table refreshes once a second whatever the speed.
+  public speed = 1;
 
   @property({ type: Boolean }) visible = false;
   // Caps the list at five rows, so a second table fits under it.
@@ -204,7 +383,10 @@ export abstract class StatsTable extends LitElement {
   ): StatsRow[];
 
   private readonly userSettings = new UserSettings();
-  private rows: StatsRow[] = [];
+  private rows: PlacedRow[] = [];
+  // When a mouse on the list last moved there: until it has been still for
+  // HOLD_STILL_MS, refreshes keep the rows where they are drawn.
+  private pointerMovedAt: number | null = null;
 
   @state()
   private sortKey: ColumnId | null = null;
@@ -226,18 +408,43 @@ export abstract class StatsTable extends LitElement {
   private rowHeightPx = FALLBACK_ROW_HEIGHT_PX;
   private viewportHeightPx = FALLBACK_VIEWPORT_HEIGHT_PX;
 
+  // What the table keeps from one refresh to the next: whether the list
+  // follows on from the last one, the rows that changed place since, for
+  // updated() to glide, and each row's rank over the last 30 seconds.
+  private readonly clock = new RefreshClock(CLOCK_JUMP_TICKS);
+  private readonly moves = new RowMoves();
+  private readonly trends = new RankTrends();
+  // The glides still running. A row keeps its element when the list is put
+  // in another order, and would carry its glide there.
+  private readonly glides = new Set<Animation>();
+  // Each row's latest glide: an older one that ends leaves the row's
+  // climbing mark to it.
+  private readonly latestGlide = new WeakMap<Element, Animation>();
+  // Eliminated players' rows that close before they go, and the rows already
+  // closing.
+  private leaving: LeavingRow[] = [];
+  private readonly folding = new WeakSet<Element>();
+
   createRenderRoot() {
     return this;
   }
 
   willUpdate(changed: Map<string, unknown>) {
-    // A hidden table takes its headers, and so their tooltip, with it.
-    if (changed.has("visible") && !this.visible) this.tip = null;
+    // A hidden table takes its headers, and so their tooltip, with it, and
+    // the rows that were closing.
+    if (changed.has("visible") && !this.visible) {
+      this.tip = null;
+      this.leaving = [];
+    }
     // So does a column taken off the table.
     const tip = this.tip;
     if (tip && !this.visibleColumns().some((c) => c.id === tip.column.id)) {
       this.tip = null;
     }
+    // Opened again, it has nothing of before to compare its list with.
+    if (changed.has("visible") && !this.visible) this.clock.forget();
+    // A list removed from under the pointer gets no pointerleave.
+    if (changed.has("visible") && !this.visible) this.pointerMovedAt = null;
     if (changed.has("visible") && this.visible) {
       // The scroll container is recreated at scroll offset 0 when the table
       // was hidden, so the remembered offset would misplace the window.
@@ -249,7 +456,7 @@ export abstract class StatsTable extends LitElement {
   updated() {
     const scroller = this.querySelector(".stats-table-scroll");
     if (!(scroller instanceof HTMLElement)) return;
-    const row = scroller.querySelector(".stats-table-row");
+    const row = scroller.querySelector(".stats-table-row:not([data-leaving])");
     const rowHeight = row instanceof HTMLElement ? row.offsetHeight : 0;
     const viewportHeight = scroller.clientHeight;
     let changed = false;
@@ -261,7 +468,79 @@ export abstract class StatsTable extends LitElement {
       this.viewportHeightPx = viewportHeight;
       changed = true;
     }
+    this.foldLeavingRows(scroller);
     if (changed) this.requestUpdate();
+    this.glideMovedRows(scroller);
+  }
+
+  // Rows that changed place glide from where they were. Your row and its
+  // neighbours snap when they are held at an edge: they are not where their
+  // index puts them.
+  private glideMovedRows(scroller: HTMLElement) {
+    const moves = this.moves.take();
+    if (moves.size === 0) return;
+    if (!("animate" in scroller) || prefersReducedMotion()) return;
+    const moved = [
+      ...scroller.querySelectorAll<HTMLElement>(".stats-table-row"),
+    ].flatMap((row) => {
+      const move = moves.get(row.dataset.key ?? "");
+      return move === undefined ? [] : [{ row, ...move }];
+    });
+    // Counted in view, with the row partly above it: the rows drawn beyond
+    // it trade places all game long, unseen.
+    const top = this.scrollOffsetPx - this.rowHeightPx;
+    const bottom = this.scrollOffsetPx + this.viewportHeightPx;
+    const seen = moved.filter(({ to }) => {
+      const at = to * this.rowHeightPx;
+      return at >= top && at < bottom;
+    });
+    if (seen.length > GLIDE_MAX_ROWS) return;
+    const held =
+      this.heldBlock(this.rows.findIndex(({ row }) => row.pinned)).edge !==
+      null;
+    for (const { row, from, to } of moved) {
+      if (
+        (row.hasAttribute("data-me") || row.hasAttribute("data-near")) &&
+        (held || this.outOfView(from) || this.outOfView(to))
+      ) {
+        continue;
+      }
+      const rows = Math.max(
+        -GLIDE_MAX_DISTANCE,
+        Math.min(GLIDE_MAX_DISTANCE, from - to),
+      );
+      const glide = row.animate(
+        [
+          { transform: `translateY(${rows * this.rowHeightPx}px)` },
+          { transform: "none" },
+        ],
+        GLIDE,
+      );
+      row.toggleAttribute("data-climbing", to < from);
+      this.glides.add(glide);
+      this.latestGlide.set(row, glide);
+      // Ended or stopped: a stopped glide rejects.
+      const done = () => {
+        this.glides.delete(glide);
+        if (this.latestGlide.get(row) === glide) {
+          row.removeAttribute("data-climbing");
+        }
+      };
+      void glide.finished.then(done, done);
+    }
+  }
+
+  private stopGlides() {
+    for (const glide of this.glides) glide.cancel();
+    this.glides.clear();
+  }
+
+  private outOfView(index: number) {
+    const top = index * this.rowHeightPx;
+    return (
+      top < this.scrollOffsetPx ||
+      top + this.rowHeightPx > this.scrollOffsetPx + this.viewportHeightPx
+    );
   }
 
   private onScroll(event: Event) {
@@ -270,6 +549,14 @@ export abstract class StatsTable extends LitElement {
 
   refresh() {
     if (this.visible) this.updateStats();
+  }
+
+  /**
+   * The game jumped to another tick (a replay seek): the next refresh does
+   * not follow on, however short the jump.
+   */
+  seeked() {
+    this.clock.forget();
   }
 
   /**
@@ -290,7 +577,8 @@ export abstract class StatsTable extends LitElement {
       this.sortKey = key;
       this.sortOrder = "desc";
     }
-    this.updateStats();
+    // Asked for, so it re-sorts at once even under the pointer.
+    this.updateStats(false);
   }
 
   private tooltipId() {
@@ -348,7 +636,40 @@ export abstract class StatsTable extends LitElement {
     );
   }
 
-  private updateStats() {
+  // A click on a row goes to that player: with ranks changing every second,
+  // the row under a mouse could change between aiming and clicking. On a
+  // touch screen the tap aims and clicks at once.
+  private onListPointerMove(event: PointerEvent) {
+    if (event.pointerType === "mouse") this.pointerMovedAt = performance.now();
+  }
+
+  private onListPointerLeave() {
+    if (this.pointerMovedAt === null) return;
+    this.pointerMovedAt = null;
+    this.updateStats();
+  }
+
+  private holdingOrder() {
+    return (
+      this.pointerMovedAt !== null &&
+      performance.now() - this.pointerMovedAt < HOLD_STILL_MS
+    );
+  }
+
+  /**
+   * The rows in the order they are drawn in, each with its new rank, so two
+   * can read 4 then 3 until the rows go to their places. New rows go to the
+   * end.
+   */
+  private inDrawnOrder(placed: PlacedRow[]): PlacedRow[] {
+    const end = this.rows.length;
+    const drawn = new Map(this.rows.map(({ row }, index) => [row.key, index]));
+    return placed.sort(
+      (a, b) => (drawn.get(a.row.key) ?? end) - (drawn.get(b.row.key) ?? end),
+    );
+  }
+
+  private updateStats(holdOrder = this.holdingOrder()) {
     if (this.game === null) return;
 
     const columns = this.visibleColumns();
@@ -371,7 +692,8 @@ export abstract class StatsTable extends LitElement {
     const sortKey = this.sortKey;
     const rows = this.buildRows(this.game, columns);
     const direction = this.sortOrder === "asc" ? 1 : -1;
-    this.rows =
+    const before = this.rows;
+    const sorted =
       orderable.length === 0 || sortKey === null
         ? rows
         : rows.sort(
@@ -379,7 +701,182 @@ export abstract class StatsTable extends LitElement {
               direction *
               ((a.values.get(sortKey) ?? 0) - (b.values.get(sortKey) ?? 0)),
           );
+    const placed = sorted.map((row, index) => ({ row, position: index + 1 }));
+    this.rows = holdOrder ? this.inDrawnOrder(placed) : placed;
+    // Asked once: the glides, the trend marks and the folds compare this list
+    // with the last refresh's, unless it does not follow on from it.
+    const followsOn = this.clock.next(
+      `${sortKey} ${this.sortOrder}`,
+      this.game.ticks(),
+      this.speed,
+    );
+    if (!followsOn) {
+      // The rows are about to be drawn in an order the glides know nothing
+      // of.
+      this.stopGlides();
+      this.moves.forget();
+      this.trends.forget();
+    }
+    this.moves.note(this.rows.map(({ row }) => row.key));
+    this.noteTrends(this.game);
+    this.leaving = this.findLeavingRows(before, followsOn);
+    // A fold already moves the rows under it: none glides as well.
+    if (this.leaving.length > 0) this.moves.drop();
     this.requestUpdate();
+  }
+
+  /**
+   * Your row, and when you rank below the rows the list shows, the row above
+   * it and, on a list of seven rows or more, the row below. Empty when no
+   * row is yours.
+   */
+  private heldBlock(myIndex: number): HeldBlock {
+    if (myIndex < 0) return { from: 0, to: 0, edge: null };
+    const shown = Math.round(this.viewportHeightPx / this.rowHeightPx);
+    const below = myIndex >= shown;
+    const from = below ? myIndex - 1 : myIndex;
+    const to =
+      below && shown >= 7
+        ? Math.min(myIndex + 2, this.rows.length)
+        : myIndex + 1;
+    const top = from * this.rowHeightPx;
+    const bottom = to * this.rowHeightPx;
+    let edge: HeldBlock["edge"] = null;
+    if (top < this.scrollOffsetPx) edge = "top";
+    else if (bottom > this.scrollOffsetPx + this.viewportHeightPx) {
+      edge = "bottom";
+    }
+    return { from, to, edge };
+  }
+
+  // Marks the rows whose rank moved over the last 30 seconds and held. The
+  // ranks are the real ones, also while the rows hold their order.
+  private noteTrends(game: GameView) {
+    this.trends.note(
+      new Map(this.rows.map(({ row, position }) => [row.key, position])),
+      game,
+    );
+  }
+
+  /** The trend marks of the drawn rows. */
+  private shownTrends(items: readonly ListItem[]): ReadonlyMap<string, Trend> {
+    return this.trends.shown(
+      items.flatMap((item) => ("placed" in item ? [item.placed.row.key] : [])),
+    );
+  }
+
+  /**
+   * The rows of `before` that are gone from the list and were in view: they
+   * close in place instead of vanishing. None when the list does not follow
+   * on from `before` (a new sort, the table opened again, a replay seek: they
+   * went long ago), or under reduced motion.
+   */
+  private findLeavingRows(
+    before: readonly PlacedRow[],
+    followsOn: boolean,
+  ): LeavingRow[] {
+    if (
+      !followsOn ||
+      prefersReducedMotion() ||
+      typeof Element.prototype.animate !== "function"
+    ) {
+      return [];
+    }
+    const kept = new Set(this.rows.map(({ row }) => row.key));
+    const firstInView = Math.floor(this.scrollOffsetPx / this.rowHeightPx);
+    const endOfView =
+      (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx;
+    const leaving: LeavingRow[] = [];
+    let gone = 0; // rows gone above this one
+    before.forEach(({ row, position }, index) => {
+      if (kept.has(row.key)) return;
+      if (index >= firstInView && index < endOfView) {
+        // Gone, the row shows who it was and nothing about them now.
+        leaving.push({
+          placed: {
+            row: {
+              ...row,
+              marks: undefined,
+              troopFill: undefined,
+              onClick: undefined,
+            },
+            position,
+            leaving: true,
+          },
+          at: index - gone,
+        });
+      }
+      gone++;
+    });
+    // A refresh that takes no row away (the pointer leaving the list, a
+    // column ticked) lets the rows already closing finish, unless their
+    // player is back: their places still hold. When rows go, they do not.
+    if (gone === 0) {
+      return this.leaving.filter(({ placed }) => !kept.has(placed.row.key));
+    }
+    return leaving;
+  }
+
+  /** Puts each leaving row back at its place, when that place is drawn. */
+  private placeLeavingRows(items: ListItem[]) {
+    const indexOf = (item: ListItem) =>
+      "placed" in item && !item.placed.leaving ? item.index : -1;
+    for (const { placed, at } of this.leaving) {
+      const next = items.findIndex((item) => indexOf(item) === at);
+      const previous = items.findIndex((item) => indexOf(item) === at - 1);
+      if (next >= 0) items.splice(next, 0, { placed, index: at });
+      else if (previous >= 0) {
+        // At the end of the list, after the leaving rows already put there:
+        // they keep the order they had.
+        let end = previous + 1;
+        for (; end < items.length; end++) {
+          const item = items[end];
+          if (!("placed" in item) || !item.placed.leaving) break;
+        }
+        items.splice(end, 0, { placed, index: at });
+      }
+    }
+  }
+
+  /**
+   * Closes each leaving row once; when it has closed it is forgotten. So is
+   * one whose place is not drawn (rows went above it, or the list scrolled
+   * on): it has nothing to close, and would hold back the glides for good.
+   */
+  private foldLeavingRows(scroller: HTMLElement) {
+    const drawn = new Set<string | undefined>();
+    for (const row of scroller.querySelectorAll<HTMLElement>(
+      "[data-leaving]",
+    )) {
+      const key = row.dataset.leaving;
+      drawn.add(key);
+      if (this.folding.has(row)) continue;
+      this.folding.add(row);
+      const forget = () => {
+        this.leaving = this.leaving.filter(
+          ({ placed }) => placed.row.key !== key,
+        );
+        this.requestUpdate();
+      };
+      // The row's own padding and rule close with it: its height counts
+      // them in, so alone it would stop 2px short and the rows under it jump.
+      row
+        .animate(
+          {
+            height: "0px",
+            paddingBottom: "0px",
+            borderBottomWidth: "0px",
+            opacity: 0,
+          },
+          { duration: 220, easing: "ease-in", fill: "forwards" },
+        )
+        .finished.then(forget, forget);
+    }
+    if (drawn.size < this.leaving.length) {
+      this.leaving = this.leaving.filter(({ placed }) =>
+        drawn.has(placed.row.key),
+      );
+    }
   }
 
   private renderHeaderCell(column: ColumnDef, index: number) {
@@ -470,6 +967,11 @@ export abstract class StatsTable extends LitElement {
     text: string,
     value: number,
     state: RowState,
+    color: string | undefined,
+    alive: StatsRow["alive"],
+    troopFill: number | undefined,
+    trend: Trend | undefined,
+    marks: readonly RowMark[] = [],
   ) {
     // A player without a clan shows a dash. Zeros recede, but not the Type
     // column's: there 0 reads "Player".
@@ -482,9 +984,10 @@ export abstract class StatsTable extends LitElement {
     // Names may be right-to-left: dir="auto" reads them so while they stay
     // at the start of their column, and the title gives a cut name in full.
     const isName = column.id === "player" || column.id === "team";
+    const gauge = troopFill !== undefined;
     return html`
       <div
-        class="stats-table-cell ${CELL} ${ALIGNMENT_CLASS[column.align]} ${
+        class="stats-table-cell ${CELL} ${gauge ? "relative" : ""} ${ALIGNMENT_CLASS[column.align]} ${
           CELL_SIZE[column.id] ?? ""
         } ${tone} ${index > 0 ? DIVIDER_CLASS : ""} ${
           index === 0 && state === "me" ? ME_EDGE : ""
@@ -495,41 +998,124 @@ export abstract class StatsTable extends LitElement {
         ?data-rule=${index > 0}
         ?data-zero=${zero}
       >
+        ${
+          isName && color !== undefined
+            ? html`<span
+                class=${CHIP}
+                style="background: ${color}"
+                aria-hidden="true"
+                data-chip
+              ></span>`
+            : nothing
+        }
+        ${gauge ? renderGauge(troopFill) : nothing}
+        ${column.id === "rank" ? this.renderTrend(trend) : nothing}
         <span
           class="min-w-0 truncate"
           dir=${isName ? "auto" : nothing}
           title=${isName ? text : nothing}
           >${noClan ? "–" : text}</span
-        >
+        >${marks.map((mark) => this.renderMark(mark))}
+        ${isName && alive !== undefined ? this.renderAlive(alive) : nothing}
       </div>
     `;
+  }
+
+  // Named for screen readers and on hover; on screen the numbers are enough.
+  private renderAlive({ count, total }: NonNullable<StatsRow["alive"]>) {
+    const label = translateText("leaderboard.players_alive");
+    return html`<span
+      class="${ALIVE} ${count === 0 ? ZERO_TONE : ALIVE_TONE}"
+      title="${label} ${count}/${total}"
+      data-alive
+      ?data-zero=${count === 0}
+      ><span class="sr-only">${label} </span>${count}/${total}</span
+    >`;
+  }
+
+  private renderMark(mark: RowMark) {
+    const { icon, tone, label } = ROW_MARK[mark];
+    const name = translateText(label);
+    return html`<span
+      class="${ROW_MARK_BOX} ${tone}"
+      role="img"
+      aria-label=${name}
+      title=${name}
+      data-mark=${mark}
+      ><of-icon name=${icon} size=${ROW_MARK_SIZE}></of-icon
+    ></span>`;
+  }
+
+  private renderTrend(trend: Trend | undefined) {
+    if (trend === undefined) return nothing;
+    const label = translateText(TREND_LABEL[trend]);
+    return html`<span
+      class="${TREND} ${TREND_SHAPE[trend]}"
+      role="img"
+      aria-label=${label}
+      title=${label}
+      data-trend=${trend}
+    ></span>`;
   }
 
   private renderRow(
     game: GameView,
     columns: readonly ColumnDef[],
-    { row, position }: PlacedRow,
+    { row, position, leaving = false }: PlacedRow,
+    index: number,
+    block: HeldBlock,
+    trend: Trend | undefined,
   ) {
     const state: RowState = row.pinned
       ? "me"
       : row.emphasized
         ? "mate"
         : "other";
+    const gaugeColumn: ColumnId = columns.some(
+      (column) => column.id === "troops",
+    )
+      ? "troops"
+      : "maxtroops";
+    // A leaving row is out of the list: never held, nor one of your
+    // neighbours.
+    const held = !leaving && index >= block.from && index < block.to;
+    const near = held && !row.pinned;
+    const nearHeld = near && block.edge !== null;
+    // Held with neighbours, the block's open side gets the gap: under it at
+    // the top, over it at the bottom.
+    const outer = block.edge === "bottom" ? block.from : block.to - 1;
+    const gap =
+      held && block.to - block.from > 1 && index === outer ? block.edge : null;
     // translate="no": a page translator must not rewrite player names.
     // The empty last cell is where the list's scrollbar lands: the browser
     // counts the bar's width as the cell's margin and the end track grows to
     // fit it, so the bar never covers the last column.
     return html`
       <div
-        class="stats-table-row grid col-span-full ${ROW} ${ROW_STATE[state]} ${
-          row.onClick ? `cursor-pointer ${ROW_HOVER[state]}` : ""
-        }"
+        class="stats-table-row grid col-span-full ${ROW} ${
+          held ? HELD_CLIMBING : CLIMBING
+        } ${ROW_STATE[state]} ${
+          held
+            ? `${HOLD} ${HOLD_TOP[index - block.from]} ${
+                HOLD_BOTTOM[block.to - 1 - index]
+              }`
+            : ""
+        } ${nearHeld ? NEAR_HELD : ""} ${gap === null ? "" : GAP[gap]} ${
+          row.onClick
+            ? `cursor-pointer ${nearHeld ? NEAR_HELD_HOVER : ROW_HOVER[state]}`
+            : ""
+        } ${leaving ? "overflow-hidden" : ""}"
         style="grid-template-columns: subgrid; grid-column: 1 / -1;"
         role="row"
-        aria-rowindex=${position + 1}
+        aria-rowindex=${leaving ? nothing : position + 1}
+        aria-hidden=${leaving ? "true" : nothing}
+        data-leaving=${leaving ? row.key : nothing}
         translate="no"
+        data-key=${row.key}
         ?data-me=${state === "me"}
         ?data-mate=${state === "mate"}
+        ?data-near=${near}
+        ?data-gap=${gap !== null}
         @click=${row.onClick ?? nothing}
       >
         ${repeat(
@@ -540,9 +1126,18 @@ export abstract class StatsTable extends LitElement {
             return this.renderCell(
               column,
               index,
-              column.cell({ ...row, position, value }, game),
+              // Its rank is taken by the row below already: a leaving row
+              // shows none, so no two rows read the same number.
+              leaving && column.id === "rank"
+                ? ""
+                : column.cell({ ...row, position, value }, game),
               value,
               state,
+              row.color,
+              row.alive,
+              column.id === gaugeColumn ? row.troopFill : undefined,
+              trend,
+              column.id === "player" ? row.marks : undefined,
             );
           },
         )}
@@ -568,11 +1163,12 @@ export abstract class StatsTable extends LitElement {
         (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx,
       ) + OVERSCAN_ROWS,
     );
-    // Your row is drawn wherever it is, so that it can be held at the edge;
-    // the spacer it falls in is split around it. Those spacers change while
-    // the list scrolls, so the list keeps no scroll anchor: the browser must
-    // not answer them by moving the scroll position.
-    const myIndex = this.rows.findIndex((row) => row.pinned);
+    // Your row and those held with it are drawn wherever they are, so that
+    // they can be held at the edge; the spacer they fall in is split around
+    // them. Those spacers change while the list scrolls, so the list keeps
+    // no scroll anchor: the browser must not answer them by moving the
+    // scroll position.
+    const block = this.heldBlock(this.rows.findIndex(({ row }) => row.pinned));
     const items: ListItem[] = [];
     let next = 0; // the first row not yet in items
     const spaceTo = (index: number) => {
@@ -582,13 +1178,19 @@ export abstract class StatsTable extends LitElement {
     };
     const place = (index: number) => {
       spaceTo(index);
-      items.push({ placed: { row: this.rows[index], position: index + 1 } });
+      items.push({ placed: this.rows[index], index });
       next = index + 1;
     };
-    if (myIndex >= 0 && myIndex < firstIndex) place(myIndex);
+    for (let index = block.from; index < block.to; index++) {
+      if (index < firstIndex) place(index);
+    }
     for (let index = firstIndex; index < lastIndex; index++) place(index);
-    if (myIndex >= lastIndex) place(myIndex);
+    for (let index = block.from; index < block.to; index++) {
+      if (index >= lastIndex) place(index);
+    }
     spaceTo(this.rows.length);
+    const trends = this.shownTrends(items);
+    this.placeLeavingRows(items);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     // The empty last track only grows to a scrollbar.
@@ -647,13 +1249,20 @@ export abstract class StatsTable extends LitElement {
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="rowgroup"
               @scroll=${this.onScroll}
+              @pointerenter=${this.onListPointerMove}
+              @pointermove=${this.onListPointerMove}
+              @pointerleave=${this.onListPointerLeave}
             >
               ${repeat(
                 items,
                 (item) =>
                   "spacer" in item
                     ? `spacer-${item.from}`
-                    : `row-${item.placed.row.key}`,
+                    : // Its own key: were the player back in the list, the
+                      // closing row's element must not become their row.
+                      `${item.placed.leaving ? "leaving" : "row"}-${
+                        item.placed.row.key
+                      }`,
                 (item) =>
                   "spacer" in item
                     ? html`<div
@@ -661,7 +1270,16 @@ export abstract class StatsTable extends LitElement {
                         style="height: ${item.spacer}px"
                         aria-hidden="true"
                       ></div>`
-                    : this.renderRow(game, columns, item.placed),
+                    : this.renderRow(
+                        game,
+                        columns,
+                        item.placed,
+                        item.index,
+                        block,
+                        item.placed.leaving
+                          ? undefined
+                          : trends.get(item.placed.row.key),
+                      ),
               )}
             </div>
           </div>

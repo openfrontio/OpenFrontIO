@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { colord } from "colord";
 import { columnById } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,
 } from "../src/client/hud/layers/TeamStats";
+import { themeProvider } from "../src/client/theme/ThemeProvider";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 import { playerInfo, setup } from "./util/Setup";
@@ -95,6 +97,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -145,6 +148,7 @@ describe("TeamStats", () => {
         playerViews: () => players,
         config: () => ({ maxTroops: () => 100 }),
         ticks: () => 600,
+        inSpawnPhase: () => false,
         numLandTiles: () => 100,
         numTilesWithFallout: () => 0,
       } as unknown as GameView;
@@ -180,6 +184,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -191,6 +196,61 @@ describe("TeamStats", () => {
     const table = teamStats.querySelector('[role="table"]');
     expect(table?.getAttribute("aria-label")).toBe("leaderboard.teams_table");
     expect(table?.getAttribute("aria-rowcount")).toBe("2");
+
+    teamStats.remove();
+  });
+
+  it("shows each team's colour and how many of its players are alive", async () => {
+    const players = [
+      ["Blue", true, 10],
+      ["Blue", true, 10],
+      ["Blue", false, 0],
+      ["Red", false, 0],
+    ].map(([team, alive, tiles], i) => ({
+      id: () => `player-${i}`,
+      smallID: () => i,
+      team: () => team,
+      numTilesOwned: () => tiles,
+      gold: () => 10n,
+      isAlive: () => alive,
+    })) as unknown as PlayerView[];
+    const teamStats = new TeamStats();
+    teamStats.game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      inSpawnPhase: () => false,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+    teamStats.refresh();
+    await teamStats.updateComplete;
+
+    const [blue, red] = [...teamStats.querySelectorAll(".stats-table-row")].map(
+      (row) => row.querySelector('[data-column="team"]') as HTMLElement,
+    );
+    const chip = blue.querySelector("[data-chip]") as HTMLElement;
+    expect(blue.firstElementChild).toBe(chip);
+    expect(colord(chip.style.background).toHex()).toBe(
+      themeProvider.current().teamColor("Blue").toHex(),
+    );
+
+    // After the name, named for a screen reader and on hover.
+    const alive = blue.querySelector("[data-alive]") as HTMLElement;
+    expect(blue.lastElementChild).toBe(alive);
+    expect(alive.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      "leaderboard.players_alive 2/3",
+    );
+    expect(alive.title).toBe("leaderboard.players_alive 2/3");
+    expect(alive.hasAttribute("data-zero")).toBe(false);
+
+    // A team with nobody left stays, its count dimmed like its zeros.
+    const none = red.querySelector("[data-alive]") as HTMLElement;
+    expect(none.title).toBe("leaderboard.players_alive 0/1");
+    expect(none.hasAttribute("data-zero")).toBe(true);
 
     teamStats.remove();
   });
@@ -227,6 +287,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
       teamClanTag: (team: string) => {

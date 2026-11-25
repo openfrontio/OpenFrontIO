@@ -476,6 +476,7 @@ export class ReplayViewer extends LitElement {
     this.adapter = adapter;
     const showEmojis = () => userSettings.emojis();
     adapter.showEmojis = showEmojis;
+    adapter.startTick = () => header.spawnPhaseEnd?.startTick ?? null;
     playback.frameBuilder.showEmojis = showEmojis;
 
     await this.updateComplete;
@@ -621,6 +622,8 @@ export class ReplayViewer extends LitElement {
           fd.playerStatus as Map<number, PlayerStatusData>,
         );
       }
+      // The leaderboard can't tell a seek from fast play by its clock alone.
+      if (seeked) this.querySelector<PlayerStats>("player-stats")?.seeked();
       this.tick = fd.tick;
       adapter.update(
         source,
@@ -1301,6 +1304,7 @@ export class ReplayViewer extends LitElement {
           class="block min-w-0"
           .game=${this.adapter?.asGameView() ?? null}
           .visible=${true}
+          .speed=${this.speed}
           .eventBus=${this.hudBus}
         ></player-stats>
         ${

@@ -6,6 +6,7 @@
  */
 
 import type { GameRecord } from "@openfront/shared/WireSchemas";
+import type { PlayerStats } from "../../../src/client/hud/layers/PlayerStats";
 import type { SettingsModal } from "../../../src/client/hud/layers/SettingsModal";
 import { MapRenderer } from "../../../src/client/render/gl";
 import type {
@@ -402,6 +403,46 @@ test("the HUD elements are in the page while the replay loads", async () => {
   await started;
   element.remove();
   expect(found).toEqual(["events-display", "player-info-overlay"]);
+});
+
+test("a seek tells the leaderboard, a frame played on does not", () => {
+  const element = new ReplayViewer();
+  const stats = document.createElement("player-stats") as PlayerStats;
+  element.appendChild(stats);
+  const seeked = vi.spyOn(stats, "seeked");
+  type OnFrame = (fd: unknown, seeked: boolean, source: unknown) => void;
+  const playback: { header: { mapWidth: number }; onFrame?: OnFrame } = {
+    header: { mapWidth: 1 },
+  };
+  // A renderer that takes any upload.
+  const view = new Proxy({}, { get: () => () => {} });
+  (
+    element as unknown as {
+      bindPlayback(...args: unknown[]): void;
+    }
+  ).bindPlayback(
+    playback,
+    view,
+    { apply: () => [] },
+    { seek: () => {}, advance: () => {} },
+    { update: () => {} },
+  );
+  const frame = (tick: number) => ({
+    tick,
+    changedTiles: [],
+    trailDirtyRowMax: -1,
+    events: { deadUnits: [], conquestEvents: [], bonusEvents: [] },
+    names: new Map(),
+    players: new Map(),
+    playerStatus: new Map(),
+  });
+
+  playback.onFrame!(frame(600), false, {});
+  expect(seeked).not.toHaveBeenCalled();
+
+  // Dragged ten minutes on.
+  playback.onFrame!(frame(6600), true, {});
+  expect(seeked).toHaveBeenCalledOnce();
 });
 
 test("playback keys do nothing while the settings menu is open", () => {
