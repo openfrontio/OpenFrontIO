@@ -1003,7 +1003,11 @@ export class WinModal extends LitElement implements Controller {
         void fetchCosmetics()
           .then((fetched) => {
             if (fetched === null || this.lastEndCard !== card) return;
-            this.endCardCosmetics = fetched;
+            // As loadPatternContent: a reload (a cohort change) can land
+            // while this fetch is out, and this older answer isn't cached.
+            // Take the catalog now in use, or a late plain catalog would
+            // replace the cohort one onCosmeticsChanged installed.
+            this.endCardCosmetics = getCachedCosmetics() ?? fetched;
             this.applyEndCard(card);
           })
           .catch(() => {});

@@ -202,6 +202,63 @@ describe("WinModal card section", () => {
     catalogue.cached = null;
   });
 
+  it("a plain catalog that lands after the cohort one doesn't replace it", async () => {
+    const withBackground = (priceHard: number) => ({
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_pacific: {
+          product: null,
+          rarity: "epic",
+          name: "bg_pacific",
+          url: "/bg.webp",
+          priceHard,
+        },
+      },
+    });
+    // Joined by direct link: nothing cached, and the plain catalog (R1) is
+    // still out when the card is chosen.
+    catalogue.cached = null;
+    let landR1!: (c: unknown) => void;
+    catalogue.fetched = new Promise((resolve) => (landR1 = resolve));
+    const modal = (await renderModal({})) as unknown as {
+      game: unknown;
+      setEndCard(choose: () => unknown): void;
+      loadout: { item: { priceHard?: number } }[];
+    };
+    modal.game = {
+      myPlayer: () => null,
+      gameID: () => "g1",
+      config: () => ({ gameConfig: () => ({}) }),
+      resumedFromSave: () => false,
+      playerByClientID: () => ({
+        name: () => "Volt",
+        clanTag: () => null,
+        territoryColor: () => ({ toHex: () => "#123456" }),
+      }),
+      playerCardOf: () => ({
+        card: { background: "bg_pacific", trackers: [] },
+        flag: undefined,
+      }),
+    };
+    modal.setEndCard(() => ({ kind: "eliminatedBy", clientID: "KILLER01" }));
+    // The group lands: the cohort catalog (R2) is cached and announced.
+    const cohort = withBackground(300);
+    catalogue.cached = cohort;
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: cohort }),
+    );
+    // Then R1 lands late, with the plain price.
+    landR1(withBackground(240));
+    await new Promise((r) => setTimeout(r, 0));
+    await vi.waitFor(() => expect(modal.loadout[0]?.item.priceHard).toBe(300));
+    // And stays there once everything has settled.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(modal.loadout[0]?.item.priceHard).toBe(300);
+    catalogue.cached = null;
+    catalogue.fetched = null;
+  });
+
   it("a failure choosing the card leaves today's screen", async () => {
     const modal = (await renderModal({
       endCardMode: "eliminatedBy",
