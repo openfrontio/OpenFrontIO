@@ -258,6 +258,7 @@ describe("/users/@me from a session that has gone", () => {
 
   afterEach(() => {
     vi.mocked(isSessionActive).mockReturnValue(true);
+    vi.mocked(isOtherSession).mockReturnValue(false);
     invalidateUserMe();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -315,6 +316,27 @@ describe("/users/@me from a session that has gone", () => {
     );
     await getUserMe();
     expect(meCalls()).toHaveLength(2);
+    vi.mocked(isOtherSession).mockReturnValue(false);
+  });
+
+  it("a request still in flight isn't joined once the session is another account's", async () => {
+    let answer!: (v: unknown) => void;
+    fetchMock.mockReturnValueOnce(new Promise((r) => (answer = r)));
+    // A's request has its token and is waiting on the network...
+    const first = getUserMe();
+    await vi.waitFor(() => expect(meCalls()).toHaveLength(1));
+    // ...when a silent refresh installs B.
+    vi.mocked(isOtherSession).mockImplementation(
+      (sub: string) => sub === "player-1",
+    );
+    const second = getUserMe();
+    // B's caller doesn't wait on A's request: it asks again.
+    expect(meCalls()).toHaveLength(1);
+    await vi.waitFor(() => expect(meCalls()).toHaveLength(2));
+    answer({ status: 200, json: async () => profile });
+    // A's caller still gets its own answer.
+    expect(await first).toEqual(profile);
+    await second;
     vi.mocked(isOtherSession).mockReturnValue(false);
   });
 
