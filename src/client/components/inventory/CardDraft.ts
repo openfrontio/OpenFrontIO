@@ -169,6 +169,20 @@ function showsSave(
   );
 }
 
+/** The card a PUT stored: the loadout the server answers with, or what was
+ * sent. Either way empty rows are gone (the PUT leaves them out), so a gap
+ * in the middle closes up, as it will on the next load. */
+function storedCard(
+  loadout: CardLoadoutBody | undefined,
+  body: CardLoadoutBody,
+): CardDraft {
+  const stored = Array.isArray(loadout?.trackers) ? loadout : body;
+  return draftFromCard({
+    background: stored.background ?? null,
+    trackers: stored.trackers.map((stat) => ({ stat })),
+  });
+}
+
 function sameRows(
   a: readonly (string | null)[],
   b: readonly (string | null)[],
@@ -255,7 +269,8 @@ export function swapPreview(
  * out differently (the one the server kept when a save failed), by what
  * they name rather than by row: a removed item goes from wherever `base`
  * has it, and one picked into a row in place of another replaces that one
- * there. An item added into an empty row takes `base`'s first empty row,
+ * there. An item added into an empty row takes one of `base`'s empty rows,
+ * placed among the items there as the player placed it (see placeAmong),
  * else the row of an item `before` didn't have (one the failed save had
  * taken off, which the player never saw). Where `base` has the very rows
  * `before` had (the failed save didn't touch them), `after`'s rows are
@@ -302,19 +317,50 @@ export function replayByItem(
     });
     for (const y of adds) {
       if (rows.includes(y)) continue;
-      let at = rows.indexOf(null);
+      if (rows.includes(null)) {
+        placeAmong(rows, y, now);
+        continue;
+      }
       // Never a tracker the player has now: that includes every one this
       // replay wrote (each comes from `after`), so nothing it placed is
       // overwritten.
-      if (at === -1) {
-        at = rows.findIndex(
-          (x) => x !== null && !was.includes(x) && !now.includes(x),
-        );
-      }
+      const at = rows.findIndex(
+        (x) => x !== null && !was.includes(x) && !now.includes(x),
+      );
       if (at !== -1) rows[at] = y;
     }
   }
   return out;
+}
+
+/**
+ * Puts `y` into `rows`, which has an empty row, right after the last item
+ * `rows` holds of those `now` has before it (first when none): the rows
+ * between it and the nearest empty one shift over. So a tracker picked into
+ * a gap the server since closed up keeps its place among the others, and
+ * one picked last still goes last.
+ */
+function placeAmong(
+  rows: (string | null)[],
+  y: string,
+  now: readonly (string | null)[],
+): void {
+  const at =
+    Math.max(
+      -1,
+      ...now
+        .slice(0, now.indexOf(y))
+        .map((x) => (x === null ? -1 : rows.indexOf(x))),
+    ) + 1;
+  const after = rows.indexOf(null, at);
+  if (after !== -1) {
+    rows.splice(after, 1);
+    rows.splice(at, 0, y);
+    return;
+  }
+  // No empty row from there on: one before it closes up instead.
+  rows.splice(rows.lastIndexOf(null), 1);
+  rows.splice(at - 1, 0, y);
 }
 
 /** Moves a row (↑/↓ or a drag): the rows between shift over. */
@@ -466,6 +512,14 @@ export class CardEditor {
    * reauth or a switch to another account and back; another account's
    * goes at once, since its PUT can't race this one's. */
   private pending = new Map<string, Promise<boolean>>();
+  /** By account: a save's PUT that stored a card once the editor had moved
+   * on from it (a reauth into the same account), with what it replaced and
+   * sent. That account's next save goes onto it (see catchUp), so a profile
+   * read before it committed never makes the next PUT undo it. */
+  private landed = new Map<
+    string,
+    { replaced: CardDraft; sent: CardDraft; stored: CardDraft }
+  >();
   /** Bumped when the card turns out to be another account's: a save
    * started before never lands on the next one's card. */
   private generation = 0;
@@ -528,18 +582,29 @@ export class CardEditor {
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
     this.flares = userMe?.player.flares ?? [];
-    if (!hadChanges) {
+    // A profile of this account that shows a PUT stored unseen has caught
+    // up with it: from here the profiles are the baseline (one changed
+    // elsewhere since must not be rebased back onto that PUT's card).
+    if (owner !== null) {
+      const landed = this.landed.get(owner);
+      if (
+        landed !== undefined &&
+        showsSave(this.saved, landed.replaced, landed.sent)
+      ) {
+        this.landed.delete(owner);
+      }
+    }
+    if (this.sending !== null) {
+      // A save in flight: the draft is left as it is, even with no changes
+      // against the old card (an edit back to it after Save is still an
+      // edit). store() reconciles it with what was sent, and this profile
+      // may be that save's own refresh.
+    } else if (!hadChanges) {
       this.draft = cloneDraft(this.saved);
-    } else if (
-      sameAccount &&
-      this.sending === null &&
-      this.droppedTo === null
-    ) {
+    } else if (sameAccount) {
       // The same card again, changed elsewhere (saved on another device):
       // the edits made on the old one go onto it, and what wasn't edited
       // follows it, so Save never puts back what the player didn't touch.
-      // Not while a save is in flight: store() reconciles with what it
-      // stored, and this profile may be that save's own refresh.
       this.draft = rebase(this.saved, before, this.draft);
     }
     this.emit();
@@ -737,6 +802,11 @@ export class CardEditor {
     // An earlier save of this account's still out (dropped by a reauth, or
     // by a switch to another account and back): this one waits for it.
     const prior = this.pending.get(owner.publicId) ?? null;
+    if (prior === null && this.catchUp(owner.publicId) && !this.eligible()) {
+      // What an earlier save stored already holds the changes.
+      this.emit();
+      return this.changeCount() === 0;
+    }
     const saving =
       prior === null ? this.store(owner) : this.storeAfter(prior, owner);
     this.inFlight = saving;
@@ -766,6 +836,7 @@ export class CardEditor {
     await prior.catch(() => undefined);
     const now = this.ownerNow(owner);
     if (now === "gone") return this.endQuietly(owner);
+    this.catchUp(owner.publicId);
     // The account unknown for now (a token refresh failed) isn't a reason
     // to drop it: store() asks again before sending, refuses, and ends it
     // failed, so the same account can retry once it's back.
@@ -776,6 +847,22 @@ export class CardEditor {
       return this.changeCount() === 0;
     }
     return this.store(owner);
+  }
+
+  /**
+   * Puts this account's card onto what an earlier save stored unseen (see
+   * `landed`), unless the saved card already shows it: the player's edits
+   * are replayed on it. True when it moved the card.
+   */
+  private catchUp(publicId: string): boolean {
+    const landed = this.landed.get(publicId);
+    if (landed === undefined) return false;
+    this.landed.delete(publicId);
+    if (showsSave(this.saved, landed.replaced, landed.sent)) return false;
+    const before = this.saved;
+    this.saved = cloneDraft(landed.stored);
+    this.draft = rebase(this.saved, before, this.draft);
+    return true;
   }
 
   private async store(owner: SaveOwner): Promise<boolean> {
@@ -804,7 +891,19 @@ export class CardEditor {
     // /users/@me seeds the editor. The account unknown for now (a refresh
     // that failed) isn't another account: a failure there can be retried
     // once it's back, and a success is taken.
-    if (this.ownerNow(owner) === "gone") return this.endQuietly(owner);
+    if (this.ownerNow(owner) === "gone") {
+      // Stored for an editor that moved on, but the same account may come
+      // back to a profile read before this committed: its next save goes
+      // onto this.
+      if (result.ok) {
+        this.landed.set(owner.publicId, {
+          replaced,
+          sent,
+          stored: storedCard(result.loadout, body),
+        });
+      }
+      return this.endQuietly(owner);
+    }
     this.sending = null;
     if (!result.ok) {
       // Dropped meanwhile: the draft goes back to the card the server kept,
@@ -813,17 +912,16 @@ export class CardEditor {
       this.droppedTo = null;
       if (droppedTo !== null) {
         this.draft = replayByItem(this.saved, droppedTo, this.draft);
+      } else {
+        // Kept for Retry: the player's edits (against the card it replaced)
+        // go onto the saved card, which a profile meanwhile may have made a
+        // newer one, so Retry never puts back what changed elsewhere.
+        this.draft = rebase(this.saved, replaced, this.draft);
       }
       this.saveState = droppedTo !== null ? "idle" : "failed";
       this.emit();
       return false;
     }
-    // What is stored now: the loadout the server answers with, or what was
-    // sent. Either way empty rows are gone (the PUT leaves them out), so a
-    // gap in the middle closes up, as it will on the next load.
-    const stored = Array.isArray(result.loadout?.trackers)
-      ? result.loadout
-      : body;
     // A profile of this account that arrived while it saved and already
     // shows what this save changed was read after the PUT (the refresh the
     // save broadcasts, or a later one): it may be newer than the PUT's
@@ -837,10 +935,7 @@ export class CardEditor {
       showsSave(this.saved, replaced, sent);
     const storedDraft = newerProfile
       ? cloneDraft(this.saved)
-      : draftFromCard({
-          background: stored.background ?? null,
-          trackers: stored.trackers.map((stat) => ({ stat })),
-        });
+      : storedCard(result.loadout, body);
     // Nothing edited while it saved (or since a drop, which reset the draft
     // to what it sent): the draft becomes the stored card. An edit made
     // meanwhile goes onto the stored card, which may be a newer one: only

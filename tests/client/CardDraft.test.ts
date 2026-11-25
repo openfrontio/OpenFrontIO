@@ -189,6 +189,26 @@ describe("card draft", () => {
     ).toEqual(["d", "b", "e"]);
   });
 
+  it("a tracker added into an emptied row keeps its place among the others", () => {
+    // [A, -, C] (B taken off), then D picked into the gap; the kept card
+    // closed it up: [A, C, -]. D goes between A and C, as the player put it.
+    expect(
+      replayByItem(
+        rows("a", "c", null),
+        rows("a", null, "c"),
+        rows("a", "d", "c"),
+      ).rows.tracker,
+    ).toEqual(["a", "d", "c"]);
+    // Picked after the others: it still goes last.
+    expect(
+      replayByItem(
+        rows("a", "c", null),
+        rows("c", "a", null),
+        rows("c", "a", "d"),
+      ).rows.tracker,
+    ).toEqual(["a", "c", "d"]);
+  });
+
   it("the body keeps held-back title and taunt and drops empty rows", () => {
     const d = pickInto(
       draftFromCard(CARD),
@@ -334,6 +354,24 @@ describe("CardEditor", () => {
     // Not "Saved": that edit isn't, and Save card takes it.
     expect(editor.saveState).toBe("idle");
     expect(editor.canSave()).toBe(true);
+  });
+
+  it("a tracker picked into the gap a save leaves keeps its row when the server closes it up", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 1 }, null);
+    const saving = editor.save();
+    editor.pick({ kind: "tracker", index: 1 }, "games_played");
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.draft.rows.tracker).toEqual([
+      "wins",
+      "games_played",
+      "best_elo",
+    ]);
   });
 
   it("closing the Inventory drops unsaved changes", () => {
@@ -811,6 +849,93 @@ describe("CardEditor", () => {
     expect(editor.saved.rows.tracker[0]).toBe("games_played");
   });
 
+  it("a queued save goes onto what the earlier PUT stored, even with its refresh lost", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // A reauth into the same account, and its profile read before the
+    // first PUT commits: still Pacific.
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    const saving = editor.save();
+    // The first PUT stores Storm; its refresh fails, so no profile shows it.
+    finishOld({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    // The tracker edit goes onto Storm, never undoing it.
+    expect(api.save.mock.calls[1][0].background).toBe("bg_storm");
+    expect(api.save.mock.calls[1][0].trackers[0]).toBe("games_played");
+  });
+
+  it("a save after an earlier PUT landed unseen goes onto what it stored", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const first = editor.save();
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    finishOld({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    await first;
+    // Settled before the next Save: nothing queued, but it still knows.
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    expect(await editor.save()).toBe(true);
+    expect(api.save.mock.calls[1][0].background).toBe("bg_storm");
+  });
+
+  it("once a profile shows an unseen PUT, a change made elsewhere after it isn't overwritten", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const first = editor.save();
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    finishOld({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    await first;
+    // A later profile shows Storm; then Ocean is set on a phone.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, B_FLARES, "account-a"));
+    editor.seed(me({ ...CARD, background: "bg_ocean" }, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    expect(await editor.save()).toBe(true);
+    expect(api.save.mock.calls[1][0].background).toBe("bg_ocean");
+  });
+
   it("pending saves are kept per account: A waits only for A's earlier PUT", async () => {
     const stored = (trackers: string[]) => ({
       ok: true,
@@ -1223,6 +1348,51 @@ describe("CardEditor", () => {
     expect(editor.saved.rows.tracker[0]).toBe("games_played");
     expect(editor.draft.rows.tracker[0]).toBe("games_played");
     expect(editor.changeCount()).toBe(0);
+  });
+
+  it("an edit back to the old card during a save stays an edit when the save's refresh lands", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // Pacific again while it saves: the same as the old card...
+    editor.pick({ kind: "background" }, "bg_pacific");
+    // ...then the save's refresh brings Storm.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    expect(editor.draft.background).toBe("bg_pacific");
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+    expect(editor.draft.background).toBe("bg_pacific");
+    expect(editor.changeCount()).toBe(1);
+  });
+
+  it("a failed save goes onto a card changed elsewhere meanwhile, keeping only its edits", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    const saving = editor.save();
+    // Another device changed the background meanwhile.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    finish({ ok: false, error: "failed" });
+    expect(await saving).toBe(false);
+    expect(editor.saveState).toBe("failed");
+    // Retry sends Storm, which the player never touched, and their tracker.
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+    expect(editor.changeCount()).toBe(1);
   });
 
   it("an older profile that lands during a save doesn't undo it", async () => {

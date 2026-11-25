@@ -474,11 +474,12 @@ export class InventoryCardTab extends LitElement {
       }
       const resolved = this.resolve(type, item);
       const base = itemStateOf(resolved, false);
-      if (base === null) continue;
+      // Filtered by whether the player owns it, not by its tile's label: an
+      // unowned pick (unsaved) is still Not owned.
+      if (base === null || !this.matchesFilter(base)) continue;
       entries.push(this.entryFor(slot, resolved, base, editor));
     }
-    entries.sort(compareTiles);
-    return entries.filter((e) => this.matchesFilter(e.state));
+    return entries.sort(compareTiles);
   }
 
   private entryFor(
@@ -511,10 +512,12 @@ export class InventoryCardTab extends LitElement {
     };
   }
 
+  /** `state` is the item's own (itemStateOf with nothing equipped): owned,
+   * forSale or earned. */
   private matchesFilter(state: ItemState): boolean {
     switch (this.filter) {
       case "owned":
-        return state === "equipped" || state === "owned" || state === "unsaved";
+        return state === "owned";
       case "notOwned":
         return state === "forSale" || state === "earned";
       case "all":
@@ -1037,7 +1040,8 @@ export class InventoryCardTab extends LitElement {
       <button
         type="button"
         data-card-toast-retry
-        class="min-h-11 shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-bold hover:bg-white/20"
+        ?disabled=${!this.editor.canSave()}
+        class="min-h-11 shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-bold hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
         @click=${() => this.save()}
       >
         ${translateText("inventory_card.retry")}

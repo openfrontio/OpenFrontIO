@@ -55,6 +55,14 @@ class ModalRouter {
   /** The hash that named currentName, to put back when it stays open. */
   private currentHash = "";
   /**
+   * The page (a modal with a pageId) the router last opened that is still
+   * open, and the hash that named it. A popup opened over it leaves it open
+   * underneath: a route that replaces it still asks it first, and once the
+   * popup closes the URL names it again.
+   */
+  private page: string | null = null;
+  private pageHash = "";
+  /**
    * A route the open modal is still being asked about (confirmRouteLeave).
    * Main routes one Back or typed hash twice (popstate, then hashchange):
    * the repeat must not ask again, since a second ask would be answered
@@ -152,7 +160,14 @@ class ModalRouter {
     if (this.pendingAsk !== null) return true;
     // Another page replaces the one shown: its modal may ask first.
     const leaving = this.currentName !== name && entry.pageId !== undefined;
-    const guarded = leaving ? this.guardedCurrent() : null;
+    // The modal the URL names asks; under a popup (which has no guard), so
+    // does the page it covers, which this route replaces too.
+    const guarded = leaving
+      ? (this.guardOf(this.currentName) ??
+        (this.page !== this.currentName && this.page !== name
+          ? this.guardOf(this.page)
+          : null))
+      : null;
     if (guarded !== null) {
       // The route asked about is this URL (path, query and hash): approved,
       // it opens with it, even if the URL moved on while the prompt was up
@@ -178,16 +193,47 @@ class ModalRouter {
     // tracking that modal, so its close wouldn't clear the path, and the next
     // reload would open it again.
     this.leavePath();
-    this.currentName = name;
+    this.setCurrent(name);
     this.currentHash = window.location.hash;
+    if (this.page === name) this.pageHash = this.currentHash;
     void this.openRegistered(name, entry, args);
   }
 
-  /** The open modal the URL names, when it asks before a route takes it
-   * away (confirmRouteLeave). */
-  private guardedCurrent(): RoutableModal | null {
-    if (this.currentName === null) return null;
-    const entry = this.registry.get(this.currentName);
+  /** The URL names `name` now; a page is also the one under any popup. */
+  private setCurrent(name: string): void {
+    this.currentName = name;
+    if (this.registry.get(name)?.pageId !== undefined && this.page !== name) {
+      this.page = name;
+      // Named by its hash once one is written; one opened from a path has
+      // none (its path is left once a popup's hash takes over).
+      this.pageHash = "";
+    }
+  }
+
+  /** A page route that never opened (its load failed, or the URL moved on
+   * first) isn't a page under anything: a popup's close never names it. */
+  private forgetUnopenedPage(name: string, entry: RegistryEntry): void {
+    if (this.page !== name) return;
+    if (isOpenModal(document.querySelector(entry.tag))) return;
+    this.page = null;
+  }
+
+  /** A popup closed: a page still open under it is the one the router
+   * tracks again. */
+  private backToPage(closed: string): void {
+    if (closed === this.page) {
+      this.page = null;
+    } else if (this.page !== null) {
+      this.currentName = this.page;
+      this.currentHash = this.pageHash;
+    }
+  }
+
+  /** The named open modal, when it asks before a route takes it away
+   * (confirmRouteLeave). */
+  private guardOf(name: string | null): RoutableModal | null {
+    if (name === null) return null;
+    const entry = this.registry.get(name);
     if (entry === undefined) return null;
     const el = document.querySelector(entry.tag) as RoutableModal | null;
     return typeof el?.confirmRouteLeave === "function" ? el : null;
@@ -234,6 +280,7 @@ class ModalRouter {
       if (this.currentName === name) {
         this.currentName = null;
       }
+      this.forgetUnopenedPage(name, entry);
       return;
     }
     await customElements.whenDefined(entry.tag);
@@ -246,19 +293,23 @@ class ModalRouter {
       if (this.currentName === name) {
         this.currentName = null;
       }
+      this.forgetUnopenedPage(name, entry);
       return;
     }
 
     this.routingFromUrl = true;
     try {
-      this.currentName = name;
-      if (entry.pageId) {
+      this.setCurrent(name);
+      const el = document.querySelector(entry.tag) as RoutableModal | null;
+      if (entry.pageId && !isOpenModal(el)) {
         // Inline modal: showPage reveals the page-content container and calls
         // .open() on the inline modal element automatically. We then call
-        // .open(args) so the args reach onOpen.
+        // .open(args) so the args reach onOpen. Not when it's already the
+        // open page: showPage closes the page shown first, so it would close
+        // and reopen it (losing what it holds, e.g. unsaved card changes).
+        // open(args) alone takes a tab change, through setActiveTab.
         window.showPage?.(entry.pageId);
       }
-      const el = document.querySelector(entry.tag) as RoutableModal | null;
       el?.open(args);
     } finally {
       this.routingFromUrl = false;
@@ -271,7 +322,7 @@ class ModalRouter {
     if (!this.registry.has(name)) return;
     // Another modal (or this one again) opened in-app: the hash takes over.
     this.leavePath();
-    this.currentName = name;
+    this.setCurrent(name);
     this.writeHash(name, args);
   }
 
@@ -285,9 +336,16 @@ class ModalRouter {
       this.leavePath();
       return;
     }
-    if (this.currentName !== name) return; // not the active routed modal
+    if (this.currentName !== name) {
+      // Not the active routed modal; a page closing under a popup isn't
+      // underneath it any more.
+      if (this.page === name) this.page = null;
+      return;
+    }
     this.currentName = null;
-    this.replaceHash("");
+    this.backToPage(name);
+    // The URL names the page still open under it, else nothing.
+    this.replaceHash(this.currentName === null ? "" : this.pageHash);
   }
 
   /**
@@ -298,7 +356,7 @@ class ModalRouter {
     if (this.currentName === null) return false;
     // Already asking about a route: its answer decides.
     if (this.pendingAsk !== null) return true;
-    const guarded = this.guardedCurrent();
+    const guarded = this.guardOf(this.currentName);
     if (guarded !== null) {
       const name = this.currentName;
       // The URL this close was asked about (Back's, path, query and hash):
@@ -335,6 +393,7 @@ class ModalRouter {
         this.routingFromUrl = false;
       }
     }
+    this.backToPage(name);
   }
 
   /** Called by BaseModal.setActiveTab() when a router-managed modal switches tabs. */
@@ -429,8 +488,21 @@ class ModalRouter {
     ) {
       this.currentHash = hash;
     }
+    if (
+      this.page !== null &&
+      new URLSearchParams(hash.slice(1)).get("modal") === this.page
+    ) {
+      this.pageHash = hash;
+    }
     history.replaceState(history.state, "", url);
   }
+}
+
+/** An open modal (BaseModal's isOpen), so routing to it again only passes
+ * its args. */
+function isOpenModal(el: HTMLElement | null): boolean {
+  const modal = el as (HTMLElement & { isOpen?: () => boolean }) | null;
+  return typeof modal?.isOpen === "function" && modal.isOpen();
 }
 
 /** The page's URL now: path, query and hash. */

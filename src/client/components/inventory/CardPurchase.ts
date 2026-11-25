@@ -51,10 +51,10 @@ const CARD_TAB_PLACEMENT: StorePlacement = {
  * Inventory asks about unsaved card changes first). */
 const toAccount = () => window.showPage?.("page-account");
 
-// The account that opened each item's confirm box (by item key), so the
-// buy is only sent as that account: a sign-in in another tab can change the
-// session while the box is open, and purchaseCosmeticInPlace then answers
-// signed_out with nothing sent.
+// The account whose balance each item's confirm box showed (by item key),
+// so the buy is only sent as that account: a sign-in in another tab can
+// change the session while the box is open, and purchaseCosmeticInPlace
+// then answers signed_out with nothing sent.
 const confirmedAs = new Map<string, string | null>();
 
 /** The tap check behind the confirm box. A profile that can't be read is
@@ -64,9 +64,21 @@ export async function checkCardPurchase(
   method: "hard" | "soft",
   signIn: () => void = toAccount,
 ): Promise<PurchasePreflight> {
-  const result = await checkInPlacePurchase(resolved, method);
+  let result = await checkInPlacePurchase(resolved, method);
+  // The balance read is another account's than the session's (a profile
+  // that answered after a switch): read once more, as the session's.
+  if (result.ok && readAsOther(result)) {
+    result = await checkInPlacePurchase(resolved, method);
+  }
+  if (result.ok && readAsOther(result)) {
+    confirmedAs.delete(resolved.key);
+    void showInGameAlert(translateText("inventory_card.server_unreachable"));
+    return { ok: false };
+  }
   if (result.ok) {
-    confirmedAs.set(resolved.key, currentPublicId());
+    // The account the balance is read from; the session's when the
+    // session's is unknown for now (a refresh that failed).
+    confirmedAs.set(resolved.key, result.publicId ?? currentPublicId());
     return result;
   }
   if (result.reason === "signed_out") {
@@ -75,6 +87,17 @@ export async function checkCardPurchase(
     void showInGameAlert(translateText("inventory_card.server_unreachable"));
   }
   return result.info ? { ok: false, info: outsideGame(result.info) } : result;
+}
+
+/** A balance read from a profile of an account the session is known not to
+ * be signed in as. Unknown for now isn't another account. */
+function readAsOther(result: { publicId?: string }): boolean {
+  const signedInAs = currentPublicId();
+  return (
+    signedInAs !== null &&
+    result.publicId !== undefined &&
+    result.publicId !== signedInAs
+  );
 }
 
 /** Buys from the confirm box. Owned: the broadcast profile shows it.

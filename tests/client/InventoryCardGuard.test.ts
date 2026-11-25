@@ -29,6 +29,7 @@ import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import { modalRouter } from "../../src/client/ModalRouter";
+import { initNavigation } from "../../src/client/Navigation";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),
@@ -249,6 +250,133 @@ describe("Inventory: unsaved card changes guard", () => {
       expect(modal.isOpen()).toBe(true);
       expect(window.location.hash).toBe(hash);
       expect(q("[data-card-save-bar]")).not.toBeNull();
+    });
+
+    it("a hash naming another Inventory tab, then Keep editing: the URL names the card tab again", async () => {
+      await openWithChange();
+      expect(window.location.hash).toContain("tab=card");
+      history.replaceState(null, "", "/#modal=inventory&tab=skins");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      expect(q("[data-card-guard]")).not.toBeNull();
+      await click("[data-card-guard-keep]");
+      expect(onCardTab()).toBe(true);
+      expect(window.location.hash).toContain("modal=inventory");
+      expect(window.location.hash).toContain("tab=card");
+      expect(window.location.hash).not.toContain("tab=skins");
+    });
+
+    // A popup (no pageId) over the Inventory page.
+    const popupOpens: unknown[] = [];
+    if (customElements.get("guard-test-popup") === undefined) {
+      customElements.define(
+        "guard-test-popup",
+        class extends HTMLElement {
+          open(args?: Record<string, unknown>) {
+            popupOpens.push(args);
+          }
+          close() {}
+        },
+      );
+    }
+    async function openPopupOverChange() {
+      document.body.appendChild(document.createElement("guard-test-popup"));
+      modalRouter.register("popup", { tag: "guard-test-popup" });
+      await openWithChange();
+      history.replaceState(null, "", "/#modal=popup");
+      expect(modalRouter.routeFromHash()).toBe(true);
+      await settle(modal);
+      await vi.waitFor(() => expect(popupOpens.length).toBeGreaterThan(0));
+    }
+
+    it("a route to another page from a popup over the Inventory asks the Inventory first", async () => {
+      await openPopupOverChange();
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      expect(q("[data-card-guard]")).not.toBeNull();
+      expect(storeOpens).toHaveLength(0);
+      await click("[data-card-guard-keep]");
+      expect(storeOpens).toHaveLength(0);
+      expect(modal.isOpen()).toBe(true);
+      expect(window.location.hash).toBe("#modal=popup");
+    });
+
+    it("once the popup closes, Back still asks the Inventory underneath", async () => {
+      await openPopupOverChange();
+      modalRouter.syncClosed("popup");
+      // The URL names the Inventory again.
+      expect(window.location.hash).toContain("modal=inventory");
+      await back();
+      expect(q("[data-card-guard]")).not.toBeNull();
+      expect(modal.isOpen()).toBe(true);
+      await click("[data-card-guard-keep]");
+      expect(window.location.hash).toContain("modal=inventory");
+    });
+
+    it("a page whose route the URL left before it opened isn't named again when a popup closes", async () => {
+      document.body.appendChild(document.createElement("guard-test-popup"));
+      modalRouter.register("popup", { tag: "guard-test-popup" });
+      // Nothing routed yet (an earlier test's modal would be asked first).
+      Object.assign(modalRouter, { currentName: null, page: null });
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      // The URL moves on to a popup before the Store has loaded.
+      history.replaceState(null, "", "/#modal=popup");
+      modalRouter.routeFromHash();
+      await vi.waitFor(() => expect(popupOpens.length).toBeGreaterThan(0));
+      await settle(modal);
+      modalRouter.syncClosed("popup");
+      expect(window.location.hash).toBe("");
+    });
+
+    // The app's own showPage (Navigation), which closes the page shown
+    // before it opens the one asked for.
+    describe("with the real showPage", () => {
+      let realShowPage: (pageId: string) => void;
+      beforeAll(() => {
+        const before = window.showPage;
+        initNavigation();
+        realShowPage = window.showPage!;
+        window.showPage = before;
+      });
+      beforeEach(() => {
+        modal.id = "page-inventory";
+        modal.classList.add("page-content", "hidden");
+        window.showPage = realShowPage;
+      });
+      afterEach(() => {
+        window.showPage = undefined;
+      });
+      const changes = () =>
+        (
+          modal as unknown as { cardEditor: { changeCount(): number } }
+        ).cardEditor.changeCount();
+
+      it("a hash naming another Inventory tab asks first, and Keep editing keeps the change", async () => {
+        await openWithChange();
+        expect(changes()).toBe(1);
+        history.replaceState(null, "", "/#modal=inventory&tab=skins");
+        modalRouter.routeFromHash();
+        await settle(modal);
+        expect(q("[data-card-guard]")).not.toBeNull();
+        expect(changes()).toBe(1);
+        await click("[data-card-guard-keep]");
+        expect(modal.isOpen()).toBe(true);
+        expect(onCardTab()).toBe(true);
+        expect(changes()).toBe(1);
+        expect(window.location.hash).toContain("tab=card");
+      });
+
+      it("Back from a popup to the Inventory's own hash keeps the change", async () => {
+        await openPopupOverChange();
+        history.replaceState(null, "", "/#modal=inventory&tab=card");
+        modalRouter.routeFromHash();
+        await settle(modal);
+        expect(modal.isOpen()).toBe(true);
+        expect(onCardTab()).toBe(true);
+        expect(changes()).toBe(1);
+      });
     });
 
     it("Back with an unsaved change, then Discard: closes, and the change is gone", async () => {
@@ -819,6 +947,62 @@ describe("Inventory: unsaved card changes guard", () => {
     q<HTMLButtonElement>("[data-card-save]")?.click();
     await settle(modal);
     expect(saveCardLoadout).not.toHaveBeenCalled();
+  });
+
+  it("the old account's profile after a switch never reaches the Inventory; the new one's does", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    const shown = () =>
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse;
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    session.id = "account-b";
+    await settle(modal);
+    // A's profile, in place (the open Inventory's refresh path) and as a
+    // load: neither is taken.
+    const late = owner();
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: late }));
+    await settle(modal);
+    expect(shown()).not.toBe(late);
+    await modal.onUserMe(late);
+    expect(shown()).not.toBe(late);
+    // B's renders as usual.
+    const b = owner();
+    (b.player as { publicId: string }).publicId = "account-b";
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: b }));
+    await settle(modal);
+    expect(shown()).toBe(b);
+    expect(cardEditor().isSeededWith(b)).toBe(true);
+  });
+
+  it("a profile that names no account isn't taken for another account's", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    const fresh = owner();
+    delete (fresh.player as { publicId?: string }).publicId;
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse,
+    ).toBe(fresh);
+  });
+
+  it("a profile while the session's account is unknown for now is still shown", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    session.id = null;
+    const fresh = owner();
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse,
+    ).toBe(fresh);
   });
 
   it("a background sign-out with the Inventory open ends signed out, not loading", async () => {

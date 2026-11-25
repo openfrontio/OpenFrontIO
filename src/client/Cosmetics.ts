@@ -721,7 +721,8 @@ function inPlaceShortfall(
  * affordable, with the balance read; or not, with the shortfall to show
  * (none when the check couldn't run or explained itself). */
 export type PurchasePreflight =
-  | { ok: true; balance: number }
+  // `publicId`: the account whose profile the balance was read from.
+  | { ok: true; balance: number; publicId?: string }
   | {
       ok: false;
       info?: InsufficientCurrency;
@@ -774,7 +775,7 @@ export async function checkInPlacePurchase(
       info: inPlaceShortfall(resolved, method, price, me, balance),
     };
   }
-  return { ok: true, balance };
+  return { ok: true, balance, publicId: me.player.publicId };
 }
 
 /** How an end-screen purchase ended (purchaseCosmeticInPlace). */

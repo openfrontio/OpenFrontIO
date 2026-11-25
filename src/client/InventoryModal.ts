@@ -14,7 +14,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { currentPublicId, userAuth } from "./Auth";
 import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import {
@@ -70,6 +70,7 @@ import {
   resolvedToPlayerPattern,
 } from "./Cosmetics";
 import { COSMETICS_CHANGED } from "./Experiments";
+import { modalRouter } from "./ModalRouter";
 import { type PricedItem, saleEndsAt } from "./ShownPrice";
 import {
   type CosmeticLoadout,
@@ -435,6 +436,22 @@ export class InventoryModal extends BaseModal {
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
+    // A profile of an account the session is known not to be signed in as
+    // (one that answered after a switch) is never shown, in place or as a
+    // load. An account unknown for now (a token refresh failed), or a
+    // profile that names none, isn't another account: that profile is
+    // taken as before.
+    if (userMeResponse !== false) {
+      const signedInAs = currentPublicId();
+      const readAs = userMeResponse.player.publicId;
+      if (
+        signedInAs !== null &&
+        readAs !== undefined &&
+        readAs !== signedInAs
+      ) {
+        return;
+      }
+    }
     // A fresh profile while the Inventory shows a loaded one (a purchase made
     // in place broadcasts one): take it as it is, without the loading state,
     // so the Player card tab and its unsaved changes stay on screen.
@@ -1663,7 +1680,19 @@ export class InventoryModal extends BaseModal {
       super.setActiveTab(key);
       return;
     }
-    this.leaveThen(() => super.setActiveTab(key));
+    if (!this.hasCardChanges()) {
+      super.setActiveTab(key);
+      return;
+    }
+    void this.confirmLeaveCard().then((ok) => {
+      if (ok) {
+        super.setActiveTab(key);
+      } else {
+        // Keep editing: the URL (a hash naming another tab) names the card
+        // tab again, as a declined route puts its hash back.
+        modalRouter.syncTab(this.routerName, CARD_TAB);
+      }
+    });
   }
 
   // ---- Actions -----------------------------------------------------------
