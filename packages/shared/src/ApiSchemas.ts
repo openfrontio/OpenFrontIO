@@ -1789,6 +1789,8 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
     kind: z.literal("featured"),
     section: StorePlacementFeaturedSectionSchema,
   }),
+  // The store row in the join lobby modal (the lobby_store ui experiment).
+  z.object({ kind: z.literal("join_lobby") }),
 ]);
 export type StorePlacement = z.infer<typeof StorePlacementSchema>;
 
@@ -1829,10 +1831,12 @@ export type ExperimentsResponse = z.infer<typeof ExperimentsResponseSchema>;
 export type ExperimentAssignment = ExperimentsResponse["assignments"][number];
 
 // POST /users/@me/experiments/exposures: the player saw the tested thing, in
-// the variant the client rendered. Steam never sends one.
+// the variant the client rendered. Steam never sends one. "ui" is a ui test's
+// spot (infra docs/ui-experiments.md), sent in every arm, control included.
 export const ExperimentExposureSurfaceSchema = z.enum([
   "store_flash",
   "home_banner",
+  "ui",
 ]);
 export type ExperimentExposureSurface = z.infer<
   typeof ExperimentExposureSurfaceSchema

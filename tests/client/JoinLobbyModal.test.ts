@@ -37,6 +37,17 @@ vi.mock("howler", () => ({
   },
 }));
 
+const experimentMocks = vi.hoisted(() => ({
+  uiAssignment: vi.fn((key: string): unknown => null),
+  recordExposure: vi.fn(async (key: string, surface: string) => false),
+}));
+
+vi.mock("../../src/client/Experiments", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Experiments")>()),
+  uiAssignment: experimentMocks.uiAssignment,
+  recordExposure: experimentMocks.recordExposure,
+}));
+
 import {
   Difficulty,
   GameMapType,
@@ -702,5 +713,105 @@ describe("JoinLobbyModal pasted lobby links", () => {
       "AbCd1234",
     );
     expect(normalize("AbCd1234")).toBe("AbCd1234");
+  });
+});
+
+describe("JoinLobbyModal lobby_store test", () => {
+  const arm = (variant: string) => ({
+    key: "lobby_store",
+    surface: "ui",
+    variant,
+    counted: true,
+    params: {},
+  });
+
+  // The modal open on a joined lobby, its roster in.
+  function show(m: any, lobbyId = "ABCD1234") {
+    m.isModalOpen = true;
+    m.currentLobbyId = lobbyId;
+    m.isConnecting = false;
+    m.gameConfig = {
+      gameType: GameType.Public,
+      gameMode: GameMode.FFA,
+      gameMap: GameMapType.World,
+    };
+    m.players = [{ clientID: "c1", username: "Alice" }];
+    return m;
+  }
+
+  const shownLobby = () => show(new JoinLobbyModal());
+
+  function storeRow(m: any): Element | null {
+    const container = document.createElement("div");
+    render(m.renderBody() as never, container);
+    return container.querySelector("lobby-store-row");
+  }
+
+  beforeEach(() => {
+    experimentMocks.uiAssignment.mockReset().mockReturnValue(null);
+    experimentMocks.recordExposure.mockReset().mockResolvedValue(true);
+  });
+
+  it("shows the store row in the treatment, and posts the exposure", () => {
+    experimentMocks.uiAssignment.mockReturnValue(arm("store_row"));
+    const m = shownLobby();
+    m.decideStoreArm();
+    expect(experimentMocks.uiAssignment).toHaveBeenCalledWith("lobby_store");
+    expect(storeRow(m)).not.toBeNull();
+    expect(experimentMocks.recordExposure).toHaveBeenCalledExactlyOnceWith(
+      "lobby_store",
+      "ui",
+    );
+  });
+
+  it("shows no row in control, and still posts the exposure", () => {
+    experimentMocks.uiAssignment.mockReturnValue(arm("control"));
+    const m = shownLobby();
+    m.decideStoreArm();
+    expect(storeRow(m)).toBeNull();
+    expect(experimentMocks.recordExposure).toHaveBeenCalledExactlyOnceWith(
+      "lobby_store",
+      "ui",
+    );
+  });
+
+  it("shows no row and posts nothing without an arm", () => {
+    const m = shownLobby();
+    m.decideStoreArm();
+    expect(storeRow(m)).toBeNull();
+    expect(experimentMocks.recordExposure).not.toHaveBeenCalled();
+  });
+
+  it("waits for the lobby to be on screen", () => {
+    experimentMocks.uiAssignment.mockReturnValue(arm("store_row"));
+    const m = shownLobby();
+    m.isConnecting = true;
+    m.decideStoreArm();
+    m.isConnecting = false;
+    m.isModalOpen = false;
+    m.decideStoreArm();
+    expect(experimentMocks.recordExposure).not.toHaveBeenCalled();
+    m.isModalOpen = true;
+    m.decideStoreArm();
+    expect(experimentMocks.recordExposure).toHaveBeenCalledOnce();
+  });
+
+  it("decides once per lobby, and afresh after a close", () => {
+    experimentMocks.uiAssignment.mockReturnValue(arm("store_row"));
+    const m = shownLobby();
+    m.decideStoreArm();
+    // A group that lands later doesn't change the lobby already shown.
+    experimentMocks.uiAssignment.mockReturnValue(arm("control"));
+    m.decideStoreArm();
+    expect(storeRow(m)).not.toBeNull();
+    expect(experimentMocks.uiAssignment).toHaveBeenCalledOnce();
+
+    m.leaveLobbyOnClose = false;
+    m.onClose();
+    expect(m.showStoreRow).toBe(false);
+    show(m);
+    m.decideStoreArm();
+    expect(storeRow(m)).toBeNull();
+    expect(experimentMocks.uiAssignment).toHaveBeenCalledTimes(2);
   });
 });
