@@ -36,7 +36,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 
 5. Find the output folder at `../resources/maps/<map_name>`
 
-`npm run gen-maps` formats every file it writes with Oxfmt as its last step (shelling out to `npx oxfmt --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx oxfmt` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+`npm run gen-maps` formats every file it writes with Oxfmt as its last step (running `node_modules/oxfmt` with `--write`), so the output already matches `npm run format` — no separate formatting step needed. If oxfmt isn't installed (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
 
 `npm run gen-maps` also regenerates `info.schema.json` (`npm run gen-map-schema`).
 

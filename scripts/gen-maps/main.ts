@@ -141,16 +141,20 @@ async function loadTerrainMaps(
 
 function runOxfmt(files: string[]): void {
   if (files.length === 0) return;
+  // Run oxfmt's bin script with this node, not through npx: on Windows npx
+  // is npx.cmd, which spawnSync can't start without a shell.
   const args = [
-    "--no-install",
-    "oxfmt",
+    join(repoRoot, "node_modules/oxfmt/bin/oxfmt"),
     "--write",
     ...files.map((f) => relative(repoRoot, f).split("\\").join("/")),
   ];
-  const r = spawnSync("npx", args, { cwd: repoRoot, stdio: "inherit" });
+  const r = spawnSync(process.execPath, args, {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
   if (r.error || r.status !== 0) {
     throw new Error(
-      `npx oxfmt --write failed (is \`npm ci\` up to date?): ${r.error?.message ?? `exit status ${r.status}`}`,
+      `oxfmt --write failed (is \`npm ci\` up to date?): ${r.error?.message ?? `exit status ${r.status}`}`,
     );
   }
 }
@@ -200,9 +204,8 @@ async function main(): Promise<void> {
     runOxfmt([...manifestPaths, mapsTSPath, enJSONPath]);
   } catch (e) {
     log.warn(
-      `Failed to auto-format generated files with Oxfmt; run \`npm run format\` manually`,
+      `Failed to auto-format generated files with Oxfmt; run \`npm run format\` manually: ${(e as Error).message}`,
     );
-    void e;
   }
   process.stdout.write("Terrain maps generated successfully\n");
 }
