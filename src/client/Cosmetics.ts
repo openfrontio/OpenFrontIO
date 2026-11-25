@@ -834,7 +834,11 @@ export async function purchaseCosmeticInPlace(
     kind: "insufficient",
     info: inPlaceShortfall(resolved, method, price, userMe, available),
   });
-  if (balance < price) return shortfall(balance);
+  // As purchaseCosmetic: the cheaper of the price the box showed and the
+  // price now decides whether to send (a sale that ended since lets the
+  // server answer price_changed); a shortfall is quoted from the price now.
+  const needed = lowerPrice(shownAmount, price);
+  if (balance < needed) return shortfall(balance);
 
   const owned = (fresh: UserMeResponse | false, notice?: string) => {
     if (userMe.player.publicId) {
@@ -895,7 +899,7 @@ export async function purchaseCosmeticInPlace(
       method === "hard"
         ? (fresh.player.currency?.hard ?? 0)
         : (fresh.player.currency?.soft ?? 0);
-    return available < price ? shortfall(available) : { kind: "failed" };
+    return available < needed ? shortfall(available) : { kind: "failed" };
   }
   if (!result.ok && result.code !== "already_owned") {
     if (result.code === "debt") {
