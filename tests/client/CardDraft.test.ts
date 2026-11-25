@@ -756,6 +756,41 @@ describe("CardEditor", () => {
     ]);
   });
 
+  it("after a reauth into the same account, a new save waits for the old PUT, then sends", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // session-reauth into the same account: the editor drops and reseeds.
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["games_played", "nukes_launched", "best_elo"],
+      },
+    });
+    const saving = editor.save();
+    await Promise.resolve();
+    await Promise.resolve();
+    // Two PUTs for one account never race: the new one waits.
+    expect(api.save).toHaveBeenCalledTimes(1);
+    expect(editor.saveState).toBe("saving");
+    // The old one settles (its answer decides nothing here)...
+    finishOld({ ok: false, error: "failed" });
+    // ...and the new one goes, and decides.
+    expect(await saving).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(editor.saved.rows.tracker[0]).toBe("games_played");
+  });
+
   it("a save that succeeds after the session moved to another account isn't taken", async () => {
     // Sent as A, then an ordinary token refresh installs B (no session
     // event) before the answer lands.

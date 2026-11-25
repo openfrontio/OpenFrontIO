@@ -361,6 +361,14 @@ export class CardEditor {
   private sending: CardDraft | null = null;
   /** The save in flight, for a Save clicked while it runs to wait on. */
   private inFlight: Promise<boolean> | null = null;
+  /** A save left in flight when the account was dropped, and whose card it
+   * was. A reauth into that same account waits for it to settle before
+   * sending (two PUTs for one account never race); another account's save
+   * goes at once, since its PUT can't race this one's. */
+  private abandoned: {
+    promise: Promise<unknown>;
+    owner: string | null;
+  } | null = null;
   /** Bumped when the card turns out to be another account's: a save
    * started before never lands on the next one's card. */
   private account = 0;
@@ -473,8 +481,21 @@ export class CardEditor {
   private resetAccount(): void {
     this.account++;
     // The last account's save in flight is no longer this editor's to wait
-    // on: the next account's Save sends at once, and the old one's answer
-    // (store() sees the account changed) decides nothing.
+    // on: its answer (store() sees the account changed) decides nothing,
+    // and another account's Save sends at once. A Save for the same account
+    // (a reauth) waits for it to settle first: see afterAbandoned().
+    if (this.inFlight !== null) {
+      const abandoned = {
+        promise: this.inFlight,
+        owner: this.seededFrom?.player.publicId ?? null,
+      };
+      this.abandoned = abandoned;
+      void abandoned.promise
+        .catch(() => undefined)
+        .finally(() => {
+          if (this.abandoned === abandoned) this.abandoned = null;
+        });
+    }
     this.inFlight = null;
     this.clearSavedTimer();
     this.seededFrom = null;
@@ -583,13 +604,35 @@ export class CardEditor {
       return this.changeCount() === 0 || this.save();
     }
     if (!this.canSave()) return false;
-    const saving = this.store();
+    const prior = this.abandonedForThisAccount();
+    const saving = prior === null ? this.store() : this.storeAfter(prior);
     this.inFlight = saving;
     try {
       return await saving;
     } finally {
       if (this.inFlight === saving) this.inFlight = null;
     }
+  }
+
+  /** A save of this same account's left in flight by a reauth, if any. */
+  private abandonedForThisAccount(): Promise<unknown> | null {
+    const prior = this.abandoned;
+    const owner = this.seededFrom?.player.publicId ?? null;
+    return prior !== null && prior.owner === owner ? prior.promise : null;
+  }
+
+  /**
+   * Stores once `prior` (that save) has settled, however it ends. Nothing
+   * is sent if the account changed meanwhile: the save is no longer this
+   * card's.
+   */
+  private async storeAfter(prior: Promise<unknown>): Promise<boolean> {
+    const account = this.account;
+    this.saveState = "saving";
+    this.emit();
+    await prior.catch(() => undefined);
+    if (this.account !== account) return false;
+    return this.store();
   }
 
   private async store(): Promise<boolean> {
