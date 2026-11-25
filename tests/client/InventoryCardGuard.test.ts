@@ -29,6 +29,7 @@ import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import { modalRouter } from "../../src/client/ModalRouter";
+import { initNavigation } from "../../src/client/Navigation";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),
@@ -311,6 +312,55 @@ describe("Inventory: unsaved card changes guard", () => {
       expect(modal.isOpen()).toBe(true);
       await click("[data-card-guard-keep]");
       expect(window.location.hash).toContain("modal=inventory");
+    });
+
+    // The app's own showPage (Navigation), which closes the page shown
+    // before it opens the one asked for.
+    describe("with the real showPage", () => {
+      let realShowPage: (pageId: string) => void;
+      beforeAll(() => {
+        const before = window.showPage;
+        initNavigation();
+        realShowPage = window.showPage!;
+        window.showPage = before;
+      });
+      beforeEach(() => {
+        modal.id = "page-inventory";
+        modal.classList.add("page-content", "hidden");
+        window.showPage = realShowPage;
+      });
+      afterEach(() => {
+        window.showPage = undefined;
+      });
+      const changes = () =>
+        (
+          modal as unknown as { cardEditor: { changeCount(): number } }
+        ).cardEditor.changeCount();
+
+      it("a hash naming another Inventory tab asks first, and Keep editing keeps the change", async () => {
+        await openWithChange();
+        expect(changes()).toBe(1);
+        history.replaceState(null, "", "/#modal=inventory&tab=skins");
+        modalRouter.routeFromHash();
+        await settle(modal);
+        expect(q("[data-card-guard]")).not.toBeNull();
+        expect(changes()).toBe(1);
+        await click("[data-card-guard-keep]");
+        expect(modal.isOpen()).toBe(true);
+        expect(onCardTab()).toBe(true);
+        expect(changes()).toBe(1);
+        expect(window.location.hash).toContain("tab=card");
+      });
+
+      it("Back from a popup to the Inventory's own hash keeps the change", async () => {
+        await openPopupOverChange();
+        history.replaceState(null, "", "/#modal=inventory&tab=card");
+        modalRouter.routeFromHash();
+        await settle(modal);
+        expect(modal.isOpen()).toBe(true);
+        expect(onCardTab()).toBe(true);
+        expect(changes()).toBe(1);
+      });
     });
 
     it("Back with an unsaved change, then Discard: closes, and the change is gone", async () => {

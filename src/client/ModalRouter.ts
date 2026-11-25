@@ -290,13 +290,16 @@ class ModalRouter {
     this.routingFromUrl = true;
     try {
       this.setCurrent(name);
-      if (entry.pageId) {
+      const el = document.querySelector(entry.tag) as RoutableModal | null;
+      if (entry.pageId && !isOpenModal(el)) {
         // Inline modal: showPage reveals the page-content container and calls
         // .open() on the inline modal element automatically. We then call
-        // .open(args) so the args reach onOpen.
+        // .open(args) so the args reach onOpen. Not when it's already the
+        // open page: showPage closes the page shown first, so it would close
+        // and reopen it (losing what it holds, e.g. unsaved card changes).
+        // open(args) alone takes a tab change, through setActiveTab.
         window.showPage?.(entry.pageId);
       }
-      const el = document.querySelector(entry.tag) as RoutableModal | null;
       el?.open(args);
     } finally {
       this.routingFromUrl = false;
@@ -483,6 +486,13 @@ class ModalRouter {
     }
     history.replaceState(history.state, "", url);
   }
+}
+
+/** An open modal (BaseModal's isOpen), so routing to it again only passes
+ * its args. */
+function isOpenModal(el: HTMLElement | null): boolean {
+  const modal = el as (HTMLElement & { isOpen?: () => boolean }) | null;
+  return typeof modal?.isOpen === "function" && modal.isOpen();
 }
 
 /** The page's URL now: path, query and hash. */
