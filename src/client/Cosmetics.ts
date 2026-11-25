@@ -1706,7 +1706,7 @@ export async function reloadCosmetics(): Promise<Cosmetics | null> {
   const fresh = await request;
   // Only the catalog now in use: a reload that a newer one overtook hands its
   // data back but must not replace what the newer one put on screen.
-  if (fresh !== null && fresh === __cosmeticsCache) announceCatalog(fresh);
+  if (fresh !== null && fresh === getCachedCosmetics()) announceCatalog(fresh);
   return fresh;
 }
 
