@@ -228,3 +228,23 @@ test("generateMap crops to a multiple of 4 and refuses a map with no land", () =
     "Map has 0 land tiles",
   );
 });
+
+test("generateMap removes more small islands than fit in one call's arguments", () => {
+  // 199 columns of land, then 250,000 one-tile islands in open water.
+  const width = 1200;
+  const height = 1000;
+  const pix = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (x < 199 || (x % 2 === 0 && y % 2 === 0)) {
+        pix.set([0, 0, 150, 255], (y * width + x) * 4);
+      }
+    }
+  }
+  const map = generateMap(
+    { kind: "nrgba8", width, height, pix },
+    { removeSmall: true },
+  );
+  expect(map.removed.length).toBe(250_000);
+  expect(map.map.numLandTiles).toBe(199 * height);
+});

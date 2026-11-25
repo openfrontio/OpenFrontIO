@@ -55,13 +55,19 @@ export function generateMap(
   const height = image.height - (image.height % 4);
   const { terrain, elevation } = imageTerrain(image, width, height);
 
-  const removed: RemovedBody[] = [];
+  let removed: RemovedBody[] = [];
   if (options.removeSmall) {
-    removed.push(
-      ...removeSmallBodies(terrain, width, height, KIND_LAND, MIN_ISLAND_SIZE, {
-        elevation,
-      }),
-      ...removeSmallBodies(terrain, width, height, KIND_WATER, MIN_LAKE_SIZE, {
+    // concat, not push(...): a map with many small bodies can have more
+    // than one call's arguments can hold.
+    removed = removeSmallBodies(
+      terrain,
+      width,
+      height,
+      KIND_LAND,
+      MIN_ISLAND_SIZE,
+      { elevation },
+    ).concat(
+      removeSmallBodies(terrain, width, height, KIND_WATER, MIN_LAKE_SIZE, {
         keepOcean: true,
         elevation,
       }),
