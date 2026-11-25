@@ -231,6 +231,20 @@ describe("salesPlayerCanBuy", () => {
     expect(salesPlayerCanBuy([flash], withCard, [card])).toEqual([]);
   });
 
+  it.each([
+    ["a card title", "cardTitles"],
+    ["a taunt", "taunts"],
+    ["a tier that isn't for sale", "unlistedSubscriptions"],
+  ])("drops a sale tagged only on %s", (_, section) => {
+    const item = { name: "x", ...onSale, promotion: flash };
+    const tagged = {
+      ...catalog,
+      flags: {},
+      [section]: { x: item },
+    } as unknown as Cosmetics;
+    expect(salesPlayerCanBuy([flash], tagged, [])).toEqual([]);
+  });
+
   it("keeps a sale the catalog tags no item with", () => {
     expect(salesPlayerCanBuy([weekend], catalog, [])).toEqual([weekend]);
     expect(salesPlayerCanBuy([flash], null, [])).toEqual([flash]);
