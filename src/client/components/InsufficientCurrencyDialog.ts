@@ -17,6 +17,13 @@ import { rememberPendingPurchase } from "./inventory/PendingEquip";
  *     leaves the game; going on remembers the item (PendingEquip.ts) so the
  *     Store opens on it after the top-up.
  *   - Caps short: how many more and how to earn them. Close only.
+ *
+ * Elsewhere it is a plain confirm. One from an in-place purchase outside a
+ * game (the Inventory's Player card tab) remembers the item too. Either
+ * way, "Get Plutonium" first fires a cancelable, bubbling `top-up` event:
+ * a parent that cancels it goes on later by calling `detail.go()`, or
+ * navigates itself after `detail.remember()` (the Inventory does, once its
+ * unsaved card guard allows).
  */
 @customElement("insufficient-currency-dialog")
 export class InsufficientCurrencyDialog extends LitElement {
@@ -104,12 +111,24 @@ export class InsufficientCurrencyDialog extends LitElement {
   }
 
   private leaveForTopUp(info: InsufficientCurrency) {
-    if (info.player && info.itemKey) {
-      rememberPendingPurchase(info.player, info.itemKey);
-    }
     this.close();
-    // Home path (not just hash) so it also works from in-game (win modal).
-    window.location.href = "/#modal=store&tab=packs";
+    const remember = () => {
+      if (info.player && info.itemKey) {
+        rememberPendingPurchase(info.player, info.itemKey);
+      }
+    };
+    const go = () => {
+      remember();
+      // Home path (not just hash) so it also works from in-game (win modal).
+      window.location.href = "/#modal=store&tab=packs";
+    };
+    const event = new CustomEvent("top-up", {
+      detail: { go, remember },
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    if (this.dispatchEvent(event)) go();
   }
 
   private button(
@@ -247,11 +266,7 @@ export class InsufficientCurrencyDialog extends LitElement {
           : ""
       }
       @cancel=${() => this.close()}
-      @confirm=${() => {
-        this.close();
-        // Home path (not just hash) so it also works from in-game (win modal).
-        window.location.href = "/#modal=store&tab=packs";
-      }}
+      @confirm=${() => this.leaveForTopUp(info)}
     ></confirm-dialog>`;
   }
 }

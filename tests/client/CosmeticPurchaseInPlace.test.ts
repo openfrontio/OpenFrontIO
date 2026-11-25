@@ -167,6 +167,31 @@ describe("buying on the end screen", () => {
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("owned");
   });
 
+  it("failed, and the re-read is another account's that owns it: still unconfirmed", async () => {
+    // A's reply was lost and B signed in before the re-read: B owning it
+    // says nothing about whether A was charged.
+    const theirs = {
+      player: {
+        publicId: "p2",
+        flares: ["cardBackground:bg_storm_front"],
+        currency: { hard: 900, soft: 0 },
+      },
+    } as never;
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me(500, 0))
+      .mockResolvedValue(theirs);
+    vi.mocked(purchaseWithCurrency).mockResolvedValue(FAILED);
+    const onOwned = vi.fn();
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      onOwned,
+    );
+    expect(outcome.kind).toBe("unconfirmed");
+    expect(onOwned).not.toHaveBeenCalled();
+  });
+
   // The end screen marks the item bought here (onOwned) before the fresh
   // profile lands, or one render sees it owned but not bought here, drops
   // it, and tears the block down and rebuilds it.
@@ -501,6 +526,8 @@ describe("buying on the end screen", () => {
     expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
       ok: true,
       balance: 500,
+      // The account the balance is read from.
+      publicId: "p1",
     });
     // The cache is dropped first: an older copy can't decide.
     expect(order.slice(0, 2)).toEqual(["invalidate", "read"]);

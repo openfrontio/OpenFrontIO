@@ -5,7 +5,6 @@ import {
   type Cosmetics,
   type PlayerCardItem,
 } from "@openfront/shared/CosmeticSchemas";
-import { type PricedItem, type ShownPrice, shownPrice } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 
 // The player card cosmetics, as the client lists and sells them. Titles and
@@ -20,7 +19,7 @@ export const CARD_ITEM_TYPES = [
 export type CardItemType = (typeof CARD_ITEM_TYPES)[number];
 
 // Where each card item type lives in the catalogue. The one copy: the Store
-// grid, My Card and the end screen's price lookup all read it.
+// grid and the end screen's price lookup both read it.
 export const CARD_ITEM_GROUP = {
   playerCard: "playerCards",
   cardTracker: "cardTrackers",
@@ -54,24 +53,6 @@ function readableName(name: string): string {
     .filter((w) => w.length > 0)
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ");
-}
-
-export interface CardPrices {
-  hard: ShownPrice | null;
-  soft: ShownPrice | null;
-  /** Passed on to <purchase-button>, which switches to the list price the
-   * moment the sale ends. */
-  promotion: PricedItem["promotion"];
-}
-
-// A card item's prices as shownPrice decides them, the same rule as the
-// Store and the Inventory.
-export function cardPrices(item: CardItem): CardPrices {
-  return {
-    hard: shownPrice(item, "hard"),
-    soft: shownPrice(item, "soft"),
-    promotion: item.promotion ?? undefined,
-  };
 }
 
 // A card item's rarity as a word, in the player's language. The card has a

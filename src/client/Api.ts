@@ -68,6 +68,7 @@ import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
   getPlayToken,
+  isOtherSession,
   isSessionActive,
   logOut,
   rememberPublicId,
@@ -227,17 +228,27 @@ function isAbortError(e: unknown): boolean {
  *
  * `aborted` distinguishes the one failure that concluded nothing about the
  * account (a deadline we imposed ourselves) from every other falsy answer,
- * which is a conclusion. Only getUserMe acts on it; see the un-caching rule
+ * which is a conclusion. `sessionGone` says the session whose token it was
+ * fetched with isn't the current one by the time it landed: whatever it says
+ * is about the old account. `sub` is the session it was fetched for (none
+ * when signed out). Only getUserMe acts on these; see the un-caching rule
  * there.
  */
-async function requestUserMe(): Promise<{
+async function requestUserMe(onSub?: (sub: string) => void): Promise<{
   profile: UserMeResponse | false;
   aborted: boolean;
+  sessionGone?: boolean;
+  sub?: string;
 }> {
+  // Known once the token is read, so a failure after that (a body that
+  // can't be read) still says whether its session has gone.
+  let sub: string | undefined;
   try {
     const userAuthResult = await userAuth();
     if (!userAuthResult) return { profile: false, aborted: false };
     const { jwt, claims } = userAuthResult;
+    sub = claims.sub;
+    onSub?.(sub);
 
     // Get the user object. Bounded like the other auth calls (see
     // Auth.ts doSteamLogin) because getUserMe memoises the promise around
@@ -267,16 +278,20 @@ async function requestUserMe(): Promise<{
       // transient failure the `false` below also represents.
       if (isSessionActive(claims.sub)) {
         await logOut();
+        return { profile: false, aborted: false, sub };
       }
-      return { profile: false, aborted: false };
+      return { profile: false, aborted: false, sessionGone: true, sub };
     }
-    if (response.status !== 200) return { profile: false, aborted: false };
+    const sessionGone = !isSessionActive(claims.sub);
+    if (response.status !== 200) {
+      return { profile: false, aborted: false, sessionGone, sub };
+    }
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Invalid response", error);
-      return { profile: false, aborted: false };
+      return { profile: false, aborted: false, sessionGone, sub };
     }
     // Activate this player's cosmetic selections (and adopt any made while
     // logged out) before the profile is handed to callers — but not if the
@@ -286,14 +301,37 @@ async function requestUserMe(): Promise<{
       const publicId = result.data.player.publicId;
       rememberPublicId(claims.sub, publicId);
       UserSettings.setPlayerId(publicId);
+      return { profile: result.data, aborted: false, sub };
     }
-    return { profile: result.data, aborted: false };
+    return { profile: result.data, aborted: false, sessionGone: true, sub };
   } catch (e) {
-    return { profile: false, aborted: isAbortError(e) };
+    // A body that couldn't be read (or a network error) after the session
+    // went is the old session's answer too.
+    const sessionGone = sub !== undefined && !isSessionActive(sub);
+    return { profile: false, aborted: isAbortError(e), sessionGone, sub };
   }
 }
 
+// The session the cached /users/@me is for (none: signed out, or its token
+// not read yet), recorded as soon as its token is in hand, so a request
+// still in flight is checked too. A token refresh can install another
+// account without a session event, so a hit is checked against it.
+let __userMeSub: string | undefined;
+
 export async function getUserMe(): Promise<UserMeResponse | false> {
+  // Cached for a session that isn't the current one any more (a silent
+  // refresh into another account): that account's profile, not this one's.
+  // No session for now (a refresh that failed) isn't another account: the
+  // profile stays, rather than being swapped for a "signed out" that would
+  // then stay cached past the recovery.
+  if (
+    __userMe !== null &&
+    __userMeSub !== undefined &&
+    isOtherSession(__userMeSub)
+  ) {
+    __userMe = null;
+    __userMeSub = undefined;
+  }
   if (__userMe !== null) {
     return __userMe;
   }
@@ -302,7 +340,12 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   // always before any await inside can resume.
   const attempt: { request?: Promise<UserMeResponse | false> } = {};
   attempt.request = (async () => {
-    const { profile, aborted } = await requestUserMe();
+    const { profile, aborted, sessionGone, sub } = await requestUserMe(
+      (sub) => {
+        if (__userMe === attempt.request) __userMeSub = sub;
+      },
+    );
+    if (__userMe === attempt.request) __userMeSub = sub;
     // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
     // a conclusion about the account — signed out, a 401, a rejected token
     // — and stays remembered; re-deriving those would put an /auth/refresh
@@ -319,12 +362,18 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     // before the promise resolves, so a caller awaiting it cannot observe
     // the timed-out answer still cached. attempt.request is always set by
     // now — this line can only be reached after an await.
-    if (aborted && __userMe === attempt.request) {
+    //
+    // Likewise one fetched for a session that's gone by the time it landed
+    // (signed out, or a portal switch to another account while it was in
+    // flight): it's the old account's answer, and cached it would be the
+    // next session's getUserMe(). Its own caller still gets it.
+    if ((aborted || sessionGone) && __userMe === attempt.request) {
       __userMe = null;
     }
     return profile;
   })();
   __userMe = attempt.request;
+  __userMeSub = undefined;
   return attempt.request;
 }
 

@@ -38,7 +38,13 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
-import { currentPublicId, sessionUncertain, userAuth } from "./Auth";
+import {
+  currentPublicId,
+  currentSessionSub,
+  isOtherSession,
+  sessionUncertain,
+  userAuth,
+} from "./Auth";
 import {
   cardItemName,
   type CardItem,
@@ -448,15 +454,44 @@ async function hardPriceOf(key: string): Promise<number | null> {
  * for a caller whose own state must change before everyone else's does.
  */
 let freshUserMeRequestId = 0;
+// Bumped at sign-out and at a portal account change. A profile fetched
+// before one is the old account's: it's returned to its caller (that
+// purchase's own result) but never broadcast, or every surface holding a
+// profile would take it as the new session's.
+let freshUserMeSession = 0;
+if (typeof document !== "undefined") {
+  const bump = () => {
+    freshUserMeSession++;
+  };
+  document.addEventListener("session-reauth", bump);
+  document.addEventListener("session-cleared", bump);
+}
 export async function broadcastFreshUserMe(
   beforeBroadcast?: (fresh: UserMeResponse) => void,
 ): Promise<UserMeResponse | false> {
   const requestId = ++freshUserMeRequestId;
+  const session = freshUserMeSession;
+  // The session's subject when this read starts: the account it's for.
+  const sub = currentSessionSub();
   invalidateUserMe();
   const fresh = await getUserMe();
   if (fresh !== false) beforeBroadcast?.(fresh);
   // A newer refresh owns the broadcast, even if it is still pending or failed.
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
+  if (session !== freshUserMeSession) return fresh;
+  // An ordinary token refresh can install another account (another tab's
+  // sign-in) with no session event: a profile read under one account is
+  // never broadcast while another holds the session. That's a session for
+  // another subject than this read started under (its publicId may not be
+  // known yet), or one whose known publicId differs. No session for now (a
+  // refresh that failed) isn't another account; a sign-out has its event.
+  const signedInAs = currentPublicId();
+  if (
+    (sub !== null && isOtherSession(sub)) ||
+    (signedInAs !== null && fresh.player.publicId !== signedInAs)
+  ) {
+    return fresh;
+  }
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
@@ -691,7 +726,8 @@ function inPlaceShortfall(
  * affordable, with the balance read; or not, with the shortfall to show
  * (none when the check couldn't run or explained itself). */
 export type PurchasePreflight =
-  | { ok: true; balance: number }
+  // `publicId`: the account whose profile the balance was read from.
+  | { ok: true; balance: number; publicId?: string }
   | {
       ok: false;
       info?: InsufficientCurrency;
@@ -744,7 +780,7 @@ export async function checkInPlacePurchase(
       info: inPlaceShortfall(resolved, method, price, me, balance),
     };
   }
-  return { ok: true, balance };
+  return { ok: true, balance, publicId: me.player.publicId };
 }
 
 /** How an end-screen purchase ended (purchaseCosmeticInPlace). */
@@ -852,7 +888,11 @@ export async function purchaseCosmeticInPlace(
   // commit after that. Re-read: owned now means it went through. Otherwise
   // say it couldn't be confirmed, never "you weren't charged"; a retry is
   // safe, as a committed buy answers already_owned.
+  // Only the purchasing account's profile can confirm it: one read after a
+  // sign-in elsewhere is another account's, and its owning the item says
+  // nothing about whether this purchase was charged.
   const ownsIt = (fresh: UserMeResponse) =>
+    fresh.player.publicId === userMe.player.publicId &&
     (fresh.player.flares ?? []).includes(resolved.key);
   const settleFailure = async (): Promise<InPlacePurchase> => {
     const fresh = await broadcastFreshUserMe((f) => {
@@ -866,7 +906,7 @@ export async function purchaseCosmeticInPlace(
 
   // Checked again by purchaseWithCurrency once it holds the token it will
   // send: reading it can refresh the JWT, and the refresh can pick up
-  // another tab's sign-in (CardSaveQueue does the same for a card save).
+  // another tab's sign-in (CardEditor does the same for a card save).
   const stillSignedInAs = () => !bound || currentPublicId() === signedInAs;
 
   let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;

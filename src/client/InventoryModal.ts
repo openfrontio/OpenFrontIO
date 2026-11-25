@@ -14,9 +14,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
-import { cardRefsFromLoadout } from "./CardLoadoutApi";
-import type { CardSavedDetail } from "./CardSaveQueue";
+import { currentPublicId, userAuth } from "./Auth";
 import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import {
@@ -25,6 +23,10 @@ import {
 } from "./components/CosmeticPresentation";
 import "./components/CosmeticPreviewModal";
 import "./components/inventory/InventoryBuyDialog";
+import { cardChangeLine } from "./components/inventory/CardChangeText";
+import { CardEditor } from "./components/inventory/CardDraft";
+import "./components/inventory/CardUnsavedDialog";
+import type { CardGuardChoice } from "./components/inventory/CardUnsavedDialog";
 import "./components/inventory/InventoryCardTab";
 import { EFFECT_SLOTS } from "./components/inventory/EffectSlots";
 import "./components/inventory/InventoryEffectList";
@@ -68,6 +70,7 @@ import {
   resolvedToPlayerPattern,
 } from "./Cosmetics";
 import { COSMETICS_CHANGED } from "./Experiments";
+import { modalRouter } from "./ModalRouter";
 import { type PricedItem, saleEndsAt } from "./ShownPrice";
 import {
   type CosmeticLoadout,
@@ -180,6 +183,14 @@ export class InventoryModal extends BaseModal {
   private statusTimer: ReturnType<typeof setTimeout> | null = null;
 
   private cosmetics: Cosmetics | null = null;
+  /** The Player card tab's changes: kept here so they outlive the tab's
+   * element (the body re-renders while a fresh profile loads). */
+  private readonly cardEditor = new CardEditor();
+  /** The unsaved-changes guard, while it asks. */
+  @state() private cardGuard: {
+    resolve: (go: boolean) => void;
+    saving: boolean;
+  } | null = null;
   private userSettings: UserSettings = new UserSettings();
   private userMeResponse: UserMeResponse | false = false;
   private catalogLoad: Promise<Cosmetics | null> | null = null;
@@ -225,6 +236,24 @@ export class InventoryModal extends BaseModal {
     void this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
   };
 
+  /** Signed out, or into another account: the card being edited isn't
+   * this session's any more, so its unsaved changes (and an open guard
+   * asking about them) go. A profile load already running was fetched for
+   * the old session: it's discarded, and the new session's /users/@me
+   * (Main broadcasts it) loads the Inventory again. */
+  private onSessionChange = () => {
+    this.ownershipLoadId++;
+    // The profile held is the old session's: nothing reads it as the new
+    // one's until that one's arrives.
+    this.userMeResponse = false;
+    this.ownershipState = "loading";
+    if (this.cardGuard !== null) {
+      this.cardGuard.resolve(false);
+      this.cardGuard = null;
+    }
+    this.cardEditor.dropAccount();
+  };
+
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
     this.previewingCosmetic = customEvent.detail;
@@ -257,6 +286,16 @@ export class InventoryModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
+    // Capture on window: heard before any listener on document, so a load
+    // the change itself starts (Main re-broadcasts the signed-out profile
+    // from its own session-cleared listener) comes after the bump below and
+    // is never discarded by it.
+    window.addEventListener("session-reauth", this.onSessionChange, {
+      capture: true,
+    });
+    window.addEventListener("session-cleared", this.onSessionChange, {
+      capture: true,
+    });
     document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
@@ -276,6 +315,12 @@ export class InventoryModal extends BaseModal {
     );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
+    window.removeEventListener("session-reauth", this.onSessionChange, {
+      capture: true,
+    });
+    window.removeEventListener("session-cleared", this.onSessionChange, {
+      capture: true,
+    });
     document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.removeEventListener(
@@ -390,22 +435,40 @@ export class InventoryModal extends BaseModal {
     }
   }
 
-  /** A card save landed: keep this copy in step, even if the /users/@me
-   * refresh after it fails, or a remade card tab (and its next save) would
-   * hold the loadout from before. */
-  private onCardSaved = (event: CustomEvent<CardSavedDetail>): void => {
-    const me = this.userMeResponse;
-    if (!me || me.player.publicId !== event.detail.publicId) return;
-    this.userMeResponse = {
-      ...me,
-      player: {
-        ...me.player,
-        card: cardRefsFromLoadout(event.detail.loadout, me.player.card),
-      },
-    };
-  };
-
   async onUserMe(userMeResponse: UserMeResponse | false) {
+    // A profile of an account the session is known not to be signed in as
+    // (one that answered after a switch) is never shown, in place or as a
+    // load. An account unknown for now (a token refresh failed), or a
+    // profile that names none, isn't another account: that profile is
+    // taken as before.
+    if (userMeResponse !== false) {
+      const signedInAs = currentPublicId();
+      const readAs = userMeResponse.player.publicId;
+      if (
+        signedInAs !== null &&
+        readAs !== undefined &&
+        readAs !== signedInAs
+      ) {
+        return;
+      }
+    }
+    // A fresh profile while the Inventory shows a loaded one (a purchase made
+    // in place broadcasts one): take it as it is, without the loading state,
+    // so the Player card tab and its unsaved changes stay on screen.
+    if (
+      userMeResponse !== false &&
+      this.isModalOpen &&
+      !this.isLoading &&
+      this.ownershipState === "loaded" &&
+      this.cosmetics !== null
+    ) {
+      this.inventoryLoadId++;
+      this.ownershipLoadId++;
+      this.userMeResponse = userMeResponse;
+      this.resumePendingEquip();
+      this.updateFromSettings();
+      return;
+    }
     await this.loadInventory(userMeResponse);
   }
 
@@ -1096,9 +1159,24 @@ export class InventoryModal extends BaseModal {
     if (this.userMeResponse === false) return null;
     const player = this.userMeResponse.player;
     if (!ownsPlayerCard(player.flares ?? [])) return null;
-    const background = player.card?.background;
+    // What the Player card tab last saved, else what the profile says.
+    const background = this.cardEditor.isSeededWith(this.userMeResponse)
+      ? this.cardEditor.saved.background
+      : player.card?.background;
     if (!background) return null;
     return this.cosmetics?.cardBackgrounds?.[background]?.url ?? null;
+  }
+
+  /** The in-game flag, for the card: its image path and its name. */
+  private cardFlag(): { path: string | undefined; name: string | null } {
+    const flag = this.equippedFlag();
+    if (flag === null || flag.cosmetic === null) {
+      return { path: undefined, name: null };
+    }
+    const path = flag.key.startsWith("country:")
+      ? `/flags/${flag.key.slice("country:".length)}.svg`
+      : (flag.cosmetic as Flag).url;
+    return { path, name: cosmeticDisplayName(flag) };
   }
 
   private renderTopTabs(): TemplateResult {
@@ -1135,7 +1213,7 @@ export class InventoryModal extends BaseModal {
       <div class="relative flex shrink-0 flex-col">
         ${modalHeader({
           title: translateText("inventory.title"),
-          onBack: () => this.close(),
+          onBack: () => this.leaveThen(() => this.close()),
           ariaLabel: translateText("common.back"),
           rightContent: html`<o-button
             data-inventory-header-action
@@ -1165,6 +1243,7 @@ export class InventoryModal extends BaseModal {
           ${this.statusMessage}
         </p>
       </div>
+      ${this.renderCardGuard()}
       ${
         this.buying && this.isModalOpen
           ? html`<inventory-buy-dialog
@@ -1260,11 +1339,22 @@ export class InventoryModal extends BaseModal {
     }
     if (tab === CARD_TAB) {
       if (this.ownershipState === "guest") return this.renderSignIn();
+      const flag = this.cardFlag();
       return html`<inventory-card-tab
         class="block p-3"
+        .editor=${this.cardEditor}
         .userMe=${this.userMeResponse === false ? null : this.userMeResponse}
-        @card-saved=${this.onCardSaved}
+        .cosmetics=${this.cosmetics}
+        .flag=${flag.path}
+        .flagName=${flag.name}
+        .priceEpoch=${this.priceEpoch}
         @change-flag=${() => this.setActiveTab("flags")}
+        @open-store=${(event: CustomEvent<{ item?: string }>) =>
+          this.openStore(event.detail.item ?? "card")}
+        @top-up=${(event: CustomEvent<{ remember: () => void }>) =>
+          this.topUp(event)}
+        @sign-in=${() =>
+          this.leaveThen(() => window.showPage?.("page-account"))}
       ></inventory-card-tab>`;
     }
     const category = (
@@ -1424,6 +1514,12 @@ export class InventoryModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // Closed from elsewhere (another modal's link): the guard has no say.
+    if (this.cardGuard !== null) {
+      this.cardGuard.resolve(false);
+      this.cardGuard = null;
+    }
+    this.cardEditor.settle();
     this.clearSaleEndTimer();
     this.clearStatus();
     this.search = "";
@@ -1447,9 +1543,156 @@ export class InventoryModal extends BaseModal {
     this.filter = filter;
   }
 
-  private openStore() {
-    this.close();
-    window.location.hash = "modal=store&tab=cosmetics";
+  /** The Store's cosmetics; `"card"` for its Card tab, or an item key
+   * (`<type>:<name>`) to open on. */
+  private openStore(target?: string) {
+    this.leaveThen(() => {
+      this.close();
+      window.location.hash =
+        target === undefined
+          ? "modal=store&tab=cosmetics"
+          : target === "card"
+            ? "modal=store&tab=cosmetics&sub=card"
+            : `modal=store&tab=cosmetics&item=${encodeURIComponent(target)}`;
+    });
+  }
+
+  /** "Get Plutonium" from a card Buy's shortfall box leaves for the packs:
+   * like the Store links, ask about unsaved card changes first, then change
+   * only the hash (never a full navigation from a page path, which would
+   * unload a card save still in flight). */
+  private topUp(event: CustomEvent<{ remember: () => void }>) {
+    event.preventDefault();
+    const { remember } = event.detail;
+    this.leaveThen(() => {
+      remember();
+      this.close();
+      window.location.hash = "modal=store&tab=packs";
+    });
+  }
+
+  // ---- Unsaved card changes guard -----------------------------------------
+
+  /** True when leaving the Player card tab would drop changes. */
+  private hasCardChanges(): boolean {
+    return this.activeTab === CARD_TAB && this.cardEditor.changeCount() > 0;
+  }
+
+  /**
+   * Whether the player may leave the Player card tab: at once without
+   * changes; otherwise once they choose Save (and it saves) or Discard.
+   */
+  private confirmLeaveCard(): Promise<boolean> {
+    if (!this.hasCardChanges()) return Promise.resolve(true);
+    if (this.cardGuard !== null) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const saving = this.cardEditor.saveState === "saving";
+      this.cardGuard = { resolve, saving };
+      if (saving) void this.afterBarSave();
+    });
+  }
+
+  /**
+   * Left while the bar's save is in flight: the guard shows Saving, with no
+   * Discard (the saved card is still the one being replaced), until it
+   * lands. Then it goes when nothing is left to save, and otherwise asks
+   * about what's left (an edit made meanwhile, or the changes of a save
+   * that failed).
+   */
+  private async afterBarSave(): Promise<void> {
+    const guard = this.cardGuard;
+    if (guard === null) return;
+    await this.cardEditor.whenSaved();
+    // Answered or replaced meanwhile: not this one's to settle.
+    if (this.cardGuard?.resolve !== guard.resolve) return;
+    if (this.cardEditor.changeCount() === 0) {
+      this.cardGuard = null;
+      guard.resolve(true);
+      return;
+    }
+    this.cardGuard = { ...guard, saving: false };
+  }
+
+  /** Runs `go` now when nothing would be lost (so tab switches and links
+   * stay synchronous), otherwise after the guard allows it. */
+  private leaveThen(go: () => void): void {
+    if (!this.hasCardChanges()) {
+      go();
+      return;
+    }
+    void this.confirmLeaveCard().then((ok) => {
+      if (ok) go();
+    });
+  }
+
+  private async chooseCardGuard(choice: CardGuardChoice): Promise<void> {
+    const guard = this.cardGuard;
+    if (guard === null || guard.saving) return;
+    if (choice === "keep") {
+      this.cardGuard = null;
+      guard.resolve(false);
+      return;
+    }
+    if (choice === "discard") {
+      this.cardEditor.discard();
+      this.cardGuard = null;
+      guard.resolve(true);
+      return;
+    }
+    this.cardGuard = { ...guard, saving: true };
+    const saved = await this.cardEditor.save();
+    // A newer guard may have replaced this one meanwhile (the Inventory
+    // closed and reopened): that one is still to be answered.
+    if (this.cardGuard?.resolve === guard.resolve) this.cardGuard = null;
+    // A failed save stays on the tab: its bar and toast offer Retry.
+    guard.resolve(saved);
+  }
+
+  private renderCardGuard(): TemplateResult | typeof nothing {
+    const guard = this.cardGuard;
+    if (guard === null) return nothing;
+    const changes = this.cardEditor.changes();
+    return html`<card-unsaved-dialog
+      .count=${changes.length}
+      .lines=${changes.map((c) => cardChangeLine(this.cosmetics, c))}
+      .canSave=${guard.saving || this.cardEditor.canSave()}
+      .buyFirst=${this.cardEditor.unownedInChanges().length > 0}
+      .saving=${guard.saving}
+      .onChoose=${(choice: CardGuardChoice) => void this.chooseCardGuard(choice)}
+    ></card-unsaved-dialog>`;
+  }
+
+  /** Escape and clicking outside close the Inventory: ask first. */
+  public confirmBeforeClose(): Promise<boolean> {
+    return this.confirmLeaveCard();
+  }
+
+  /** A route (browser Back, a hash edited by hand, a route to another page)
+   * takes the Inventory away: ask first, as for any other close. */
+  public confirmRouteLeave(): Promise<boolean> {
+    if (!this.isModalOpen) return Promise.resolve(true);
+    return this.confirmLeaveCard();
+  }
+
+  /** Leaving the Player card tab for In game: ask first. */
+  public setActiveTab(key: string): void {
+    if (key === CARD_TAB || this.activeTab !== CARD_TAB) {
+      super.setActiveTab(key);
+      return;
+    }
+    if (!this.hasCardChanges()) {
+      super.setActiveTab(key);
+      return;
+    }
+    void this.confirmLeaveCard().then((ok) => {
+      if (ok) {
+        super.setActiveTab(key);
+      } else {
+        // Keep editing: the URL (a hash naming another tab) names the card
+        // tab again, as a declined route puts its hash back.
+        modalRouter.syncTab(this.routerName, CARD_TAB);
+      }
+    });
   }
 
   // ---- Actions -----------------------------------------------------------

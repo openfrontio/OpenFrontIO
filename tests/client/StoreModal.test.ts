@@ -2916,4 +2916,30 @@ describe("StoreModal: a link to a card item", () => {
       (store as unknown as { requestedItem: string | null }).requestedItem,
     ).toBeNull();
   });
+
+  it("closing the Store closes a card preview left open", async () => {
+    // The Store hides without disconnecting its grid, so a preview left
+    // open would keep its Tab trap (and show again on the next open).
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "cosmetics", item: "cardBackground:bg_storm_front" });
+    await vi.waitFor(() =>
+      expect(store!.querySelector("card-store-grid")).toBeTruthy(),
+    );
+    const grid = store.querySelector("card-store-grid") as unknown as {
+      previewing: unknown;
+      updateComplete: Promise<unknown>;
+    };
+    grid.previewing = {
+      type: "cardBackground",
+      item: { name: "bg_storm_front", rarity: "common" },
+    };
+    await grid.updateComplete;
+    store.close();
+    await grid.updateComplete;
+    expect(grid.previewing).toBeNull();
+    expect(store.querySelector("card-item-preview")).toBeNull();
+  });
 });

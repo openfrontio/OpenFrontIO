@@ -193,17 +193,18 @@ describe("AccountModal — rendering", () => {
       expect(modal.querySelector("[data-account-get-card]")).toBeTruthy();
     });
 
-    it("edit card switches tab", async () => {
+    it("Edit card opens the Inventory's Player card tab", async () => {
       await setLoggedInUser(withCard(true));
-      const seen: unknown[] = [];
-      const open = vi
-        .spyOn(modal as unknown as { open(a?: unknown): void }, "open")
-        .mockImplementation((a?: unknown) => {
-          seen.push(a);
-        });
+      window.location.hash = "";
       (modal.querySelector("[data-account-edit-card]") as HTMLElement).click();
-      expect(seen).toEqual([{ tab: "card" }]);
-      open.mockRestore();
+      expect(window.location.hash).toBe("#modal=inventory&tab=card");
+    });
+
+    it("Get the card opens the Inventory's Player card tab too", async () => {
+      await setLoggedInUser(withCard(false));
+      window.location.hash = "";
+      (modal.querySelector("[data-account-get-card]") as HTMLElement).click();
+      expect(window.location.hash).toBe("#modal=inventory&tab=card");
     });
 
     it("connected accounts and the creator panel sit side by side", async () => {

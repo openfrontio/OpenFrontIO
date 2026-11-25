@@ -14,12 +14,16 @@ import {
   Product,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
 import type { PropertyValues, TemplateResult } from "lit";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import { isCardItemType } from "./components/card/CardItems";
-import { cardStoreItems } from "./components/card/CardStoreGrid";
+import {
+  type CardStoreGrid,
+  cardStoreItems,
+} from "./components/card/CardStoreGrid";
 import "./components/CosmeticCard";
 import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -262,6 +266,21 @@ export class StoreModal extends BaseModal {
   // result never waits on a slow catalog before it may say so.
   @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+
+  /** The viewer's level badge, for the Card tab's large preview. */
+  private cardBadge(): LevelBadge | null {
+    const progress =
+      this.userMeResponse === false
+        ? null
+        : this.userMeResponse.player.progress;
+    return progress
+      ? {
+          level: progress.level,
+          prestige: progress.prestige,
+          legend: progress.legend,
+        }
+      : null;
+  }
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
   // is visible, then inspected so the store opens on that item.
   private requestedItem: string | null = null;
@@ -1217,6 +1236,12 @@ export class StoreModal extends BaseModal {
               }
               .tracker=${this.tracker ?? null}
               .requestedItem=${this.requestedItem}
+              .username=${
+                this.userMeResponse === false
+                  ? ""
+                  : (this.userMeResponse.player.username ?? "")
+              }
+              .badge=${this.cardBadge()}
               @requested-item-shown=${() => (this.requestedItem = null)}
             ></card-store-grid>`
           : flash
@@ -1936,6 +1961,8 @@ export class StoreModal extends BaseModal {
     if (args?.sub === "sale" || args?.sub === "new") {
       this.cosmeticsSubTab = args.sub;
     }
+    // `sub=card`: the Inventory's Player card tab ("More … in the Store").
+    if (args?.sub === "card") this.cosmeticsSubTab = "card";
     this.chooseOpeningTab(args, affiliate);
     // Prices change when a sale starts or ends, so a catalog fetched more than
     // a minute ago is refetched rather than shown with stale prices. In the
@@ -2010,6 +2037,9 @@ export class StoreModal extends BaseModal {
     )) {
       inline.closeCardModal();
     }
+    // Likewise the Card sub-tab's large preview: left open, its Tab trap
+    // would hold keyboard focus on a hidden page.
+    this.querySelector<CardStoreGrid>("card-store-grid")?.closePreview();
     this.affiliateCode = null;
     this.openedPack = null;
     this.previewingCosmetic = null;

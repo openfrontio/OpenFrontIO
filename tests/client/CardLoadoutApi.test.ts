@@ -17,10 +17,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: fresh.broadcast,
 }));
 
-import {
-  cardRefsFromLoadout,
-  saveCardLoadout,
-} from "../../src/client/CardLoadoutApi";
+import { saveCardLoadout } from "../../src/client/CardLoadoutApi";
 
 const LOADOUT = {
   background: "bg_pacific",
@@ -41,8 +38,8 @@ describe("saveCardLoadout", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("broadcasts a fresh /users/@me before a successful save returns", async () => {
-    // So the Account header, a recreated My Card tab and any other editor
-    // read the saved card, not the copy from when the modal opened.
+    // So the Account header and the Inventory's card editor read the saved
+    // card, not the copy from when the modal opened.
     let broadcastDone = false;
     fresh.broadcast.mockImplementation(async () => {
       await Promise.resolve();
@@ -149,29 +146,6 @@ describe("saveCardLoadout", () => {
     expect(await saveCardLoadout(LOADOUT)).toEqual({
       ok: false,
       error: "failed",
-    });
-  });
-});
-
-describe("cardRefsFromLoadout", () => {
-  it("is the saved loadout as /users/@me carries it, keeping known values", () => {
-    expect(
-      cardRefsFromLoadout(
-        {
-          background: "bg_x",
-          title: null,
-          taunt: "salute",
-          trackers: ["wins", "conquests"],
-        },
-        { trackers: [{ stat: "wins", value: 12 }] },
-      ),
-    ).toEqual({
-      background: "bg_x",
-      taunt: "salute",
-      trackers: [
-        { stat: "wins", value: 12 },
-        { stat: "conquests", value: 0 },
-      ],
     });
   });
 });

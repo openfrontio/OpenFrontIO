@@ -5,6 +5,7 @@ vi.mock("../src/client/Auth", () => ({
   logOut: async () => true,
   userAuth: async () => null,
   isSessionActive: () => false,
+  isOtherSession: () => false,
   getPlayToken: async () => "token",
   getAuthHeader: async () => "",
 }));

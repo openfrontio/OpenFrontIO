@@ -29,6 +29,8 @@ export interface InventoryItemTileProps {
   note?: string | null;
   /** Artwork; defaults to <cosmetic-preview>. */
   artwork?: TemplateResult | null;
+  /** Opens a large preview: a button over the artwork's corner. */
+  onPreview?: (() => void) | null;
   onActivate?: (resolved: ResolvedCosmetic) => void;
   onVariantActivate?: (resolved: ResolvedCosmetic) => void;
 }
@@ -84,6 +86,7 @@ export class InventoryItemTile
   @property({ type: Number }) priceEpoch = 0;
   @property({ type: String }) note: string | null = null;
   @property({ attribute: false }) artwork: TemplateResult | null = null;
+  @property({ attribute: false }) onPreview: (() => void) | null = null;
   @property({ attribute: false })
   onActivate?: (resolved: ResolvedCosmetic) => void;
   @property({ attribute: false })
@@ -141,10 +144,22 @@ export class InventoryItemTile
 
   private renderFooter(active: ResolvedCosmetic) {
     if (this.note) {
+      // The note replaces the footer's words, never its state: an item in
+      // use reads "✓ In slot 2" in the Equipped style.
+      const style =
+        this.state === "equipped"
+          ? "bg-blue-600 text-white"
+          : this.state === "unsaved"
+            ? "border border-dashed border-white bg-black/30 text-white"
+            : "bg-white/10 text-white/80";
       return html`<span
         data-tile-footer
-        class="flex min-h-7 items-center justify-center rounded-md bg-white/10 px-2 text-xs font-bold text-white/80"
-        >${this.note}</span
+        class="flex min-h-7 items-center justify-center gap-1 rounded-md px-2 text-center text-xs font-bold ${style}"
+        >${
+          this.state === "equipped"
+            ? html`<span aria-hidden="true">✓</span>`
+            : nothing
+        }${this.note}</span
       >`;
     }
     switch (this.state) {
@@ -255,6 +270,39 @@ export class InventoryItemTile
    * may not nest a control.
    */
   private renderExtras(active: ResolvedCosmetic) {
+    if (this.onPreview) {
+      const onPreview = this.onPreview;
+      return html`<div
+        data-tile-extras
+        class="pointer-events-none absolute left-2.5 right-2.5 top-2.5 flex justify-end"
+      >
+        <button
+          type="button"
+          data-tile-preview
+          aria-label=${translateText("inventory_card.preview", {
+            name: cosmeticDisplayName(active),
+          })}
+          title=${translateText("inventory_card.preview", {
+            name: cosmeticDisplayName(active),
+          })}
+          class="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-lg border border-white/20 bg-black/60 text-white hover:bg-black/80 md:h-8 md:w-8"
+          @click=${(event: Event) => {
+            event.stopPropagation();
+            onPreview();
+          }}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 16"
+            class="h-4 w-4 fill-current"
+          >
+            <path
+              d="M2 2h5v2H4v3H2V2Zm7 0h5v5h-2V4H9V2ZM2 9h2v3h3v2H2V9Zm10 0h2v5H9v-2h3V9Z"
+            />
+          </svg>
+        </button>
+      </div>`;
+    }
     if (active.cosmetic === null || this.artwork !== null) return nothing;
     const credits = active.cosmetic as {
       artist?: string;

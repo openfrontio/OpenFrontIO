@@ -33,6 +33,7 @@ import {
   CARD_ITEM_GROUP,
   type CardItem,
 } from "../../components/card/CardItems";
+import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
 import {
   buildPlayerCardView,
   type PlayerCardView,
@@ -1203,9 +1204,9 @@ export class WinModal extends LitElement implements Controller {
   }
   private userMeCall = 0;
 
-  // The finished game is left for the Account page's My Card tab.
+  // The finished game is left for the Inventory's Player card tab.
   private onEditCard = (): void => {
-    window.location.href = "/#modal=account&tab=card";
+    window.location.href = EDIT_CARD_HREF;
   };
 
   async show({ stats = true } = {}) {

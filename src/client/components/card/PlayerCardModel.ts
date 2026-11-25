@@ -81,7 +81,10 @@ export function defaultPlayerCardView(
 }
 
 // A tracker's value: "38,912", or "38.9k" / "1.2M" where space is short.
+// "—" for a value that isn't known (NaN: the Inventory's preview of a stat
+// the server hasn't sent).
 export function formatTracker(value: number, compact: boolean): string {
+  if (!Number.isFinite(value)) return "—";
   if (!compact || Math.abs(value) < 1000) return value.toLocaleString();
   const [divisor, suffix] =
     Math.abs(value) >= 1_000_000 ? [1_000_000, "M"] : [1000, "k"];
