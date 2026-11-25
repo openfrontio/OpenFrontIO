@@ -60,14 +60,17 @@ function catalogItems(cosmetics: Cosmetics): object[] {
 }
 
 /**
- * Every item a sale can be tagged on: the cosmetics, plus the currency packs
- * and subscriptions (which the Store may not sell on every platform).
+ * Every item a sale can be tagged on: the cosmetics, plus the currency packs,
+ * subscriptions and player card items, which the On sale tab doesn't list.
  */
 function taggableItems(cosmetics: Cosmetics): object[] {
   return [
     ...catalogItems(cosmetics),
     ...Object.values(cosmetics.currencyPacks ?? {}),
     ...Object.values(cosmetics.subscriptions ?? {}),
+    ...Object.values(cosmetics.playerCards ?? {}),
+    ...Object.values(cosmetics.cardTrackers ?? {}),
+    ...Object.values(cosmetics.cardBackgrounds ?? {}),
   ];
 }
 

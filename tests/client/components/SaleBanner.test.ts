@@ -216,6 +216,21 @@ describe("salesPlayerCanBuy", () => {
     ).toEqual([flash]);
   });
 
+  it("drops a sale tagged only on a card background", () => {
+    const neon = { name: "neon-grid", url: "", ...onSale, promotion: flash };
+    const withCard = {
+      ...catalog,
+      flags: {},
+      cardBackgrounds: { "neon-grid": neon },
+    } as unknown as Cosmetics;
+    const card = {
+      ...resolved(neon),
+      type: "cardBackground",
+    } as unknown as ResolvedCosmetic;
+    // Buyable, but the On sale tab doesn't list card items.
+    expect(salesPlayerCanBuy([flash], withCard, [card])).toEqual([]);
+  });
+
   it("keeps a sale the catalog tags no item with", () => {
     expect(salesPlayerCanBuy([weekend], catalog, [])).toEqual([weekend]);
     expect(salesPlayerCanBuy([flash], null, [])).toEqual([flash]);
