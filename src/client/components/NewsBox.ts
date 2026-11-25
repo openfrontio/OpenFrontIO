@@ -9,9 +9,14 @@ import {
   fetchCosmetics,
   invalidateCosmetics,
   refreshStaleCosmetics,
-  resolveCosmetics,
   type ResolvedCosmetic,
 } from "../Cosmetics";
+import { fetchPlayPrices, sellsOnlyThroughPlay } from "../Payments";
+import {
+  type PlayPrices,
+  playProductIds,
+  storePurchasables,
+} from "../StoreSellable";
 import { lastUserMeResponse } from "../UserMeBroadcast";
 import {
   HIDE_SALE_BANNERS_KEY,
@@ -99,9 +104,14 @@ export class NewsBox extends LitElement {
   // The signed-in player, so a sale on only what they own gets no banner.
   @state() private userMe: UserMeResponse | false =
     lastUserMeResponse()?.response ?? false;
+  // In the Android app: Play's prices for the catalog's packs, which decide
+  // whether the Store lists a pack at all.
+  private playPrices: PlayPrices = null;
+  private playPricesFor: Cosmetics | null = null;
   private purchasableFor: {
     cosmetics: Cosmetics;
     userMe: UserMeResponse | false;
+    playPrices: PlayPrices;
     items: ResolvedCosmetic[];
   } | null = null;
   // Drops the Steam Awards banner when nominations close.
@@ -133,19 +143,33 @@ export class NewsBox extends LitElement {
   };
 
   /**
-   * What the store would sell this player, resolved once per catalog and
-   * account (the box re-renders every few seconds while news cycles).
+   * What the store would sell this player, by the Store's own rule, resolved
+   * once per catalog and account (the box re-renders every few seconds while
+   * news cycles). The banner opens the Store without an affiliate code.
    */
   private purchasable(cosmetics: Cosmetics): ResolvedCosmetic[] {
     const cached = this.purchasableFor;
-    if (cached?.cosmetics === cosmetics && cached.userMe === this.userMe) {
+    if (
+      cached?.cosmetics === cosmetics &&
+      cached.userMe === this.userMe &&
+      cached.playPrices === this.playPrices
+    ) {
       return cached.items;
     }
-    const items = resolveCosmetics(cosmetics, this.userMe, null).filter(
-      (resolved) => resolved.relationship === "purchasable",
-    );
-    this.purchasableFor = { cosmetics, userMe: this.userMe, items };
+    const { userMe, playPrices } = this;
+    const items = storePurchasables(cosmetics, userMe, null, playPrices);
+    this.purchasableFor = { cosmetics, userMe, playPrices, items };
     return items;
+  }
+
+  /** Asks Play for the catalog's pack prices, once per catalog. */
+  private async loadPlayPrices(cosmetics: Cosmetics): Promise<void> {
+    if (!sellsOnlyThroughPlay() || this.playPricesFor === cosmetics) return;
+    this.playPricesFor = cosmetics;
+    const prices = await fetchPlayPrices(playProductIds(cosmetics));
+    if (this.playPricesFor !== cosmetics) return;
+    this.playPrices = prices;
+    this.requestUpdate();
   }
 
   /**
@@ -157,7 +181,10 @@ export class NewsBox extends LitElement {
   private async loadSales(attempt = 0) {
     const cosmetics = await fetchCosmetics();
     if (!this.isConnected) return;
-    if (cosmetics !== null) this.cosmetics = cosmetics;
+    if (cosmetics !== null) {
+      this.cosmetics = cosmetics;
+      void this.loadPlayPrices(cosmetics);
+    }
     // Re-render even when the refetch hands back the same catalog: a sale
     // whose end has passed drops out of the banner on time.
     this.requestUpdate();

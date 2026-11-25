@@ -217,6 +217,49 @@ describe("NewsBox", () => {
       expect(box.textContent).toContain("Patch notes");
     });
 
+    it("drops the banner of a sale on only what the Android app can't sell", async () => {
+      const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+      const sale = { id: "7", name: "Supporter Sale", endsAt };
+      const catalog = {
+        ...catalogWith(sale),
+        subscriptions: {
+          supporter: {
+            name: "supporter",
+            priceHard: 10,
+            listPriceHard: 100,
+            promotion: { percentOff: 90, ...sale },
+          },
+        },
+      } as unknown as Cosmetics;
+      // The Android shell: Play is the only way to pay there, and the Store
+      // sells no subscription, so its On sale tab has nothing from this sale.
+      const shell = window as { openfrontDesktop?: unknown };
+      shell.openfrontDesktop = {};
+      vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce(catalog);
+      const box = document.createElement("news-box");
+      document.body.appendChild(box);
+
+      try {
+        await vi.waitFor(() =>
+          expect(box.textContent).toContain("Patch notes"),
+        );
+        expect(box.querySelector("[data-store-sale-banner]")).toBeNull();
+      } finally {
+        box.remove();
+        delete shell.openfrontDesktop;
+      }
+
+      // On the web the Store sells it, so the same sale has its banner.
+      vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce(catalog);
+      const web = document.createElement("news-box");
+      document.body.appendChild(web);
+      await vi.waitFor(() =>
+        expect(web.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+      );
+    });
+
     it("leaves the news alone for a sale not set to announce", async () => {
       const endsAt = new Date(Date.now() + 3_600_000).toISOString();
       vi.mocked(fetchCosmetics).mockResolvedValueOnce(

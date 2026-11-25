@@ -11,7 +11,6 @@ import {
 import {
   CosmeticPack,
   Cosmetics,
-  Pack,
   Product,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
@@ -68,6 +67,12 @@ import {
   sellsOnlyThroughPlay,
 } from "./Payments";
 import { type PricedItem, shownPrice } from "./ShownPrice";
+import {
+  playPrice,
+  playProductIds,
+  sellable,
+  storePurchasables,
+} from "./StoreSellable";
 import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
@@ -231,15 +236,6 @@ export function saleFirst<T extends readonly ResolvedCosmetic[]>(
 }
 
 export { saleCoversEverything };
-
-/** The Play products the catalog's currency packs are sold as. */
-function playProductIds(cosmetics: Cosmetics | null): string[] {
-  return Object.values(cosmetics?.currencyPacks ?? {}).flatMap((pack) =>
-    pack.currency === "hard" && pack.googleProductId !== undefined
-      ? [pack.googleProductId]
-      : [],
-  );
-}
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -510,41 +506,20 @@ export class StoreModal extends BaseModal {
   } | null = null;
 
   private resolvePurchasables(): ResolvedCosmetic[] {
-    return resolveCosmetics(
+    return storePurchasables(
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
-    ).filter(
-      (resolved) =>
-        resolved.relationship === "purchasable" && this.sellable(resolved),
+      this.playPrices,
     );
   }
 
-  /**
-   * In the Android app Play is the only way to pay, so a currency pack is
-   * listed only at a price Play gave (or when it is bought with in-game
-   * currency) and no subscription is sold. Everything else is unaffected.
-   */
   private sellable(resolved: ResolvedCosmetic): boolean {
-    if (!sellsOnlyThroughPlay()) return true;
-    if (resolved.type === "subscription") return false;
-    if (resolved.type !== "pack") return true;
-    const pack = resolved.cosmetic as Pack;
-    return (
-      this.playPrice(resolved) !== null ||
-      shownPrice(pack, "hard") !== null ||
-      shownPrice(pack, "soft") !== null
-    );
+    return sellable(resolved, this.playPrices);
   }
 
-  /** Play's price for a currency pack, or null when Play does not sell it. */
   private playPrice(resolved: ResolvedCosmetic): string | null {
-    if (resolved.type !== "pack") return null;
-    const pack = resolved.cosmetic as Pack;
-    if (pack.currency !== "hard" || pack.googleProductId === undefined) {
-      return null;
-    }
-    return this.playPrices?.get(pack.googleProductId) ?? null;
+    return playPrice(resolved, this.playPrices);
   }
 
   private cosmeticsGroups(

@@ -190,6 +190,20 @@ describe("salesPlayerCanBuy", () => {
     expect(salesPlayerCanBuy([flash], catalog, [resolved(stale)])).toEqual([]);
   });
 
+  it("drops a sale tagged only on a subscription the store doesn't sell", () => {
+    const supporter = { name: "supporter", ...onSale, promotion: flash };
+    const withSub = {
+      ...catalog,
+      flags: {},
+      subscriptions: { supporter },
+    } as unknown as Cosmetics;
+    // Left out of `purchasable` (the Android app sells no subscription).
+    expect(salesPlayerCanBuy([flash], withSub, [])).toEqual([]);
+    expect(salesPlayerCanBuy([flash], withSub, [resolved(supporter)])).toEqual([
+      flash,
+    ]);
+  });
+
   it("keeps a sale the catalog tags no item with", () => {
     expect(salesPlayerCanBuy([weekend], catalog, [])).toEqual([weekend]);
     expect(salesPlayerCanBuy([flash], null, [])).toEqual([flash]);

@@ -59,6 +59,18 @@ function catalogItems(cosmetics: Cosmetics): object[] {
   ];
 }
 
+/**
+ * Every item a sale can be tagged on: the cosmetics, plus the currency packs
+ * and subscriptions (which the Store may not sell on every platform).
+ */
+function taggableItems(cosmetics: Cosmetics): object[] {
+  return [
+    ...catalogItems(cosmetics),
+    ...Object.values(cosmetics.currencyPacks ?? {}),
+    ...Object.values(cosmetics.subscriptions ?? {}),
+  ];
+}
+
 const promotionIdOf = (item: unknown): string | undefined =>
   (item as { promotion?: { id: string } } | null)?.promotion?.id;
 
@@ -77,7 +89,7 @@ export function salesPlayerCanBuy(
   now: number = Date.now(),
 ): Promotion[] {
   if (cosmetics === null) return sales;
-  const tagged = new Set(catalogItems(cosmetics).map(promotionIdOf));
+  const tagged = new Set(taggableItems(cosmetics).map(promotionIdOf));
   const buyable = new Set(
     purchasable
       .filter((resolved) => activeSale(resolved.cosmetic, now) !== null)
