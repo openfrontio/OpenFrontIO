@@ -769,7 +769,12 @@ export class CardEditor {
     // The account unknown for now (a token refresh failed) isn't a reason
     // to drop it: store() asks again before sending, refuses, and ends it
     // failed, so the same account can retry once it's back.
-    if (now === "ours" && !this.eligible()) return this.endQuietly(owner);
+    if (now === "ours" && !this.eligible()) {
+      this.endQuietly(owner);
+      // Nothing left to save (a fresh profile already shows the changes)
+      // is done, as for a Save that waited on this card's own save.
+      return this.changeCount() === 0;
+    }
     return this.store(owner);
   }
 
