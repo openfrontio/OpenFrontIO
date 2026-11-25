@@ -251,6 +251,20 @@ describe("Inventory: unsaved card changes guard", () => {
       expect(q("[data-card-save-bar]")).not.toBeNull();
     });
 
+    it("a hash naming another Inventory tab, then Keep editing: the URL names the card tab again", async () => {
+      await openWithChange();
+      expect(window.location.hash).toContain("tab=card");
+      history.replaceState(null, "", "/#modal=inventory&tab=skins");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      expect(q("[data-card-guard]")).not.toBeNull();
+      await click("[data-card-guard-keep]");
+      expect(onCardTab()).toBe(true);
+      expect(window.location.hash).toContain("modal=inventory");
+      expect(window.location.hash).toContain("tab=card");
+      expect(window.location.hash).not.toContain("tab=skins");
+    });
+
     it("Back with an unsaved change, then Discard: closes, and the change is gone", async () => {
       await openWithChange();
       await back();

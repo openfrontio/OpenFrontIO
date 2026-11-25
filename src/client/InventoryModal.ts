@@ -70,6 +70,7 @@ import {
   resolvedToPlayerPattern,
 } from "./Cosmetics";
 import { COSMETICS_CHANGED } from "./Experiments";
+import { modalRouter } from "./ModalRouter";
 import { type PricedItem, saleEndsAt } from "./ShownPrice";
 import {
   type CosmeticLoadout,
@@ -1676,7 +1677,19 @@ export class InventoryModal extends BaseModal {
       super.setActiveTab(key);
       return;
     }
-    this.leaveThen(() => super.setActiveTab(key));
+    if (!this.hasCardChanges()) {
+      super.setActiveTab(key);
+      return;
+    }
+    void this.confirmLeaveCard().then((ok) => {
+      if (ok) {
+        super.setActiveTab(key);
+      } else {
+        // Keep editing: the URL (a hash naming another tab) names the card
+        // tab again, as a declined route puts its hash back.
+        modalRouter.syncTab(this.routerName, CARD_TAB);
+      }
+    });
   }
 
   // ---- Actions -----------------------------------------------------------
