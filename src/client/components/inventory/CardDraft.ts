@@ -90,10 +90,13 @@ export function draftFromCard(
 }
 
 /**
- * Puts back the order the player gave the items in `after` (moved since
- * `before`) on `out`, a card rebased onto a fresh one. Only the rows that
- * hold those items are reordered; the fresh card's other items stay where
- * they are. Nothing changes when the player moved nothing.
+ * Replays the player's moves (`before` to `after`) onto `out`, a card
+ * rebased onto a fresh one. Only the pairs of items the player put in the
+ * other order are reordered: every other pair keeps `out`'s order, so a
+ * move made elsewhere stays too. Where the two disagree (a pair the player
+ * didn't touch that only fits one way round), the player's move wins.
+ * Items `out` holds that either side lacks stay in their rows, and nothing
+ * changes when the player moved nothing.
  */
 export function replayMoves(
   out: CardDraft,
@@ -102,22 +105,46 @@ export function replayMoves(
 ): CardDraft {
   const next = cloneDraft(out);
   for (const kind of CARD_SLOT_KIND_LIST) {
-    const order = after.rows[kind].filter((x): x is string => x !== null);
-    const was = before.rows[kind].filter(
-      (x): x is string => x !== null && order.includes(x),
-    );
-    const kept = order.filter((x) => was.includes(x));
-    if (sameRows(kept, was)) continue;
+    const was = before.rows[kind];
+    const now = after.rows[kind];
     const rows = next.rows[kind];
+    // The rows holding an item the player could have moved.
     const at = rows
-      .map((x, i) => (x !== null && order.includes(x) ? i : -1))
+      .map((x, i) =>
+        x !== null && was.includes(x) && now.includes(x) ? i : -1,
+      )
       .filter((i) => i !== -1);
-    const items = at
-      .map((i) => rows[i] as string)
-      .sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    at.forEach((i, j) => (rows[i] = items[j]));
+    const items = at.map((i) => rows[i] as string);
+    // `first` goes before `second`: the player swapped them round.
+    const swapped = (first: string, second: string) =>
+      now.indexOf(first) < now.indexOf(second) &&
+      was.indexOf(first) > was.indexOf(second);
+    // Each next row takes the first item (in `out`'s order) that no item
+    // still left must go before: the player's order where they changed it,
+    // `out`'s everywhere else.
+    const left = [...items];
+    const ordered: string[] = [];
+    while (left.length > 0) {
+      const ready = left.find((x) => !left.some((y) => swapped(y, x)))!;
+      ordered.push(ready);
+      left.splice(left.indexOf(ready), 1);
+    }
+    at.forEach((i, j) => (rows[i] = ordered[j]));
   }
   return next;
+}
+
+/**
+ * The player's edits (`before` to `after`) on a newer card `base`: picks by
+ * what they name (replayByItem), then the order they gave (replayMoves).
+ * What the player didn't touch follows `base`.
+ */
+function rebase(
+  base: CardDraft,
+  before: CardDraft,
+  after: CardDraft,
+): CardDraft {
+  return replayMoves(replayByItem(base, before, after), before, after);
 }
 
 /** Whether `card` has every part `sent` changed from `replaced` (rows
@@ -358,6 +385,24 @@ export function slotItem(
 
 export type CardSaveState = "idle" | "saving" | "saved" | "failed";
 
+/**
+ * Who a save is for, taken once as it starts. Every later question about
+ * whether the save is still wanted, or still to be taken, asks this one
+ * owner (CardEditor.ownerNow).
+ */
+interface SaveOwner {
+  /** The editor's account generation: bumped whenever its card turns out
+   * to be another account's (or none), so an old save never lands on it. */
+  generation: number;
+  /** The session epoch: bumped at sign-out and at a portal account change. */
+  epoch: number;
+  /** The card's account (its publicId). */
+  publicId: string;
+  /** The session's JWT subject (null: no token right then). It names the
+   * account even before that account's publicId is stored. */
+  sub: string | null;
+}
+
 /** How long "Saved" shows before the bar goes. */
 export const SAVED_SHOWN_MS = 2000;
 
@@ -412,19 +457,18 @@ export class CardEditor {
   private droppedTo: CardDraft | null = null;
   /** The draft the save in flight sent. */
   private sending: CardDraft | null = null;
-  /** The save in flight, for a Save clicked while it runs to wait on. */
+  /** This card's save in flight, for a Save clicked while it runs to wait
+   * on. */
   private inFlight: Promise<boolean> | null = null;
-  /** A save left in flight when the account was dropped, and whose card it
-   * was. A reauth into that same account waits for it to settle before
-   * sending (two PUTs for one account never race); another account's save
+  /** Every save not yet settled, by account (publicId): the latest one for
+   * each, which runs after the one before. A save waits for its account's
+   * earlier one, so two PUTs for one account never race, even across a
+   * reauth or a switch to another account and back; another account's
    * goes at once, since its PUT can't race this one's. */
-  private abandoned: {
-    promise: Promise<unknown>;
-    owner: string | null;
-  } | null = null;
+  private pending = new Map<string, Promise<boolean>>();
   /** Bumped when the card turns out to be another account's: a save
    * started before never lands on the next one's card. */
-  private account = 0;
+  private generation = 0;
   /** Every profile seeded so far. After a session change none of them is
    * taken again: one still in hand (the modal's, until the new session's
    * /users/@me) is the old account's. */
@@ -496,11 +540,7 @@ export class CardEditor {
       // follows it, so Save never puts back what the player didn't touch.
       // Not while a save is in flight: store() reconciles with what it
       // stored, and this profile may be that save's own refresh.
-      this.draft = replayMoves(
-        replayByItem(this.saved, before, this.draft),
-        before,
-        this.draft,
-      );
+      this.draft = rebase(this.saved, before, this.draft);
     }
     this.emit();
   }
@@ -536,23 +576,10 @@ export class CardEditor {
 
   /** Another account's card from here: nothing of the last one's stays. */
   private resetAccount(): void {
-    this.account++;
-    // The last account's save in flight is no longer this editor's to wait
-    // on: its answer (store() sees the account changed) decides nothing,
-    // and another account's Save sends at once. A Save for the same account
-    // (a reauth) waits for it to settle first: see afterAbandoned().
-    if (this.inFlight !== null) {
-      const abandoned = {
-        promise: this.inFlight,
-        owner: this.seededFrom?.player.publicId ?? null,
-      };
-      this.abandoned = abandoned;
-      void abandoned.promise
-        .catch(() => undefined)
-        .finally(() => {
-          if (this.abandoned === abandoned) this.abandoned = null;
-        });
-    }
+    this.generation++;
+    // The last card's save in flight is no longer this editor's to wait on:
+    // its answer decides nothing (ownerNow says it's gone). It stays in
+    // `pending`, so a later Save for that same account still waits for it.
     this.inFlight = null;
     this.clearSavedTimer();
     this.seededFrom = null;
@@ -641,13 +668,58 @@ export class CardEditor {
   }
 
   canSave(): boolean {
+    return this.saveState !== "saving" && this.eligible();
+  }
+
+  /** The changes could be saved, a save running aside: the card is the
+   * session's account's, and every item in the changes is owned. */
+  private eligible(): boolean {
     return (
       !this.awaitingProfile &&
       this.holdsSessionAccount() &&
       this.changeCount() > 0 &&
-      this.unownedInChanges().length === 0 &&
-      this.saveState !== "saving"
+      this.unownedInChanges().length === 0
     );
+  }
+
+  /** Who a save starting now is for. Only called once canSave() holds, so
+   * the card is the session's account's. */
+  private captureOwner(): SaveOwner {
+    return {
+      generation: this.generation,
+      epoch: sessionEpoch,
+      publicId: this.seededFrom!.player.publicId!,
+      sub: currentSessionSub(),
+    };
+  }
+
+  /**
+   * Whether the save `owner` started is still this card's and this
+   * session's: "gone" once the editor moved to another card, or the
+   * session ended or changed account (by its subject, or by its publicId);
+   * "unknown" while the session's account can't be read (a token refresh
+   * failed, and the session stays), which isn't another account.
+   */
+  private ownerNow(owner: SaveOwner): "ours" | "unknown" | "gone" {
+    if (this.generation !== owner.generation || sessionEpoch !== owner.epoch) {
+      return "gone";
+    }
+    if (owner.sub !== null && isOtherSession(owner.sub)) return "gone";
+    const signedInAs = this.sessionAccount();
+    if (signedInAs === null) return "unknown";
+    return signedInAs === owner.publicId ? "ours" : "gone";
+  }
+
+  /** Ends a save that isn't to be taken, with nothing to Retry. An editor
+   * on another card since is left alone: its state is that card's. */
+  private endQuietly(owner: SaveOwner): false {
+    if (this.generation === owner.generation) {
+      this.sending = null;
+      this.droppedTo = null;
+      this.saveState = "idle";
+      this.emit();
+    }
+    return false;
   }
 
   /**
@@ -661,78 +733,71 @@ export class CardEditor {
       return this.changeCount() === 0 || this.save();
     }
     if (!this.canSave()) return false;
-    const prior = this.abandonedForThisAccount();
-    const saving = prior === null ? this.store() : this.storeAfter(prior);
+    const owner = this.captureOwner();
+    // An earlier save of this account's still out (dropped by a reauth, or
+    // by a switch to another account and back): this one waits for it.
+    const prior = this.pending.get(owner.publicId) ?? null;
+    const saving =
+      prior === null ? this.store(owner) : this.storeAfter(prior, owner);
     this.inFlight = saving;
+    this.pending.set(owner.publicId, saving);
     try {
       return await saving;
     } finally {
       if (this.inFlight === saving) this.inFlight = null;
+      if (this.pending.get(owner.publicId) === saving) {
+        this.pending.delete(owner.publicId);
+      }
     }
   }
 
-  /** A save of this same account's left in flight by a reauth, if any. */
-  private abandonedForThisAccount(): Promise<unknown> | null {
-    const prior = this.abandoned;
-    const owner = this.seededFrom?.player.publicId ?? null;
-    return prior !== null && prior.owner === owner ? prior.promise : null;
-  }
-
   /**
-   * Stores once `prior` (that save) has settled, however it ends. Nothing
-   * is sent if the account changed meanwhile: the save is no longer this
-   * card's.
+   * Stores once `prior` (that account's earlier save) has settled, however
+   * it ends. Nothing is sent if the save is no longer this card's, or the
+   * changes can no longer be saved (a fresh profile meanwhile may have
+   * taken an item away, or brought the changes to nothing).
    */
-  private async storeAfter(prior: Promise<unknown>): Promise<boolean> {
-    const account = this.account;
+  private async storeAfter(
+    prior: Promise<unknown>,
+    owner: SaveOwner,
+  ): Promise<boolean> {
     this.saveState = "saving";
     this.emit();
     await prior.catch(() => undefined);
-    if (this.account !== account) return false;
-    return this.store();
+    if (this.ownerNow(owner) === "gone" || !this.eligible()) {
+      return this.endQuietly(owner);
+    }
+    return this.store(owner);
   }
 
-  private async store(): Promise<boolean> {
+  private async store(owner: SaveOwner): Promise<boolean> {
     const sent = cloneDraft(this.draft);
     this.sending = sent;
     this.clearSavedTimer();
     this.saveState = "saving";
     this.emit();
     const body = loadoutBody(sent, this.held);
-    // Asked again once the token is read: that can wait on a JWT refresh,
-    // and a sign-out meanwhile must not send this card under the next
-    // session's token.
-    const epoch = sessionEpoch;
-    const account = this.account;
-    const owner = this.seededFrom?.player.publicId ?? null;
     // The profile the editor held as the save started, and the card it
     // replaced: a profile seeded while it ran is kept over the PUT's answer
     // only if it already shows this save.
     const seededAtStart = this.seededFrom;
     const replaced = cloneDraft(this.saved);
-    // The session's subject as the save starts: the account it's for, even
-    // when another account's publicId isn't known yet.
-    const ownerSub = currentSessionSub();
-    // Asked once the token is read, right before the PUT: still the session
-    // it started under, and still signed in as this card's account.
+    // Asked once the token is read, right before the PUT (reading it can
+    // wait on a JWT refresh, which can pick up another tab's sign-in): sent
+    // only while the owner is plainly still signed in.
     const result = await saveCardLoadout(
       body,
-      () => sessionEpoch === epoch && this.sessionAccount() === owner,
+      () => this.ownerNow(owner) === "ours",
     );
-    // Another account's card by now: dropAccount() has reset the editor,
-    // and anything since is that account's.
-    if (this.account !== account) return false;
+    // Signed out, into another account, or the editor on another card by
+    // now (another tab's sign-in, picked up by an ordinary refresh, fires no
+    // session event): whatever it stored isn't this card's, so it isn't
+    // taken as the saved card, and there's nothing to Retry. The next
+    // /users/@me seeds the editor. The account unknown for now (a refresh
+    // that failed) isn't another account: a failure there can be retried
+    // once it's back, and a success is taken.
+    if (this.ownerNow(owner) === "gone") return this.endQuietly(owner);
     this.sending = null;
-    if (sessionEpoch !== epoch) {
-      // Signed out, or into another account, while it saved: whatever it
-      // stored belongs to a session that's gone, so it isn't taken as the
-      // saved card, and there's nothing to Retry. The next /users/@me
-      // seeds the editor.
-      this.droppedTo = null;
-      this.saveState = "idle";
-      this.emit();
-      return false;
-    }
     if (!result.ok) {
       // Dropped meanwhile: the draft goes back to the card the server kept,
       // with any edit made since, and no Retry is left over.
@@ -741,29 +806,7 @@ export class CardEditor {
       if (droppedTo !== null) {
         this.draft = replayByItem(this.saved, droppedTo, this.draft);
       }
-      // Signed in as another account by now (another tab's sign-in, picked
-      // up by a refresh, fires no session event): not this card's failure,
-      // and Save is off, so it ends quietly rather than offering a Retry
-      // that can't save. No session at all (a refresh that failed) still
-      // ends failed: the same account can retry once it's back.
-      const signedInAs = this.sessionAccount();
-      const otherAccount = signedInAs !== null && signedInAs !== owner;
-      this.saveState = droppedTo !== null || otherAccount ? "idle" : "failed";
-      this.emit();
-      return false;
-    }
-    // Stored, but the session is another account's by now (an ordinary
-    // token refresh installed it after the PUT went, with no session
-    // event): that card isn't this editor's to take as saved. The next
-    // profile seeds it. Unknown for now (a refresh that failed) isn't
-    // another account.
-    const signedInAs = this.sessionAccount();
-    if (
-      (signedInAs !== null && signedInAs !== owner) ||
-      (ownerSub !== null && isOtherSession(ownerSub))
-    ) {
-      this.droppedTo = null;
-      this.saveState = "idle";
+      this.saveState = droppedTo !== null ? "idle" : "failed";
       this.emit();
       return false;
     }
@@ -792,26 +835,15 @@ export class CardEditor {
         });
     // Nothing edited while it saved (or since a drop, which reset the draft
     // to what it sent): the draft becomes the stored card. An edit made
-    // meanwhile is kept as it is: it was made on what was sent, which the
-    // stored card only differs from by closed-up gaps, so it names the
-    // same trackers.
+    // meanwhile goes onto the stored card, which may be a newer one: only
+    // what was changed since `sent` (a slot's pick, or the order) is
+    // replayed, so a part changed elsewhere stays changed, and a gap the
+    // server closed up isn't two new edits.
     this.droppedTo = null;
-    if (cardChanges(sent, this.draft).length === 0) {
-      this.draft = cloneDraft(storedDraft);
-    } else {
-      // Edited while it saved: each part left as it was sent follows the
-      // stored card (a gap the server closed up isn't two new edits).
-      const draft = cloneDraft(this.draft);
-      if (draft.background === sent.background) {
-        draft.background = storedDraft.background;
-      }
-      for (const kind of CARD_SLOT_KIND_LIST) {
-        if (sameRows(draft.rows[kind], sent.rows[kind])) {
-          draft.rows[kind] = [...storedDraft.rows[kind]];
-        }
-      }
-      this.draft = draft;
-    }
+    this.draft =
+      cardChanges(sent, this.draft).length === 0
+        ? cloneDraft(storedDraft)
+        : rebase(storedDraft, sent, this.draft);
     this.saved = storedDraft;
     // An edit made while it saved isn't saved: no "Saved" over it, and
     // Save card takes it at once.

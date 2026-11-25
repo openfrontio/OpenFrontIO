@@ -152,7 +152,14 @@ export class CardStoreGrid extends LitElement {
     );
   }
 
-  private buy(type: CardItemType, item: CardItem, method: "hard" | "soft") {
+  // `shownAmount`: what the confirm box showed; the server refuses (409) to
+  // charge more than that.
+  private buy(
+    type: CardItemType,
+    item: CardItem,
+    method: "hard" | "soft",
+    shownAmount?: number,
+  ) {
     this.tracker?.click(`${type}:${item.name}`, PLACEMENT);
     const resolved: ResolvedCosmetic = {
       type,
@@ -161,7 +168,7 @@ export class CardStoreGrid extends LitElement {
       relationship: "purchasable",
       key: `${type}:${item.name}`,
     };
-    return purchaseCosmetic(resolved, method, PLACEMENT);
+    return purchaseCosmetic(resolved, method, PLACEMENT, shownAmount);
   }
 
   private preview(type: CardItemType, item: CardItem): TemplateResult {
@@ -300,8 +307,10 @@ export class CardStoreGrid extends LitElement {
                   }
                   .rarity=${String(item.rarity)}
                   .itemName=${cardItemName(type, item)}
-                  .onPurchaseHard=${() => this.buy(type, item, "hard")}
-                  .onPurchaseSoft=${() => this.buy(type, item, "soft")}
+                  .onPurchaseHard=${(shown?: number) =>
+                    this.buy(type, item, "hard", shown)}
+                  .onPurchaseSoft=${(shown?: number) =>
+                    this.buy(type, item, "soft", shown)}
                 ></purchase-button>`
           }
         </div>`;

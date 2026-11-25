@@ -354,11 +354,13 @@ export class PurchaseButton extends LitElement {
   @property({ type: Function })
   onPurchaseDollar?: () => Promise<PurchaseResult>;
 
+  /** Called on confirm with the amount the confirm box showed, for the
+   * purchase's price check (purchaseCosmetic's shownAmount). */
   @property({ type: Function })
-  onPurchaseHard?: () => Promise<PurchaseResult>;
+  onPurchaseHard?: (shownAmount?: number) => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseSoft?: () => Promise<PurchaseResult>;
+  onPurchaseSoft?: (shownAmount?: number) => Promise<PurchaseResult>;
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
@@ -371,7 +373,7 @@ export class PurchaseButton extends LitElement {
     method: "hard" | "soft";
     itemName: string;
     item: PricedItem;
-    handler: () => Promise<PurchaseResult>;
+    handler: (shownAmount?: number) => Promise<PurchaseResult>;
     // The item's busy key, so confirming holds and releases that item's
     // buttons even after this element is handed another item.
     busyKey: string;
@@ -752,7 +754,13 @@ export class PurchaseButton extends LitElement {
                 const pending = this.confirmingPurchase;
                 this.confirmingPurchase = null;
                 if (pending) {
-                  this.executePurchase(pending.handler, pending.busyKey);
+                  // The amount the box showed, from the item it captured:
+                  // the server refuses to charge more than this.
+                  const shown = shownPrice(pending.item, pending.method)?.price;
+                  this.executePurchase(
+                    () => pending.handler(shown),
+                    pending.busyKey,
+                  );
                 }
               }}
               @cancel=${() => (this.confirmingPurchase = null)}

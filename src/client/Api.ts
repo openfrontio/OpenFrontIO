@@ -1369,10 +1369,58 @@ export type PurchaseWithCurrencyResult =
   // and refetch. Nothing charged. No payload: unlike the pack's 409 the body
   // carries no item list, only {error, message}.
   | { ok: false; code: "already_owned" }
+  // 409 price_changed: the server would charge more than `expectedAmount`,
+  // the price the store showed (a stale catalog, or a store experiment that
+  // stopped since). Nothing charged. `amount` is the price now, when given.
+  | { ok: false; code: "price_changed"; amount?: number }
   // `stillWanted` said no: the account changed, so nothing was sent (or a
   // 401 came back for a token that's no longer the session's).
   | { ok: false; code: "cancelled" }
   | { ok: false; code: "failed" };
+
+/**
+ * What a purchase tells the server about the price it showed: the server
+ * refuses with 409 price_changed rather than charge more than
+ * `expectedAmount`. `platform` is the storefront (store experiments never
+ * apply on Steam).
+ */
+export interface PurchasePriceCheck {
+  expectedAmount?: number;
+  platform?: "web" | "crazygames" | "steam";
+}
+
+function priceCheckFields(check: PurchasePriceCheck | undefined): object {
+  if (check === undefined) return {};
+  return {
+    ...(check.expectedAmount !== undefined &&
+    Number.isSafeInteger(check.expectedAmount) &&
+    check.expectedAmount >= 0
+      ? { expectedAmount: check.expectedAmount }
+      : {}),
+    ...(check.platform !== undefined ? { platform: check.platform } : {}),
+  };
+}
+
+/**
+ * A 409 body's price_changed refusal, or null for any other 409. Only the
+ * two fields are read, and nothing of the body is logged.
+ */
+function priceChangedRefusal(
+  body: unknown,
+): { ok: false; code: "price_changed"; amount?: number } | null {
+  const fields = (body ?? {}) as { reason?: unknown; amount?: unknown };
+  if (fields.reason !== "price_changed") return null;
+  const raw = fields.amount;
+  const amount = Number(raw);
+  return {
+    ok: false,
+    code: "price_changed",
+    ...((typeof raw === "string" || typeof raw === "number") &&
+    Number.isFinite(amount)
+      ? { amount }
+      : {}),
+  };
+}
 
 // POST /shop/purchase — buy a single cosmetic for hard or soft currency. The
 // only spend path that takes soft currency. Any error means no debit and no
@@ -1383,6 +1431,7 @@ export async function purchaseWithCurrency(
   currencyType: "hard" | "soft",
   colorPaletteName?: string,
   placement?: StorePlacement,
+  priceCheck?: PurchasePriceCheck,
   stillWanted: () => boolean = () => true,
 ): Promise<PurchaseWithCurrencyResult> {
   try {
@@ -1402,6 +1451,7 @@ export async function purchaseWithCurrency(
         currencyType,
         colorPaletteName,
         ...(placement ? { placement } : {}),
+        ...priceCheckFields(priceCheck),
       }),
     });
     if (response.status === 401) {
@@ -1425,10 +1475,14 @@ export async function purchaseWithCurrency(
       return { ok: false, code: "failed" };
     }
     if (response.status === 409) {
-      // The body is deliberately not read: it carries no item list, so there
-      // is nothing to extract, and not touching it is the cheapest way to
-      // keep a server body away from a log line.
-      return { ok: false, code: "already_owned" };
+      // Read only for the price-change refusal; the "Already owned" body
+      // carries no item list, and nothing of either reaches a log line.
+      return (
+        priceChangedRefusal(await response.json().catch(() => null)) ?? {
+          ok: false,
+          code: "already_owned",
+        }
+      );
     }
     if (!response.ok) {
       console.error(
@@ -1470,6 +1524,8 @@ export type PurchaseCosmeticPackResult =
   // which). Also what a retry after a timed-out success returns — treat it as
   // "already bought" and refetch /users/@me. Nothing charged.
   | { ok: false; code: "already_owned"; ownedFlareNames: string[] }
+  // 409 price_changed: see PurchaseWithCurrencyResult. Nothing charged.
+  | { ok: false; code: "price_changed"; amount?: number }
   | { ok: false; code: "failed" };
 
 const PACK_UNAVAILABLE_REASONS = [
@@ -1487,6 +1543,7 @@ const PACK_UNAVAILABLE_REASONS = [
 export async function purchaseCosmeticPack(
   packName: string,
   placement?: StorePlacement,
+  priceCheck?: PurchasePriceCheck,
 ): Promise<PurchaseCosmeticPackResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase/pack`, {
@@ -1495,7 +1552,11 @@ export async function purchaseCosmeticPack(
         "Content-Type": "application/json",
         Authorization: await getAuthHeader(),
       },
-      body: JSON.stringify({ packName, ...(placement ? { placement } : {}) }),
+      body: JSON.stringify({
+        packName,
+        ...(placement ? { placement } : {}),
+        ...priceCheckFields(priceCheck),
+      }),
     });
     if (response.status === 401) {
       await logOut();
@@ -1521,6 +1582,8 @@ export async function purchaseCosmeticPack(
     }
     if (response.status === 409) {
       const body = await response.json().catch(() => null);
+      const priceChanged = priceChangedRefusal(body);
+      if (priceChanged !== null) return priceChanged;
       const owned: unknown = body?.ownedFlareNames;
       return {
         ok: false,

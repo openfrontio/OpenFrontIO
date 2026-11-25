@@ -154,12 +154,12 @@ class ModalRouter {
     const leaving = this.currentName !== name && entry.pageId !== undefined;
     const guarded = leaving ? this.guardedCurrent() : null;
     if (guarded !== null) {
-      // The route asked about is this hash: approved, it opens with it,
-      // even if the URL moved on while the prompt was up (a route made
-      // meanwhile is left to this one's answer).
-      const target = window.location.hash;
+      // The route asked about is this URL (path, query and hash): approved,
+      // it opens with it, even if the URL moved on while the prompt was up
+      // (a route made meanwhile is left to this one's answer).
+      const target = currentUrl();
       void this.askThen(guarded, () => {
-        this.replaceHash(target);
+        this.replaceUrl(target);
         this.routeTo(name, entry, args);
       });
     } else {
@@ -301,12 +301,13 @@ class ModalRouter {
     const guarded = this.guardedCurrent();
     if (guarded !== null) {
       const name = this.currentName;
-      // The URL this close was asked about (Back's): approved, it's the URL
-      // again, even if a route typed meanwhile moved it on.
-      const target = window.location.hash;
+      // The URL this close was asked about (Back's, path, query and hash):
+      // approved, it's the URL again, even if a route typed meanwhile moved
+      // it on.
+      const target = currentUrl();
       void this.askThen(guarded, () => {
         if (this.currentName !== name) return;
-        this.replaceHash(target);
+        this.replaceUrl(target);
         this.closeNow();
       });
       return true;
@@ -416,15 +417,27 @@ class ModalRouter {
   }
 
   private replaceHash(hash: string): void {
+    this.replaceUrl(window.location.pathname + window.location.search + hash);
+  }
+
+  /** Puts `url` (path, query and hash) in place of the current entry. */
+  private replaceUrl(url: string): void {
+    const hash = url.includes("#") ? url.slice(url.indexOf("#")) : "";
     if (
       this.currentName !== null &&
       new URLSearchParams(hash.slice(1)).get("modal") === this.currentName
     ) {
       this.currentHash = hash;
     }
-    const url = window.location.pathname + window.location.search + hash;
     history.replaceState(history.state, "", url);
   }
+}
+
+/** The page's URL now: path, query and hash. */
+function currentUrl(): string {
+  return (
+    window.location.pathname + window.location.search + window.location.hash
+  );
 }
 
 export const modalRouter = new ModalRouter();

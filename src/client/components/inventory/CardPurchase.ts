@@ -77,11 +77,15 @@ export async function checkCardPurchase(
   return result.info ? { ok: false, info: outsideGame(result.info) } : result;
 }
 
-/** Buys from the confirm box. Owned: the broadcast profile shows it. */
+/** Buys from the confirm box. Owned: the broadcast profile shows it.
+ * `shownAmount` is the price the box showed: it's sent as the expected
+ * amount, so a price raised since is refused (price_changed, with the
+ * catalogue reloaded) rather than charged. */
 export async function buyCardItem(
   resolved: ResolvedCosmetic,
   method: "hard" | "soft",
   signIn: () => void = toAccount,
+  shownAmount?: number,
 ): Promise<PurchaseResult> {
   // No confirm box (no tap check ran): the account signed in now.
   const signedInAs = confirmedAs.has(resolved.key)
@@ -94,6 +98,7 @@ export async function buyCardItem(
     CARD_TAB_PLACEMENT,
     undefined,
     signedInAs,
+    shownAmount,
   );
   switch (outcome.kind) {
     case "owned":

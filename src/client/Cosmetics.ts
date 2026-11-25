@@ -59,6 +59,13 @@ import {
 } from "./components/inventory/PendingEquip";
 import { getCachedCosmetics, setCachedCosmetics } from "./CosmeticsCache";
 import { isDesktopShell } from "./DesktopShell";
+import {
+  COSMETICS_CHANGED,
+  EXPERIMENTS_CHANGED,
+  experimentsState,
+  setCatalogGeneration,
+  waitForExperiments,
+} from "./Experiments";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   classifyPurchaseReturn,
@@ -69,6 +76,7 @@ import {
   startPurchase,
 } from "./Payments";
 import { currentPrice } from "./SalePrice";
+import { storePlatform } from "./StoreTracking";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { showToast, translateText } from "./Utils";
@@ -89,6 +97,37 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsFetchedAt = 0;
+/**
+ * What one catalog request was fetched for (store experiments,
+ * Experiments.ts). Each request keeps its own, so a request that lands late
+ * can never be tagged with another request's group.
+ */
+interface CatalogTag {
+  // The experiments generation: `undefined` while the request still waits
+  // for the player's group, null when it went out without it (timed out).
+  generation: number | null | undefined;
+  // The cohort it was fetched with (null: the plain catalog).
+  cohort: string | null;
+  // Whether it has landed and its catalog is the one in use.
+  landed: boolean;
+  // Fetched by reloadCosmetics, which tells the Store and banner itself.
+  reload: boolean;
+}
+// The tag of the request in `__cosmetics` (meaningless while that is null).
+let __cosmeticsTag: CatalogTag = {
+  generation: undefined,
+  cohort: null,
+  landed: false,
+  reload: false,
+};
+// The experiments generation of the catalog last landed (undefined: none yet).
+let __landedGeneration: number | null | undefined = undefined;
+
+/**
+ * How long a catalog fetch waits for the player's store experiment group
+ * before going out plain. With no test running the answer is near-instant.
+ */
+export const EXPERIMENTS_WAIT_MS = 1500;
 
 /** How long a fetched catalog is trusted before the store refetches it. */
 export const COSMETICS_STALE_MS = 60_000;
@@ -755,7 +794,8 @@ export type InPlacePurchase =
   | { kind: "signed_out" }
   // A session, but its profile couldn't be read: nothing sent.
   | { kind: "unreachable" }
-  // Explained already with its own message (a wallet in debt).
+  // Explained already with its own message (a wallet in debt, or a
+  // price_changed refusal: nothing charged).
   | { kind: "handled" };
 
 /**
@@ -777,6 +817,10 @@ export type InPlacePurchase =
  * tab replaces the refresh cookie, so a JWT refresh here could otherwise
  * buy as the other account. A different account (or none) answers
  * `signed_out`, with nothing sent.
+ *
+ * `shownAmount` is the price the confirm box showed: the server refuses
+ * (409 price_changed) to charge more, as for purchaseCosmetic. Without it,
+ * the price the catalogue in hand gives now.
  */
 export async function purchaseCosmeticInPlace(
   resolved: ResolvedCosmetic,
@@ -784,6 +828,7 @@ export async function purchaseCosmeticInPlace(
   placement?: StorePlacement,
   onOwned?: () => void,
   signedInAs?: string | null,
+  shownAmount?: number,
 ): Promise<InPlacePurchase> {
   const c = resolved.cosmetic;
   if (!c || resolved.type === "subscription" || resolved.type === "pack") {
@@ -819,7 +864,11 @@ export async function purchaseCosmeticInPlace(
     kind: "insufficient",
     info: inPlaceShortfall(resolved, method, price, userMe, available),
   });
-  if (balance < price) return shortfall(balance);
+  // As purchaseCosmetic: the cheaper of the price the box showed and the
+  // price now decides whether to send (a sale that ended since lets the
+  // server answer price_changed); a shortfall is quoted from the price now.
+  const needed = lowerPrice(shownAmount, price);
+  if (balance < needed) return shortfall(balance);
 
   const owned = (fresh: UserMeResponse | false, notice?: string) => {
     if (userMe.player.publicId) {
@@ -862,6 +911,7 @@ export async function purchaseCosmeticInPlace(
       method,
       resolved.colorPalette?.name,
       placement,
+      { expectedAmount: shownAmount ?? price, platform: storePlatform() },
       stillSignedInAs,
     );
   } catch (error) {
@@ -870,6 +920,12 @@ export async function purchaseCosmeticInPlace(
   }
   // Another account by the time the token was read: nothing was sent.
   if (!result.ok && result.code === "cancelled") return { kind: "signed_out" };
+  // The server would charge more than the box showed: nothing charged. The
+  // reload announces the catalogue now, so the end screen re-prices.
+  if (!result.ok && result.code === "price_changed") {
+    await priceChanged();
+    return { kind: "handled" };
+  }
   if (!result.ok && result.code === "insufficient_balance") {
     const fresh = await broadcastFreshUserMe();
     if (fresh === false) return { kind: "failed" };
@@ -877,7 +933,7 @@ export async function purchaseCosmeticInPlace(
       method === "hard"
         ? (fresh.player.currency?.hard ?? 0)
         : (fresh.player.currency?.soft ?? 0);
-    return available < price ? shortfall(available) : { kind: "failed" };
+    return available < needed ? shortfall(available) : { kind: "failed" };
   }
   if (!result.ok && result.code !== "already_owned") {
     if (result.code === "debt") {
@@ -891,10 +947,12 @@ export async function purchaseCosmeticInPlace(
   }
   // Charged something other than the price shown (a sale started or ended
   // since the catalogue loaded): say what was taken, as the Store does, and
-  // drop the catalogue that showed the wrong price.
+  // drop the catalogue that showed the wrong price. Judged against what the
+  // confirm box showed, when the caller says.
+  const shown = shownAmount ?? price;
   const notice =
-    result.ok && result.amount !== undefined && result.amount !== price
-      ? purchaseSuccessMessage(c.name, price, result.amount, method)
+    result.ok && result.amount !== undefined && result.amount !== shown
+      ? purchaseSuccessMessage(c.name, shown, result.amount, method)
       : undefined;
   onOwned?.();
   return owned(await broadcastFreshUserMe(), notice);
@@ -904,6 +962,10 @@ export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
   placement?: StorePlacement,
+  // The price on the button the player clicked, if the caller rendered one.
+  // The server refuses (409) to charge more than this. Without it, the price
+  // the catalog in hand gives now.
+  shownAmount?: number,
 ): Promise<PurchaseResult> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
@@ -1056,7 +1118,7 @@ export async function purchaseCosmetic(
   }
 
   if (resolved.type === "cosmeticPack") {
-    return purchasePack(c as CosmeticPack, method, placement);
+    return purchasePack(c as CosmeticPack, method, placement, shownAmount);
   }
 
   if (method === "dollar") {
@@ -1125,7 +1187,16 @@ export async function purchaseCosmetic(
   // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
   // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
   const priced = c as Pattern | Flag | Pack;
-  const price = currentPrice(priced, method) ?? 0;
+  const nowPrice = currentPrice(priced, method);
+  const price = nowPrice ?? 0;
+  // A sale can end between the render and the click: the button still showed
+  // the sale price, and that is what the player agreed to pay.
+  const shownPrice = shownAmount ?? nowPrice;
+  // Checked against the cheaper of the two: a sale that ended since the render
+  // lets the server answer price_changed (and the catalog refresh) rather
+  // than a top-up for an amount the button never showed, and one that started
+  // since doesn't block a balance that covers the price now.
+  const needed = lowerPrice(shownAmount, price);
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -1146,10 +1217,12 @@ export async function purchaseCosmetic(
     return;
   }
   // Built for the pre-check below and reused when the server refuses for the
-  // same reason, so both routes describe the same item the same way.
+  // same reason, so both routes describe the same item the same way. Quoted
+  // from the price now, not `needed`: after a sale ends, a top-up to the
+  // shown price would only end in price_changed and another shortfall.
   const insufficient = (available: number): InsufficientCurrency =>
     currencyShortfall(resolved, method, price, available);
-  if (balance < price) {
+  if (balance < needed) {
     return insufficient(balance);
   }
 
@@ -1166,9 +1239,13 @@ export async function purchaseCosmetic(
     method,
     colorPaletteName,
     placement,
+    { expectedAmount: shownPrice, platform: storePlatform() },
   );
   if (!result.ok) {
     switch (result.code) {
+      case "price_changed":
+        await priceChanged();
+        return;
       case "insufficient_balance": {
         // The balance moved since the pre-check: re-read it for the shortfall,
         // the same way the pack path does. Broadcast as well as re-read —
@@ -1186,7 +1263,7 @@ export async function purchaseCosmetic(
           method === "hard"
             ? (fresh.player.currency?.hard ?? 0)
             : (fresh.player.currency?.soft ?? 0);
-        const outcome = balanceOutcome(available, price);
+        const outcome = balanceOutcome(available, needed);
         if (outcome === "debt") {
           await showInGameAlert(debtMessage(-available));
           return;
@@ -1244,6 +1321,17 @@ export async function purchaseCosmetic(
 }
 
 /**
+ * The server refused to charge more than the store showed (409
+ * price_changed): nothing was charged. Refetch the catalog so the store and
+ * the homepage banner show the price as it is now, and say so.
+ */
+async function priceChanged(): Promise<void> {
+  const reload = reloadCosmetics();
+  await showInGameAlert(translateText("store.price_changed"));
+  await reload;
+}
+
+/**
  * The success alert. The server prices off its own clock, so a sale that
  * started or ended since the store loaded (or a client clock that is off)
  * can charge something other than the price shown: say what was taken, and
@@ -1269,6 +1357,14 @@ function purchaseSuccessMessage(
 }
 
 /**
+ * The amount a balance pre-check asks for: the lower of the price the button
+ * showed and the price now, or the price now when nothing was shown.
+ */
+export function lowerPrice(shown: number | undefined, now: number): number {
+  return shown === undefined ? now : Math.min(shown, now);
+}
+
+/**
  * Buys a cosmetic pack (plutonium only). Mirrors the single-cosmetic currency
  * flow: a local balance pre-check surfaces the insufficient-funds dialog
  * before any request; a success reloads so every granted item shows as owned.
@@ -1277,12 +1373,15 @@ async function purchasePack(
   pack: CosmeticPack,
   method: PaymentMethod,
   placement?: StorePlacement,
+  shownAmount?: number,
 ): Promise<PurchaseResult> {
   if (method !== "hard") {
     console.error("purchaseCosmetic: packs are only sold for hard currency");
     return;
   }
   const price = currentPrice(pack, "hard") ?? pack.priceHard;
+  // As for a single cosmetic: the cheaper of the shown and current price.
+  const needed = lowerPrice(shownAmount, price);
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -1290,7 +1389,9 @@ async function purchasePack(
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
     currency: translateText("cosmetics.hard"),
-    shortfall: price - balance,
+    // Clamped like the single-cosmetic path: never zero or negative. From
+    // the price now, as there: `needed` only decides whether to send.
+    shortfall: Math.max(1, price - balance),
     item: pack.displayName,
     canTopUp: true,
   });
@@ -1302,11 +1403,14 @@ async function purchasePack(
     await showInGameAlert(debtMessage(-balance));
     return;
   }
-  if (balance < price) {
+  if (balance < needed) {
     return insufficient(balance);
   }
 
-  const result = await purchaseCosmeticPack(pack.name, placement);
+  const result = await purchaseCosmeticPack(pack.name, placement, {
+    expectedAmount: shownAmount ?? price,
+    platform: storePlatform(),
+  });
   if (result.ok) {
     const charged = Number(result.data.amount);
     await showInGameAlert(
@@ -1322,6 +1426,9 @@ async function purchasePack(
     return;
   }
   switch (result.code) {
+    case "price_changed":
+      await priceChanged();
+      return;
     case "insufficient_balance": {
       // The balance moved since the pre-check: re-read it for the shortfall,
       // and re-broadcast so the open Store stops showing the old balance.
@@ -1332,7 +1439,7 @@ async function purchasePack(
         return;
       }
       const available = fresh.player.currency?.hard ?? 0;
-      const outcome = balanceOutcome(available, price);
+      const outcome = balanceOutcome(available, needed);
       if (outcome === "debt") {
         await showInGameAlert(debtMessage(-available));
         return;
@@ -1412,6 +1519,11 @@ function simpleHash(str: string): string {
  */
 export function invalidateCosmetics(): void {
   __cosmetics = null;
+}
+
+/** Tests only: forget which experiments group the last catalog was for. */
+export function resetCatalogGenerationForTest(): void {
+  __landedGeneration = undefined;
 }
 
 /**
@@ -1496,17 +1608,40 @@ export function tierListingRail(): TierListingRail {
   return paymentsProvider() === "steam" ? "steam" : "web";
 }
 
-function cosmeticsJsonUrl(): string {
-  return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
+function cosmeticsJsonUrl(cohort: string | null): string {
+  const rail = tierListingRail();
+  const base = `${getApiBase()}/cosmetics.json?rail=${rail}`;
+  // A store experiment cohort's catalog is a web-rail thing; Steam never
+  // sends one.
+  return cohort !== null && rail === "web"
+    ? `${base}&cohort=${encodeURIComponent(cohort)}`
+    : base;
 }
 
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
+  const tag: CatalogTag = {
+    generation: undefined,
+    cohort: null,
+    landed: false,
+    reload: false,
+  };
+  __cosmeticsTag = tag;
+  // A holder, so the body can recognise its own request as the cached one
+  // (filled in before any await inside can resume).
+  const self: { request?: Promise<Cosmetics | null> } = {};
   const request = (async () => {
     try {
-      const response = await fetch(cosmeticsJsonUrl(), {
+      // The player's experiment group decides which catalog to fetch. If it
+      // isn't known in time, the plain catalog goes out untagged, sends no
+      // exposure, and is refetched when the group lands.
+      const experiments = await waitForExperiments(EXPERIMENTS_WAIT_MS);
+      const cohort = experiments?.catalogCohort ?? null;
+      tag.generation = experiments?.generation ?? null;
+      tag.cohort = cohort;
+      const response = await fetch(cosmeticsJsonUrl(cohort), {
         signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
@@ -1518,17 +1653,37 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         console.error(`Invalid cosmetics: ${result.error.message}`);
         return null;
       }
+      // Only the cached request caches and tags. One replaced meanwhile (a
+      // refetch for a new group) or dropped (invalidated, or its refetch
+      // failed) hands its data to its own caller and touches nothing: it may
+      // be for a group that is no longer the player's.
+      if (__cosmetics !== self.request) return result.data;
       const patternKeys = Object.keys(result.data.patterns).sort();
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
       setCachedCosmetics(result.data);
       __cosmeticsFetchedAt = Date.now();
+      tag.landed = true;
+      const generation = tag.generation ?? null;
+      const groupChanged =
+        __landedGeneration !== undefined && __landedGeneration !== generation;
+      __landedGeneration = generation;
+      setCatalogGeneration(generation);
+      // A catalog for another group replaced the one the Store and the
+      // homepage banner show (say the store opened after a failed refetch):
+      // move them onto it, so what they show is what exposures are sent for.
+      if (groupChanged && !tag.reload) announceCatalog(result.data);
+      // The groups moved on while this was in flight (a switch, or a late
+      // answer that landed before this request was tagged): refetch for the
+      // groups now known rather than keep this cohort until the 60 s refresh.
+      followExperiments();
       return result.data;
     } catch (error) {
       console.warn("Error getting cosmetics:", error);
       return null;
     }
   })();
+  self.request = request;
   __cosmetics = request;
   void request.then((result) => {
     if (result === null && __cosmetics === request) {
@@ -1536,6 +1691,58 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/**
+ * Drops the catalog, fetches it afresh, and tells the open Store and the
+ * homepage banner (COSMETICS_CHANGED): invalidating alone isn't enough, since
+ * they keep the catalog object they rendered. A failed fetch dispatches
+ * nothing, so they keep what they show.
+ */
+export async function reloadCosmetics(): Promise<Cosmetics | null> {
+  invalidateCosmetics();
+  const request = fetchCosmetics();
+  __cosmeticsTag.reload = true;
+  const fresh = await request;
+  // Only the catalog now in use: a reload that a newer one overtook hands its
+  // data back but must not replace what the newer one put on screen.
+  if (fresh !== null && fresh === __cosmeticsCache) announceCatalog(fresh);
+  return fresh;
+}
+
+function announceCatalog(cosmetics: Cosmetics): void {
+  document.dispatchEvent(
+    new CustomEvent<Cosmetics>(COSMETICS_CHANGED, { detail: cosmetics }),
+  );
+}
+
+// The player's experiment group landed or changed (a late answer, a sign-in,
+// an account switch, a logout): a catalog fetched for another group, or
+// without one, is refetched in every group, control included, so neither
+// group keeps a catalog that can never send exposures. A request still
+// waiting for the group picks it up itself.
+document.addEventListener(EXPERIMENTS_CHANGED, () => followExperiments());
+
+/**
+ * Brings the catalog in hand up to the latest experiment groups. With no
+ * test for this player (signed out, or nothing running) and the same cohort,
+ * the catalog is already right: it is only re-tagged, with no request. Any
+ * other change refetches, the same way in every group.
+ */
+function followExperiments(): void {
+  // Nothing cached: the next fetch (the store opening, the banner's recheck,
+  // the 60 s refresh) is tagged with the groups known then.
+  if (__cosmetics === null) return;
+  const tag = __cosmeticsTag;
+  if (tag.generation === undefined) return;
+  const latest = experimentsState();
+  if (latest === null || tag.generation === latest.generation) return;
+  if (latest.assignments.length === 0 && latest.catalogCohort === tag.cohort) {
+    tag.generation = latest.generation;
+    if (tag.landed) setCatalogGeneration(latest.generation);
+    return;
+  }
+  void reloadCosmetics();
 }
 
 /** A tier by name, listed on this rail or not. */

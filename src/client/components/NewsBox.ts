@@ -10,6 +10,7 @@ import {
   invalidateCosmetics,
   refreshStaleCosmetics,
 } from "../Cosmetics";
+import { COSMETICS_CHANGED } from "../Experiments";
 import {
   HIDE_SALE_BANNERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -85,6 +86,9 @@ export class NewsBox extends LitElement {
   // The sales news.json announces: a sale set not to announce gets no banner.
   @state() private announcedSales: ReadonlySet<string> = new Set();
   private saleTimer: ReturnType<typeof setTimeout> | null = null;
+  // Bumped by every catalog the box takes: a read started before it (a slow
+  // first fetch) must not put an older catalog back.
+  private salesRead = 0;
   // The markdown renderer is its own chunk, loaded alongside the news.
   private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
     null;
@@ -98,6 +102,7 @@ export class NewsBox extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     globalThis.addEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
     void this.loadNews();
     void this.loadSales();
@@ -109,6 +114,17 @@ export class NewsBox extends LitElement {
     }
   }
 
+  // A refetched catalog (the player's store experiment group landed or
+  // changed, or a purchase met a changed price): the banner shows its sales,
+  // so a Deeper player sees their group's % here as in the store.
+  private onCosmeticsChanged = (event: Event) => {
+    const fresh = (event as CustomEvent<Cosmetics>).detail;
+    if (!fresh || !this.isConnected) return;
+    this.salesRead++;
+    // Its sales may end sooner than the next check: reschedule from it,
+    // without fetching again.
+    this.showSales(fresh, 0);
+  };
   private rerender = (): void => this.requestUpdate();
 
   /**
@@ -118,8 +134,14 @@ export class NewsBox extends LitElement {
    * has started.
    */
   private async loadSales(attempt = 0) {
+    const read = ++this.salesRead;
     const cosmetics = await fetchCosmetics();
-    if (!this.isConnected) return;
+    if (!this.isConnected || read !== this.salesRead) return;
+    this.showSales(cosmetics, attempt);
+  }
+
+  /** Shows a catalog's sales and schedules the next check from them. */
+  private showSales(cosmetics: Cosmetics | null, attempt: number) {
     if (cosmetics !== null) this.cosmetics = cosmetics;
     // Re-render even when the refetch hands back the same catalog: a sale
     // whose end has passed drops out of the banner on time.
@@ -215,6 +237,7 @@ export class NewsBox extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     globalThis.removeEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
     this.stopCycle();
     this.clearSaleTimer();

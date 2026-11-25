@@ -6,15 +6,19 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { GAME_ID_REGEX, type Winner } from "@openfront/engine-api/Schemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating/FfaRatingPanel";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
+  purchaseCosmetic,
+  getCachedCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
+import { COSMETICS_CHANGED } from "../../../../src/client/Experiments";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { rememberLobbyPublicGameType } from "../../../../src/client/LobbyPublicGameType";
@@ -77,6 +81,8 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
     typeof import("../../../../src/client/Cosmetics")
   >()),
   fetchCosmetics: vi.fn(async () => null),
+  getCachedCosmetics: vi.fn(() => null),
+  purchaseCosmetic: vi.fn(async () => undefined),
   resolveCosmetics: vi.fn(() => []),
 }));
 
@@ -273,6 +279,156 @@ describe("WinModal pattern promotion", () => {
     const legacyContainerTag = ["cosmetic", "container"].join("-");
     expect(modal.querySelectorAll(legacyButtonTag)).toHaveLength(0);
     expect(modal.querySelectorAll(legacyContainerTag)).toHaveLength(0);
+  });
+
+  it("redraws the same offer at the new price when the catalog changes", async () => {
+    const pattern = (name: string, priceHard: number): ResolvedCosmetic => ({
+      type: "pattern",
+      cosmetic: {
+        name,
+        pattern: "AAAAAA",
+        product: null,
+        priceHard,
+        rarity: "rare",
+      } as never,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: `pattern:${name}`,
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    vi.mocked(resolveCosmetics).mockReturnValue([pattern("aurora", 80)]);
+
+    modal = document.createElement("win-modal") as WinModal;
+    Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+      rand: 0.75,
+      isWin: true,
+    });
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await modal.updateComplete;
+    expect(
+      modal.querySelector<PurchaseButton>("purchase-button")?.priceHard,
+    ).toBe(80);
+
+    // A price_changed refusal reloads the catalog: the sale has ended.
+    vi.mocked(resolveCosmetics).mockReturnValue([
+      pattern("blaze", 50),
+      pattern("aurora", 100),
+    ]);
+    document.dispatchEvent(new CustomEvent(COSMETICS_CHANGED, { detail: {} }));
+    await vi.waitFor(() =>
+      expect(
+        modal!.querySelector<PurchaseButton>("purchase-button")?.priceHard,
+      ).toBe(100),
+    );
+    // The same pattern, not a new pick.
+    expect(modal.querySelectorAll("purchase-button")).toHaveLength(1);
+  });
+
+  it("shows and sends the price now once a pattern's sale has ended", async () => {
+    // A catalog cached from before the sale ended still says 150/600; the
+    // server charges the list price, as the Store would show it.
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    vi.mocked(resolveCosmetics).mockReturnValue([
+      {
+        type: "pattern",
+        cosmetic: {
+          name: "aurora",
+          pattern: "AAAAAA",
+          product: null,
+          priceHard: 150,
+          listPriceHard: 250,
+          priceSoft: 600,
+          listPriceSoft: 1000,
+          promotion: {
+            id: "1",
+            name: "Flash",
+            percentOff: 40,
+            endsAt: new Date(Date.now() - 1000).toISOString(),
+          },
+          rarity: "rare",
+        } as never,
+        colorPalette: null,
+        relationship: "purchasable",
+        key: "pattern:aurora",
+      },
+    ]);
+
+    modal = document.createElement("win-modal") as WinModal;
+    Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+      rand: 0.75,
+      isWin: true,
+    });
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    const button = modal.querySelector<PurchaseButton>("purchase-button")!;
+    expect(button.priceHard).toBe(250);
+    expect(button.priceSoft).toBe(1000);
+    await button.onPurchaseHard?.();
+    await button.onPurchaseSoft?.();
+    const resolved = expect.objectContaining({ key: "pattern:aurora" });
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      resolved,
+      "hard",
+      { kind: "post_game" },
+      250,
+    );
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      resolved,
+      "soft",
+      { kind: "post_game" },
+      1000,
+    );
+  });
+
+  it("draws the first offer from a catalog that landed while it loaded", async () => {
+    // Load A is out when reload B lands (and announces before any offer
+    // exists). A comes back uncached: the offer must use B's prices.
+    const older = { name: "A" } as unknown as Cosmetics;
+    const newer = { name: "B" } as unknown as Cosmetics;
+    const aurora = (priceHard: number): ResolvedCosmetic => ({
+      type: "pattern",
+      cosmetic: {
+        name: "aurora",
+        pattern: "AAAAAA",
+        product: null,
+        priceHard,
+        rarity: "rare",
+      } as never,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: "pattern:aurora",
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(older);
+    vi.mocked(getCachedCosmetics).mockReturnValue(newer);
+    vi.mocked(resolveCosmetics).mockImplementation((catalog) =>
+      catalog === newer ? [aurora(100)] : [aurora(80)],
+    );
+    try {
+      modal = document.createElement("win-modal") as WinModal;
+      Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+        rand: 0.75,
+        isWin: true,
+      });
+      document.body.appendChild(modal);
+      await modal.updateComplete;
+      await modal.loadPatternContent();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(
+        modal.querySelector<PurchaseButton>("purchase-button")?.priceHard,
+      ).toBe(100);
+    } finally {
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      vi.mocked(getCachedCosmetics).mockReturnValue(null);
+      vi.mocked(resolveCosmetics).mockReturnValue([]);
+    }
   });
 
   it("drops the ad-free pitch in the desktop shell, which has no ads", async () => {
