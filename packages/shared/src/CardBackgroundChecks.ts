@@ -93,13 +93,13 @@ export interface CardIssue {
 // pixels. Anything else (no data, a short buffer) is never read pixel by pixel.
 function pixelsOk(img: unknown): img is CardCheckImage {
   if (typeof img !== "object" || img === null) return false;
-  const { width, height, data } = img as Partial<CardCheckImage>;
+  const { width, height, data } = img as Record<string, unknown>;
   return (
     Number.isInteger(width) &&
     Number.isInteger(height) &&
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.length === "number" &&
+    // A real byte buffer, not anything with a length: a server re-checking
+    // what a page sent may get { length: n } from JSON.
+    (data instanceof Uint8ClampedArray || data instanceof Uint8Array) &&
     data.length === (width as number) * (height as number) * 4
   );
 }
@@ -119,6 +119,22 @@ function reportedSize(img: unknown): { width: number; height: number } {
     width: typeof width === "number" ? width : 0,
     height: typeof height === "number" ? height : 0,
   };
+}
+
+// A value from the caller's JSON, as text for an issue's params. Never calls
+// the value's own toString, which JSON can set to anything ({"toString":null}).
+function asText(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (
+    typeof v === "number" ||
+    typeof v === "boolean" ||
+    typeof v === "bigint" ||
+    v === null ||
+    v === undefined
+  ) {
+    return `${v}`;
+  }
+  return `[${typeof v}]`;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -206,7 +222,7 @@ export function checkLayerSources(
         code: "layer_src",
         level: "error",
         layer: i,
-        params: { src: String(src).slice(0, MAX_SRC_LENGTH) },
+        params: { src: asText(src).slice(0, MAX_SRC_LENGTH) },
       });
     }
   });
@@ -302,7 +318,7 @@ export function checkCardBackground(
         code: "layer_format",
         level: "error",
         layer: i,
-        params: { type: String(l.type) },
+        params: { type: asText(l.type) },
       });
     }
   });
@@ -331,7 +347,7 @@ export function checkCardBackground(
       issues.push({
         code: "animation_not_layers",
         level: "error",
-        params: { kind: String(kind) },
+        params: { kind: asText(kind) },
       });
     } else {
       const parsed = LayerAnimationSchema.safeParse(animation);

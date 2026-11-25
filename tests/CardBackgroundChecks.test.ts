@@ -6,6 +6,7 @@ import {
   CARD_ART_HEIGHT,
   CARD_ART_WIDTH,
   checkCardBackground,
+  checkLayerSources,
   MAX_SET_BYTES,
 } from "@openfront/shared/CardBackgroundChecks";
 import fs from "fs";
@@ -473,6 +474,92 @@ describe("checkCardBackground", () => {
         anim({ src: "a.png", effect: "drift" }),
       );
       expect(codes(issues)).toEqual(["layer_size"]);
+    });
+
+    test("pixel data that is only a length is the wrong size", () => {
+      // From JSON: a length, but no bytes behind it.
+      const fake = {
+        width: W,
+        height: H,
+        data: { length: W * H * 4 },
+      } as unknown as CardCheckImage;
+      const plain = {
+        width: W,
+        height: H,
+        data: new Array(W * H * 4).fill(255),
+      } as unknown as CardCheckImage;
+      for (const img of [fake, plain]) {
+        const issues = checkCardBackground(
+          files({ base: { image: img, type: "image/webp", bytes: 1 } }),
+          undefined,
+        );
+        expect(codes(issues)).toEqual(["base_size"]);
+      }
+    });
+
+    test("a Uint8Array of pixels is accepted like a Uint8ClampedArray", () => {
+      const img = image();
+      const bytes = {
+        width: W,
+        height: H,
+        data: new Uint8Array(img.data.buffer),
+      } as unknown as CardCheckImage;
+      const issues = checkCardBackground(
+        files({
+          base: { image: OPAQUE_BASE, type: "image/webp", bytes: 1 },
+          layers: [layer("pulse", bytes)],
+        }),
+        anim({ src: "a.png", effect: "pulse" }),
+      );
+      expect(codes(issues)).toEqual([]);
+    });
+
+    test("hostile JSON values never make the checks throw", () => {
+      // JSON.parse can give an object whose toString is not a function.
+      const hostile = JSON.parse('{"toString":null}');
+      const kind = checkCardBackground(files(), { kind: hostile });
+      expect(kind).toEqual([
+        {
+          code: "animation_not_layers",
+          level: "error",
+          params: { kind: "[object]" },
+        },
+      ]);
+      const type = checkCardBackground(
+        files({
+          layers: [
+            layer("pulse", SMALL_RIGHT_LAYER, 50_000, hostile as string),
+          ],
+        }),
+        anim({ src: "a.png", effect: "pulse" }),
+      );
+      expect(type).toContainEqual({
+        code: "layer_format",
+        level: "error",
+        layer: 0,
+        params: { type: "[object]" },
+      });
+      expect(
+        checkLayerSources(anim({ src: hostile, effect: "pulse" })),
+      ).toEqual([
+        {
+          code: "layer_src",
+          level: "error",
+          layer: 0,
+          params: { src: "[object]" },
+        },
+      ]);
+      // Strings and other primitives read as before.
+      expect(
+        checkCardBackground(files(), { kind: "mask", mask: "m.png" }),
+      ).toContainEqual({
+        code: "animation_not_layers",
+        level: "error",
+        params: { kind: "mask" },
+      });
+      expect(checkLayerSources(anim({ src: 7, effect: "pulse" }))).toEqual([
+        { code: "layer_src", level: "error", layer: 0, params: { src: "7" } },
+      ]);
     });
 
     test("an image with no pixel data is the wrong size", () => {
