@@ -25,6 +25,7 @@ import {
   checkInPlacePurchase,
   fetchCosmetics,
 } from "../../src/client/Cosmetics";
+import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import { modalRouter } from "../../src/client/ModalRouter";
@@ -975,6 +976,49 @@ describe("Inventory: buying card items in place", () => {
     expect(q("[data-card-buy]")).toBeNull();
     expect(q<HTMLButtonElement>("[data-card-save]")!.disabled).toBe(false);
     expect(q("[data-card-change-count]")).not.toBeNull();
+  });
+
+  it("a catalogue change re-prices the card tab's buy buttons", async () => {
+    await pickStorm();
+    const buy = () =>
+      q(
+        "[data-card-buy='cardBackground:bg_storm'] purchase-button",
+      ) as unknown as {
+        priceSoft: number | null;
+      };
+    expect(buy().priceSoft).toBe(2400);
+    // A store-experiment group changed, or a price_changed refusal reloaded
+    // the catalogue: the retry must send the price now.
+    const raised = catalog();
+    (raised.cardBackgrounds!.bg_storm as { priceSoft: number }).priceSoft =
+      2600;
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+    );
+    await settle(modal);
+    expect(buy().priceSoft).toBe(2600);
+    // The pick survives the new catalogue.
+    expect(q("[data-card-change-count]")).not.toBeNull();
+  });
+
+  it("a catalogue change re-prices the no-card screen's buy button", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(
+      owner(["cardBackground:bg_pacific"]),
+    );
+    modal.open({ tab: "card" });
+    await settle(modal);
+    const buy = () =>
+      q("[data-card-get-card] purchase-button") as unknown as {
+        priceHard: number | null;
+      };
+    expect(buy().priceHard).toBe(300);
+    const raised = catalog();
+    (raised.playerCards!.standard as { priceHard: number }).priceHard = 450;
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+    );
+    await settle(modal);
+    expect(buy().priceHard).toBe(450);
   });
 
   /** Opens <purchase-button>'s confirm box for a currency, the way a tap

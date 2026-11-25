@@ -755,8 +755,10 @@ export class InventoryCardTab extends LitElement {
       .busyKey=${resolved.key}
       .preflight=${(method: "hard" | "soft") =>
         checkCardPurchase(resolved, method, this.signIn)}
-      .onPurchaseHard=${() => buyCardItem(resolved, "hard", this.signIn)}
-      .onPurchaseSoft=${() => buyCardItem(resolved, "soft", this.signIn)}
+      .onPurchaseHard=${(shown?: number) =>
+        buyCardItem(resolved, "hard", this.signIn, shown)}
+      .onPurchaseSoft=${(shown?: number) =>
+        buyCardItem(resolved, "soft", this.signIn, shown)}
     ></purchase-button>`;
   }
 

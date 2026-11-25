@@ -617,6 +617,34 @@ describe("<inventory-card-tab> without the card", () => {
     expect(shop.buy.mock.calls[0][4]).toBe("p1");
   });
 
+  it("sends the price the confirm box showed, even if the catalogue changes while it is open", async () => {
+    shop.check.mockResolvedValue({ ok: true, balance: 5000 });
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(NO_CARD, null));
+    const button = buyButton() as unknown as HTMLElement & {
+      requestCurrencyPurchase(method: "hard"): void;
+      updateComplete: Promise<unknown>;
+    };
+    button.requestCurrencyPurchase("hard");
+    await settle();
+    await button.updateComplete;
+    // A new catalogue lands while the box is open (a cohort reload).
+    const raised = structuredClone(COSMETICS) as Cosmetics;
+    (
+      raised.playerCards as Record<string, { priceHard: number }>
+    ).standard.priceHard = 450;
+    tab.cosmetics = raised;
+    await settle();
+    button
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+    await settle();
+    // purchaseCosmeticInPlace's shownAmount: sent as expectedAmount, so
+    // the server answers price_changed rather than charging 450.
+    expect(shop.buy).toHaveBeenCalledTimes(1);
+    expect(shop.buy.mock.calls[0][5]).toBe(300);
+  });
+
   it("See it in the Store asks for the card in the Store", async () => {
     await render(userMe(NO_CARD, null));
     const seen: unknown[] = [];
