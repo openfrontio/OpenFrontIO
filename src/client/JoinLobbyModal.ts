@@ -13,7 +13,7 @@ import {
   ScheduledPublicGameType,
   ScheduledPublicGameTypeSchema,
 } from "@openfront/shared/WireSchemas";
-import { html, nothing, TemplateResult } from "lit";
+import { html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -36,6 +36,7 @@ import { hasMapDetails, renderMapDetails } from "./components/map/MapDetails";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
+import { recordExposure, uiAssignment } from "./Experiments";
 import { gamePortal } from "./GamePortal";
 import { SendSpectateEvent } from "./LobbyEvents";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -44,6 +45,7 @@ import { openReplayViewer } from "./replay/ReplayEntry";
 import "./components/CopyButton";
 import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import "./components/LobbyPlayerView";
+import "./components/LobbyStoreRow";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 import {
@@ -55,6 +57,9 @@ import {
 } from "./utilities/LobbySettingsSummary";
 import { normaliseMapKey } from "./Utils";
 import { findVersionedShell } from "./VersionedReplay";
+
+/** The ui test that puts store items in the join lobby modal. */
+const LOBBY_STORE_TEST = "lobby_store";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -93,6 +98,10 @@ export class JoinLobbyModal extends BaseModal {
   @state() private boostRetryHeld = false;
   @state() private showBoostConfirm = false;
   @state() private insufficientInfo: InsufficientCurrency | null = null;
+  /** The lobby_store ui test's treatment: the store row under the roster. */
+  @state() private showStoreRow = false;
+  // The lobby the store row's arm was decided for, once per lobby shown.
+  private storeArmDecidedFor = "";
   private hardBalance = 0;
   // Clock offset for the hosted list's countdowns, kept apart from
   // serverTimeOffset (the joined lobby's).
@@ -309,6 +318,26 @@ export class JoinLobbyModal extends BaseModal {
     );
   }
 
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.decideStoreArm();
+  }
+
+  /**
+   * The lobby_store ui test (infra docs/ui-experiments.md), decided once the
+   * lobby is on screen: the treatment shows the store row, control doesn't,
+   * and every arm posts its exposure. No arm (signed out, Steam, not in the
+   * test, groups not loaded yet) is control with no exposure.
+   */
+  private decideStoreArm(): void {
+    if (!this.isModalOpen || !this.currentLobbyId || this.isConnecting) return;
+    if (this.storeArmDecidedFor === this.currentLobbyId) return;
+    this.storeArmDecidedFor = this.currentLobbyId;
+    const arm = uiAssignment(LOBBY_STORE_TEST);
+    this.showStoreRow = arm !== null && arm.variant !== "control";
+    if (arm !== null) void recordExposure(LOBBY_STORE_TEST, "ui");
+  }
+
   protected renderBody() {
     // Pre-join state: show lobby ID input form
     if (!this.currentLobbyId) {
@@ -382,6 +411,7 @@ export class JoinLobbyModal extends BaseModal {
                         `
                       : ""
                   }
+                  ${this.showStoreRow ? html`<lobby-store-row></lobby-store-row>` : nothing}
                 `
           }
         </div>
@@ -811,6 +841,8 @@ export class JoinLobbyModal extends BaseModal {
     this.publicQueues = {};
     this.gameStartAlert.reset();
     this.isConnecting = true;
+    this.storeArmDecidedFor = "";
+    this.showStoreRow = false;
   }
 
   private resetBoost() {

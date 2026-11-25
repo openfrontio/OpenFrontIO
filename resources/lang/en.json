@@ -2798,6 +2798,7 @@
     "starting_game": "Starting…",
     "starting_in": "Starting in {time}",
     "status": "Status",
+    "store_row_title": "From the store",
     "teams": "{num} teams",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",

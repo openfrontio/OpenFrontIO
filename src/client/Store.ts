@@ -45,7 +45,6 @@ import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   activeSale,
-  isNew,
   newUntilMs,
   fetchCosmetics,
   cosmeticsCacheIsStale,
@@ -61,6 +60,15 @@ import {
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
 import { COSMETICS_CHANGED, exposureWatcher } from "./Experiments";
+import {
+  featuredSections,
+  type FeaturedSections,
+  flashGroup,
+  type Group,
+  groupIsNew,
+  newOrSaleGroups,
+  saleFirst,
+} from "./FeaturedPicks";
 import {
   fetchPlayPrices,
   priceStringToCents,
@@ -121,18 +129,6 @@ function featuredRowLength(): number {
   return window.matchMedia(FEATURED_ROW_SM).matches ? 3 : 2;
 }
 
-type Group = readonly ResolvedCosmetic[];
-
-/** What the Featured tab shows, each item in only the first section it fits. */
-interface FeaturedSections {
-  /** The running flash sale's item, while the player can buy it. */
-  deal: Group | undefined;
-  /** New items, newest first, without the deal item. */
-  new: Group[];
-  /** The rest on sale, without the deal item and anything in `new`. */
-  sale: Group[];
-}
-
 /** The local time of a deal's end, as GameHistoryDates formats times. */
 function localTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -185,55 +181,6 @@ function hasEndedSale(cosmetics: Cosmetics | null): boolean {
   return (cosmetics?.promotions ?? []).some(
     (sale) => new Date(sale.endsAt).getTime() <= now,
   );
-}
-
-/** The running flash sale's item group, if one is among `groups`. */
-function flashGroup<T extends readonly ResolvedCosmetic[]>(
-  groups: readonly T[],
-): T | undefined {
-  return groups.find((group) =>
-    group.some((resolved) => activeSale(resolved.cosmetic)?.kind === "flash"),
-  );
-}
-
-/** Whether a running sale discounts any variant in a card's group. */
-function groupOnSale(group: readonly ResolvedCosmetic[]): boolean {
-  return group.some((resolved) => activeSale(resolved.cosmetic) !== null);
-}
-
-/** Whether any variant in a card's group is new to the store. */
-function groupIsNew(group: readonly ResolvedCosmetic[]): boolean {
-  return group.some((resolved) => isNew(resolved.cosmetic));
-}
-
-/** When a card's group stops being new: its latest variant's newUntil. */
-function groupNewUntil(group: readonly ResolvedCosmetic[]): number {
-  return Math.max(
-    ...group.map((resolved) => newUntilMs(resolved.cosmetic) ?? 0),
-  );
-}
-
-/** The most recently added first: the one that stays new longest. */
-function newestFirst<T extends readonly ResolvedCosmetic[]>(
-  groups: readonly T[],
-): T[] {
-  return groups
-    .map((group) => ({ group, until: groupNewUntil(group) }))
-    .sort((a, b) => b.until - a.until)
-    .map(({ group }) => group);
-}
-
-/** The flash item, then the rest on sale, then everything else. */
-export function saleFirst<T extends readonly ResolvedCosmetic[]>(
-  groups: readonly T[],
-): T[] {
-  const flash = flashGroup(groups);
-  const rest = groups.filter((group) => group !== flash);
-  return [
-    ...(flash ? [flash] : []),
-    ...rest.filter(groupOnSale),
-    ...rest.filter((group) => !groupOnSale(group)),
-  ];
 }
 
 export { saleCoversEverything };
@@ -594,6 +541,7 @@ export class StoreModal extends BaseModal {
     tab: CosmeticsSubTab,
   ): readonly (readonly ResolvedCosmetic[])[] {
     const items = this.resolvedPurchasables();
+    if (tab === "sale" || tab === "new") return newOrSaleGroups(items, tab);
     const skins = groupCosmeticVariants(
       items.filter(
         (resolved) => resolved.type === "pattern" || resolved.type === "skin",
@@ -605,22 +553,6 @@ export class StoreModal extends BaseModal {
     const crowns = items
       .filter((resolved) => resolved.type === "crown")
       .map((r) => [r]);
-    if (tab === "sale" || tab === "new") {
-      // A sale (a flash sale's pick included) or a new item can be an effect
-      // or a bundle too, and those live on other tabs; list them here as well
-      // so On sale and New each lead to every such item (the banner's "On
-      // sale" link included).
-      const others = items
-        .filter(
-          (resolved) =>
-            resolved.type === "effect" || resolved.type === "cosmeticPack",
-        )
-        .map((r) => [r]);
-      const all = [...skins, ...flags, ...crowns, ...others];
-      return tab === "sale"
-        ? saleFirst(all.filter(groupOnSale))
-        : newestFirst(all.filter(groupIsNew));
-    }
     // The Card sub-tab draws its own grid (<card-store-grid>).
     if (tab === "card") return [];
     return saleFirst(
@@ -630,27 +562,10 @@ export class StoreModal extends BaseModal {
 
   /** The Featured tab's sections, from the catalog, the player and the clock. */
   private featuredSections(): FeaturedSections {
-    const onSale = this.cosmeticsGroups("sale");
-    const deal = flashGroup(onSale);
-    const keysOf = (groups: readonly Group[]) =>
-      new Set(groups.flatMap((group) => group.map((item) => item.key)));
-    const dealKeys = keysOf(deal ? [deal] : []);
-    const fresh = this.cosmeticsGroups("new")
-      .filter((group) => !group.some((item) => dealKeys.has(item.key)))
-      .slice(0, this.featuredRowLength);
-    // Only what the New row shows at this width: a new item on sale that
-    // doesn't fit there still shows under On sale.
-    const newKeys = keysOf(fresh);
-    const sale = onSale.filter(
-      (group) =>
-        group !== deal &&
-        !group.some((item) => dealKeys.has(item.key) || newKeys.has(item.key)),
+    return featuredSections(
+      this.resolvedPurchasables(),
+      this.featuredRowLength,
     );
-    return {
-      deal,
-      new: fresh,
-      sale: sale.slice(0, this.featuredRowLength),
-    };
   }
 
   /** Something to buy on Featured. The owned-deal strip doesn't count. */

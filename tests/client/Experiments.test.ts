@@ -979,6 +979,91 @@ describe("exposures", () => {
   });
 });
 
+describe("ui tests", () => {
+  const UI = "lobby_store";
+  const uiArm = (variant: string, counted = true) => ({
+    key: UI,
+    surface: "ui",
+    variant,
+    counted,
+    params: {},
+  });
+
+  function publish(...arms: ReturnType<typeof uiArm>[]) {
+    // No catalog fetched: a ui arm prices nothing, so it doesn't wait for one.
+    Experiments.publishExperimentsForTest(arms, null, env.sub);
+    Experiments.setCatalogGeneration(null);
+  }
+
+  it("reads the player's arm by key, and only a ui test's", () => {
+    publish(uiArm("store_row"));
+    expect(Experiments.uiAssignment(UI)?.variant).toBe("store_row");
+    expect(Experiments.uiAssignment("other_test")).toBeNull();
+    Experiments.publishExperimentsForTest(
+      [{ ...uiArm("store_row"), surface: "flash_sale_depth" }],
+      null,
+      env.sub,
+    );
+    expect(Experiments.uiAssignment(UI)).toBeNull();
+  });
+
+  it("has no arm before the groups load", () => {
+    expect(Experiments.uiAssignment(UI)).toBeNull();
+  });
+
+  for (const variant of ["control", "store_row"]) {
+    it(`(${variant}) posts the exposure with surface ui, once`, async () => {
+      publish(uiArm(variant));
+      expect(await Experiments.recordExposure(UI, "ui")).toBe(true);
+      expect(await Experiments.recordExposure(UI, "ui")).toBe(false);
+      expect(exposureBodies()).toEqual([
+        { platform: "web", exposures: [{ key: UI, variant, surface: "ui" }] },
+      ]);
+    });
+  }
+
+  it("shows an uncounted arm but sends no exposure for it", async () => {
+    publish(uiArm("store_row", false));
+    expect(Experiments.uiAssignment(UI)?.variant).toBe("store_row");
+    expect(await Experiments.recordExposure(UI, "ui")).toBe(false);
+    expect(exposureBodies()).toEqual([]);
+  });
+
+  it("has no arm and sends nothing on Steam", async () => {
+    publish(uiArm("store_row"));
+    env.steam = true;
+    expect(Experiments.uiAssignment(UI)).toBeNull();
+    expect(await Experiments.recordExposure(UI, "ui")).toBe(false);
+    expect(exposureBodies()).toEqual([]);
+  });
+
+  it("has no arm while another account's groups load", () => {
+    publish(uiArm("store_row"));
+    Experiments.loadInFlightForTest("account-b", new Promise(() => {}));
+    expect(Experiments.uiAssignment(UI)).toBeNull();
+  });
+
+  it("never sends a ui test from a pricing surface, nor a pricing test as ui", async () => {
+    Experiments.publishExperimentsForTest(
+      [uiArm("store_row"), ...assignments("deeper").assignments],
+      DEEPER,
+      env.sub,
+    );
+    expect(await Experiments.recordExposure(UI, "store_flash")).toBe(false);
+    expect(await Experiments.recordExposure(KEY, "ui")).toBe(false);
+    const card = flashCard();
+    Experiments.exposureWatcher.observe(card, "store_flash");
+    setVisible(card, true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(exposureBodies()).toEqual([
+      {
+        platform: "web",
+        exposures: [{ key: KEY, variant: "deeper", surface: "store_flash" }],
+      },
+    ]);
+  });
+});
+
 describe("store analytics are untouched by a refetch", () => {
   it("never counts the flash card's impression twice in one page view", async () => {
     const send = vi.fn();

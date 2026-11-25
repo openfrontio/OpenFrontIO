@@ -303,18 +303,36 @@ function exposableAssignments(): ExperimentAssignment[] {
 }
 
 /**
- * The player saw the tested deal in their group (the flash card in the store,
- * or the homepage deal banner). Sent once per test per page load, and not
- * again on later loads once the server took it. A failed POST is not
- * retried. Resolves to whether a request went out.
+ * The player's arm in a ui test (infra docs/ui-experiments.md), or null:
+ * show control on null. Null too while another account's groups load, and
+ * always on Steam. Not tied to the catalog: a ui arm prices nothing.
+ */
+export function uiAssignment(key: string): ExperimentAssignment | null {
+  if (published === null || platform() === "steam") return null;
+  if (current === null || current.account !== published.account) return null;
+  return (
+    published.assignments.find((a) => a.key === key && a.surface === "ui") ??
+    null
+  );
+}
+
+/**
+ * The player saw the tested thing in their group: the flash card in the
+ * store or the homepage deal banner for a pricing test, or a ui test's spot
+ * (surface "ui", sent in every arm, control included). Sent once per test per
+ * page load, and not again on later loads once the server took it. A failed
+ * POST is not retried. Resolves to whether a request went out.
  */
 export async function recordExposure(
   key: string,
   surface: ExperimentExposureSurface,
 ): Promise<boolean> {
-  const assignment = exposableAssignments().find((a) => a.key === key);
+  const assignment =
+    surface === "ui"
+      ? uiAssignment(key)
+      : exposableAssignments().find((a) => a.key === key);
   const account = published?.account ?? null;
-  if (assignment === undefined || account === null) return false;
+  if (!assignment?.counted || account === null) return false;
   const dedupeKey = exposureKey(account, key);
   if (sentThisPage.has(dedupeKey) || storedExposure(dedupeKey)) return false;
   const where = platform();
