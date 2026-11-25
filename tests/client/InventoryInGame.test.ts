@@ -1046,6 +1046,32 @@ describe("Inventory In game tab", () => {
       ).toBe(350);
     });
 
+    it("a catalogue announced during the first load isn't replaced by the plain one", async () => {
+      // The first load's catalogue request is out...
+      let landPlain!: (c: Cosmetics) => void;
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise<Cosmetics>((resolve) => (landPlain = resolve)),
+      );
+      modal.open({ tab: "crowns" });
+      await settle(modal);
+      // ...the group's catalogue is announced...
+      const raised = makeCatalog();
+      (raised.crowns!.sale_crown as { priceHard: number }).priceHard = 350;
+      document.dispatchEvent(
+        new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+      );
+      // ...and the plain answer lands last.
+      landPlain(makeCatalog());
+      await settle(modal);
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      expect(
+        modal.querySelector<PurchaseButton>(
+          "inventory-buy-dialog purchase-button",
+        )!.priceHard,
+      ).toBe(350);
+    });
+
     it("closes the buy popup when a new catalogue no longer sells the item", async () => {
       await open("crowns");
       await setFilter(modal, "all");

@@ -230,17 +230,24 @@ export class InventoryModal extends BaseModal {
     this.previewingCosmetic = customEvent.detail;
   };
 
-  // Bumped on each COSMETICS_CHANGED, so a refresh that was out across one
-  // knows its answer is older (refreshCatalog).
+  // Bumped on each COSMETICS_CHANGED, so a load or refresh that was out
+  // across one knows its answer is older (loadInventory, refreshCatalog).
   private catalogChangeSeq = 0;
+  // The last catalogue COSMETICS_CHANGED announced: what a load that was out
+  // across it installs instead of its own, older answer.
+  private announcedCosmetics: Cosmetics | null = null;
 
   /** A new catalogue is in use (a store-experiment group changed, or a
    * price_changed refusal reloaded it): show its prices, as the Store does,
    * so a retry sends the price now and doesn't loop on the 409. */
   private onCosmeticsChanged = (e: Event): void => {
     const cosmetics = (e as CustomEvent<Cosmetics | null>).detail;
-    if (!cosmetics || this.cosmetics === null) return;
+    if (!cosmetics) return;
+    // Counted even with no catalogue shown yet: a first load still out
+    // takes this one rather than its own.
     this.catalogChangeSeq++;
+    this.announcedCosmetics = cosmetics;
+    if (this.cosmetics === null) return;
     this.cosmetics = cosmetics;
     this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
@@ -347,12 +354,19 @@ export class InventoryModal extends BaseModal {
       this.ownershipState = "loading";
     }
     this.loadFailed = false;
+    const seq = this.catalogChangeSeq;
     try {
-      const [cosmetics] = await Promise.all([
+      const [loaded] = await Promise.all([
         this.loadCatalog(),
         this.loadOwnership(userMeResponse),
       ]);
       if (loadId !== this.inventoryLoadId) return;
+      // A catalogue announced while this load was out is newer than its
+      // answer (a group's, say, over the plain one): install that instead.
+      const cosmetics =
+        seq !== this.catalogChangeSeq && this.announcedCosmetics !== null
+          ? this.announcedCosmetics
+          : loaded;
       // A refresh whose fetch failed keeps the catalogue already shown, as
       // refreshCatalog does: the error view would unmount the Player card
       // tab. A first load or a sign-out has none to keep.
