@@ -36,7 +36,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 
 5. Find the output folder at `../resources/maps/<map_name>`
 
-`npm run gen-maps` formats every file it writes with Oxfmt as its last step (running `node_modules/oxfmt` with `--write`), so the output already matches `npm run format` — no separate formatting step needed. If oxfmt isn't installed (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+`npm run gen-maps` formats every file it writes with Oxfmt as its last step (running `node_modules/oxfmt` with `--write`), so the output already matches `npm run format` — no separate formatting step needed. Run `npm ci` first: the generator, its runner (tsx) and Oxfmt all come from the repo's dev dependencies.
 
 `npm run gen-maps` also regenerates `info.schema.json` (`npm run gen-map-schema`).
 
@@ -52,7 +52,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 
 ## Command Line Flags
 
-Pass flags after `--`: `npm run gen-maps -- --maps=world`.
+Pass flags after `--`: `npm run gen-maps -- --maps=world`. `--help` lists them.
 
 - `--maps`: Optional comma-separated list of maps to process.
   - ex: `npm run gen-maps -- --maps=world,eastasia,big_plains`

@@ -46,6 +46,10 @@ function parseFlags(argv: string[]): Flags {
     const m = /^--?([^=]+)(?:=(.*))?$/.exec(arg);
     if (!m) break; // first non-flag argument stops parsing, like Go
     const [, name, inline] = m;
+    if (name === "h" || name === "help") {
+      process.stderr.write(HELP);
+      process.exit(0);
+    }
     if (bools[name])
       bools[name](
         inline === undefined ? true : inline === "true" || inline === "1",
@@ -59,8 +63,19 @@ function parseFlags(argv: string[]): Flags {
   return f;
 }
 
+const HELP = `Usage: npm run gen-maps -- [flags]
+  --maps=a,b         only generate these maps (default: all)
+  --workers=n        maps to process at once (default 4); lower uses less memory
+  --timings          print how long each map took, slowest first
+  --log-level=level  ALL, DEBUG, INFO (default), WARN or ERROR
+  --verbose, -v      debug logs prefixed with [mapname]; same as --log-level=DEBUG
+  --log-performance  log performance recommendations; sets --log-level=DEBUG
+  --log-removal      log each removed island and lake; sets --log-level=DEBUG
+`;
+
+// Like Go's flag package: the error, then the usage, exit status 2.
 function usage(msg: string): never {
-  process.stderr.write(msg + "\n");
+  process.stderr.write(msg + "\n" + HELP);
   process.exit(2);
 }
 
