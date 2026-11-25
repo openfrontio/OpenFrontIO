@@ -1,7 +1,9 @@
 // @vitest-environment node
 /**
- * Heightmap import (docs/ScenarioEditor.md, "Terrain"): the map generator's
- * pixel rules, the size limits, and the import as one undo step.
+ * Heightmap import (docs/ScenarioEditor.md, "Terrain"): the size limits, a
+ * stock map's image read with the map generator's pixel rules
+ * (tests/core/mapgen tests the rules themselves), and the import as one undo
+ * step.
  */
 
 import {
@@ -9,13 +11,13 @@ import {
   type EditorCommand,
 } from "@openfront/engine-api/EditorCommands";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { imageTerrain } from "@openfront/engine-lib/mapgen/GenerateMap";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { DocumentEditor } from "../../../src/client/scenario/DocumentEditor";
 import {
   heightmapSize,
-  heightmapTerrain,
   importHeightmap,
 } from "../../../src/client/scenario/HeightmapImport";
 import {
@@ -91,71 +93,6 @@ function decodePng(file: string): {
   return { width, height, rgba };
 }
 
-/** One pixel's authored terrain. */
-const pixel = (r: number, g: number, b: number, a = 255) =>
-  heightmapTerrain([r, g, b, a], 1, 1, 1)[0];
-
-describe("heightmapTerrain", () => {
-  test("alpha under 20 is water, whatever the colour", () => {
-    expect(pixel(0, 0, 0, 0)).toBe(WATER);
-    expect(pixel(255, 255, 255, 19)).toBe(WATER);
-    expect(pixel(255, 255, 255, 20)).not.toBe(WATER);
-  });
-
-  test("blue 106 is water", () => {
-    expect(pixel(10, 200, 106)).toBe(WATER);
-    expect(pixel(10, 200, 105)).toBe(land(0));
-    expect(pixel(10, 200, 107)).toBe(land(0));
-  });
-
-  test("black is impassable, and only black", () => {
-    expect(pixel(0, 0, 0)).toBe(IMPASSABLE);
-    expect(pixel(1, 0, 0)).toBe(land(0));
-    expect(pixel(0, 1, 0)).toBe(land(0));
-    expect(pixel(0, 0, 1)).toBe(land(0));
-  });
-
-  test("elevation is (blue - 140) / 2 rounded up, blue clamped to 140-200", () => {
-    expect(pixel(50, 50, 0)).toBe(land(0));
-    expect(pixel(50, 50, 139)).toBe(land(0));
-    expect(pixel(50, 50, 140)).toBe(land(0));
-    expect(pixel(50, 50, 141)).toBe(land(1));
-    expect(pixel(50, 50, 142)).toBe(land(1));
-    expect(pixel(50, 50, 143)).toBe(land(2));
-    expect(pixel(50, 50, 199)).toBe(land(30));
-    expect(pixel(50, 50, 200)).toBe(land(30));
-    expect(pixel(50, 50, 201)).toBe(land(30));
-    expect(pixel(50, 50, 255)).toBe(land(30));
-  });
-
-  test("premultiplies by alpha first, as the generator does", () => {
-    // 200 * 128 / 255 is 100 premultiplied: plains, not a mountain.
-    expect(pixel(50, 50, 200, 128)).toBe(land(0));
-    // 212 premultiplied by 128 is 106: water.
-    expect(pixel(50, 50, 212, 128)).toBe(WATER);
-    // Dark and faint premultiplies to black.
-    expect(pixel(5, 5, 5, 20)).toBe(IMPASSABLE);
-  });
-
-  test("reads the top-left of a wider image", () => {
-    // 3 x 2: only the first two columns are read.
-    const rgba = [
-      [0, 0, 0, 255],
-      [9, 9, 200, 255],
-      [9, 9, 106, 255],
-      [9, 9, 106, 255],
-      [9, 9, 160, 0],
-      [9, 9, 0, 255],
-    ].flat();
-    expect([...heightmapTerrain(rgba, 3, 2, 2)]).toEqual([
-      IMPASSABLE,
-      land(30),
-      WATER,
-      WATER,
-    ]);
-  });
-});
-
 describe("heightmapSize", () => {
   test("crops each side down to a multiple of 4 and at most 5000", () => {
     expect(heightmapSize(100, 5000)).toEqual({ width: 100, height: 5000 });
@@ -181,9 +118,13 @@ test("a stock map's source image imports as that map's authored terrain", () => 
   );
   const size = heightmapSize(image.width, image.height)!;
   expect(size).toEqual({ width: 224, height: 168 });
-  const terrain = heightmapTerrain(
-    image.rgba,
-    image.width,
+  const { terrain } = imageTerrain(
+    {
+      kind: "nrgba8",
+      width: image.width,
+      height: image.height,
+      pix: image.rgba,
+    },
     size.width,
     size.height,
   );

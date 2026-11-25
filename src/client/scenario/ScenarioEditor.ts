@@ -27,6 +27,7 @@ import {
   type DoomsdayClockSpeed,
 } from "@openfront/engine-lib/game/DoomsdayClock";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { imageTerrain } from "@openfront/engine-lib/mapgen/GenerateMap";
 import { EventBus } from "@openfront/shared/EventBus";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { html, LitElement, nothing } from "lit";
@@ -70,7 +71,6 @@ import {
 import {
   heightmapPixels,
   heightmapSize,
-  heightmapTerrain,
   importHeightmap,
   openHeightmap,
 } from "./HeightmapImport";
@@ -566,12 +566,15 @@ export class ScenarioEditor extends LitElement {
         return;
       }
       const { width, height } = size;
-      const pixels = heightmapPixels(bitmap, width, height);
+      const pix = heightmapPixels(bitmap, width, height);
       this.endStroke();
       this.settingsRemoved = null;
-      if (
-        importHeightmap(editor, heightmapTerrain(pixels, width, width, height))
-      ) {
+      const { terrain } = imageTerrain(
+        { kind: "nrgba8", width, height, pix },
+        width,
+        height,
+      );
+      if (importHeightmap(editor, terrain)) {
         this.saveDraft();
       }
       this.requestUpdate();
