@@ -912,8 +912,17 @@ describe("Inventory: buying card items in place", () => {
   });
 
   /** Opens <purchase-button>'s confirm box for a currency, the way a tap
-   * on its button does (the tap check runs first). */
+   * on its button does (the tap check runs first). The check is answered
+   * here rather than by the real one: that reads the profile through
+   * Cosmetics and Api, and the client project's vmThreads pool can hand a
+   * file module instances another file evaluated (bound to that file's
+   * mocks), so it could answer "unreachable" and show an alert instead of
+   * the confirm. These tests are about Escape, not the tap check. */
   async function openConfirm(within: string, method: "hard" | "soft") {
+    vi.mocked(checkInPlacePurchase).mockResolvedValueOnce({
+      ok: true,
+      balance: 5000,
+    });
     const button = q(`${within} purchase-button`) as unknown as {
       requestCurrencyPurchase(m: "hard" | "soft"): void;
     };
