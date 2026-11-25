@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { profileIcon, teamIcon } from "../src/client/hud/HotbarIcons";
+import { OF_ICONS } from "../src/client/components/OfIcon";
 import {
   COLUMN_DEFS,
   columnById,
@@ -43,12 +43,23 @@ describe("Stats column registry", () => {
   it("gives the team column its own icon, not the player one", () => {
     expect(columnById("team").headerVisual).toEqual({
       kind: "icon",
-      src: teamIcon,
+      icon: "team",
     });
     expect(columnById("player").headerVisual).toEqual({
       kind: "icon",
-      src: profileIcon,
+      icon: "player",
     });
+  });
+
+  it("names only header icons that exist", () => {
+    for (const def of COLUMN_DEFS) {
+      const visual = def.headerVisual;
+      if (visual?.kind !== "icon") continue;
+      expect(OF_ICONS).toHaveProperty(visual.icon);
+      if (visual.superscript !== undefined && "icon" in visual.superscript) {
+        expect(OF_ICONS).toHaveProperty(visual.superscript.icon);
+      }
+    }
   });
 
   it("keeps rank and the identity column out of the cog menu", () => {
@@ -62,6 +73,8 @@ describe("Stats column registry", () => {
   it("gives identity columns a fixed track and stat columns a shared one", () => {
     for (const def of COLUMN_DEFS) {
       expect(def.width === "auto").toBe(def.isOrderable);
+      // A shared track is sized from its widest text; a fixed one needs none.
+      expect(def.widest().length > 0).toBe(def.width === "auto");
     }
   });
 
