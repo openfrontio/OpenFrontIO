@@ -232,7 +232,15 @@ export function moveRow(
   to: number,
 ): CardDraft {
   const rows = draft.rows[kind];
-  if (from === to || to < 0 || to >= rows.length || from < 0) return draft;
+  if (
+    from === to ||
+    from < 0 ||
+    from >= rows.length ||
+    to < 0 ||
+    to >= rows.length
+  ) {
+    return draft;
+  }
   const next = cloneDraft(draft);
   const [item] = next.rows[kind].splice(from, 1);
   next.rows[kind].splice(to, 0, item);

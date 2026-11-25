@@ -93,6 +93,10 @@ describe("card draft", () => {
     ]);
     expect(moveRow(d, "tracker", 0, -1)).toBe(d);
     expect(moveRow(d, "tracker", 2, 3)).toBe(d);
+    // A source row past the end (or before the start) moves nothing either:
+    // never an undefined row in the draft.
+    expect(moveRow(d, "tracker", 3, 0)).toBe(d);
+    expect(moveRow(d, "tracker", -1, 0)).toBe(d);
   });
 
   it("lists each changed slot", () => {
