@@ -104,7 +104,7 @@ describe("deriveTerrain", () => {
     // A 1 x 8 strip: land, then water 7 tiles out.
     const { terrain, w, h } = grid([[L, W, W, W, W, W, W, W]]);
     deriveTerrain(terrain, w, h);
-    // Land next to water is shoreline; the depth is ceil(distance / 2).
+    // Land next to water is shoreline; depth is floor(distance to land / 2).
     expect([...terrain]).toEqual([
       L | 0x40,
       0x20 | 0x40,

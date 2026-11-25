@@ -8,8 +8,8 @@ import {
   SHORELINE_BIT,
 } from "./TerrainBytes";
 
-// Max BFS hops from a coastline that can affect a depth: depth =
-// ceil(distance / 2) capped at 31, so 62 hops.
+// Max distance to passable land that can affect a depth: depth =
+// floor(distance / 2) capped at 31, so 62.
 export const MAX_DEPTH_DISTANCE = 62;
 // The map generator's depth for water next to impassable terrain.
 const IMPASSABLE_NEIGHBOR_DEPTH = 10;
@@ -24,7 +24,8 @@ const DOWN = 16;
 const LEFT = 32;
 const RIGHT = 64;
 const KIND_BIT = KIND.map((k) => 1 << k);
-// The dist array: distance to passable land + 1, and flags.
+// The dist array: distance to passable land (1 next to it, 0 if not
+// reached), and flags.
 const DIST_MASK = 0x3f;
 const SEEN = 0x2000;
 const COASTLESS = 0x4000;
@@ -54,7 +55,7 @@ export interface DeriveOptions {
  * - shoreline: land next to water, or water next to passable land;
  * - ocean: the largest body of water, on a tie the one the generator finds
  *   first scanning column by column (holding the smallest x * h + y);
- * - depth: ceil(distance to passable land / 2), capped at 31; 10 next to
+ * - depth: floor(distance to passable land / 2), capped at 31; 10 next to
  *   impassable terrain; 0 in a body of water with no coast, or on a
  *   downscaled map its first water source's depth.
  */
@@ -72,7 +73,7 @@ export function deriveTerrain(
   // the directions in which they are water.
   const around = new Uint8Array(total);
   // From here dist holds, for each water tile, its distance to passable
-  // land + 1 (0 if not reached) and the flags.
+  // land (0 if not reached) and the flags.
   dist.fill(0);
   let tail = 0;
   for (let y = 0, t = 0; y < h; y++) {
