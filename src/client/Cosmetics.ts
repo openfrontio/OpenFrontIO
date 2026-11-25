@@ -432,6 +432,14 @@ export async function broadcastFreshUserMe(
   // A newer refresh owns the broadcast, even if it is still pending or failed.
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   if (session !== freshUserMeSession) return fresh;
+  // An ordinary token refresh can install another account (another tab's
+  // sign-in) with no session event: a profile of an account other than the
+  // one signed in now is never broadcast either. An account not known right
+  // now (a refresh that failed) isn't another one; a sign-out has its event.
+  const signedInAs = currentPublicId();
+  if (signedInAs !== null && fresh.player.publicId !== signedInAs) {
+    return fresh;
+  }
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
