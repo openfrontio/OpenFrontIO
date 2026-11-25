@@ -11,8 +11,8 @@ vi.mock("../../src/client/Cosmetics", () => ({
 import { StorePlacementSubTabSchema } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardStoreGrid } from "../../src/client/components/card/CardStoreGrid";
-import { shownPrice } from "../../src/client/ShownPrice";
 import { purchaseCosmetic } from "../../src/client/Cosmetics";
+import { shownPrice } from "../../src/client/ShownPrice";
 
 if (!customElements.get("card-store-grid")) {
   customElements.define("card-store-grid", CardStoreGrid);

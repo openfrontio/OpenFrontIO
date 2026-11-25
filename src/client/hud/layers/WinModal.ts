@@ -29,11 +29,11 @@ import {
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import { knownSignedOut, sessionUncertain, userAuth } from "../../Auth";
 import "../../components/CosmeticCard";
-import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
 import {
   CARD_ITEM_GROUP,
   type CardItem,
 } from "../../components/card/CardItems";
+import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
 import {
   buildPlayerCardView,
   type PlayerCardView,
