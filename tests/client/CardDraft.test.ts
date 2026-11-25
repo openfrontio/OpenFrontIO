@@ -791,6 +791,82 @@ describe("CardEditor", () => {
     expect(editor.saved.rows.tracker[0]).toBe("games_played");
   });
 
+  it("pending saves are kept per account: A waits only for A's earlier PUT", async () => {
+    const stored = (trackers: string[]) => ({
+      ok: true,
+      loadout: { background: "bg_pacific", title: null, taunt: null, trackers },
+    });
+    let finishA!: (v: unknown) => void;
+    let finishB!: (v: unknown) => void;
+    api.save
+      .mockReturnValueOnce(new Promise((r) => (finishA = r)))
+      .mockReturnValueOnce(new Promise((r) => (finishB = r)));
+    const editor = new CardEditor();
+    // A starts a save...
+    session.id = "account-a";
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // ...B signs in and starts one too...
+    editor.dropAccount();
+    session.id = "account-b";
+    editor.seed(me(CARD, B_FLARES, "account-b"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    expect(api.save).toHaveBeenCalledTimes(2);
+    // ...and A signs back in with both PUTs still out.
+    editor.dropAccount();
+    session.id = "account-a";
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce(
+      stored(["games_played", "nukes_launched", "best_elo"]),
+    );
+    const saving = editor.save();
+    await Promise.resolve();
+    await Promise.resolve();
+    // A's second PUT waits for A's first, never racing it.
+    expect(api.save).toHaveBeenCalledTimes(2);
+    // A's first settles while B's is still out: A's next goes, without
+    // waiting for B's.
+    finishA(stored(["wins", "nukes_launched", "best_elo"]));
+    expect(await saving).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(3);
+    expect(api.save.mock.calls[2][0].trackers[0]).toBe("games_played");
+    finishB(stored(["wins", "nukes_launched", "best_elo"]));
+  });
+
+  it("a save that waited for an earlier PUT is checked again before it sends", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // A reauth into the same account; the new save waits for the old PUT.
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    const saving = editor.save();
+    await Promise.resolve();
+    expect(editor.saveState).toBe("saving");
+    // Meanwhile a fresh profile says Games played isn't owned (a refund).
+    editor.seed(
+      me(
+        CARD,
+        B_FLARES.filter((f) => f !== "cardTracker:games_played"),
+        "account-a",
+      ),
+    );
+    finishOld({ ok: false, error: "failed" });
+    // No longer saveable: nothing is sent, and nothing is left saving.
+    expect(await saving).toBe(false);
+    expect(api.save).toHaveBeenCalledTimes(1);
+    expect(editor.saveState).toBe("idle");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+  });
+
   it("a save that succeeds after the session moved to another account isn't taken", async () => {
     // Sent as A, then an ordinary token refresh installs B (no session
     // event) before the answer lands.
