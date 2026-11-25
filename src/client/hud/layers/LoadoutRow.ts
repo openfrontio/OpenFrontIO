@@ -179,6 +179,7 @@ export class LoadoutRow extends LitElement {
   private async buy(
     entry: LoadoutItem,
     method: "hard" | "soft",
+    shownAmount?: number,
   ): Promise<PurchaseResult> {
     const key = `${entry.type}:${entry.item.name}`;
     this.tracker?.click(key, PLACEMENT);
@@ -203,6 +204,8 @@ export class LoadoutRow extends LitElement {
       PLACEMENT,
       tellOwned,
       signedInAs,
+      // What the confirm box showed: the server refuses to charge more.
+      shownAmount,
     );
     switch (outcome.kind) {
       case "owned":
@@ -286,8 +289,8 @@ export class LoadoutRow extends LitElement {
       .busyKey=${key}
       .rarity=${String(entry.item.rarity)}
       .itemName=${cardItemName(entry.type, entry.item)}
-      .onPurchaseHard=${() => this.buy(entry, "hard")}
-      .onPurchaseSoft=${() => this.buy(entry, "soft")}
+      .onPurchaseHard=${(shown?: number) => this.buy(entry, "hard", shown)}
+      .onPurchaseSoft=${(shown?: number) => this.buy(entry, "soft", shown)}
     ></purchase-button>`;
   }
 

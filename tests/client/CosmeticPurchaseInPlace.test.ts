@@ -50,6 +50,7 @@ const { showInGameAlert } = await import("../../src/client/InGameModal");
 const { checkInPlacePurchase, purchaseCosmetic, purchaseCosmeticInPlace } =
   await import("../../src/client/Cosmetics");
 const { invalidateUserMe } = await import("../../src/client/Api");
+const { translateText } = await import("../../src/client/Utils");
 const { clearPendingPurchase, peekPendingPurchase, rememberPendingPurchase } =
   await import("../../src/client/components/inventory/PendingEquip");
 
@@ -250,6 +251,48 @@ describe("buying on the end screen", () => {
     const outcome = await purchaseCosmeticInPlace(STORM, "hard");
     expect(outcome.kind).toBe("owned");
     expect((outcome as { notice?: string }).notice).toBeDefined();
+  });
+
+  it("sends the price the confirm showed; a price_changed refusal says so, nothing charged", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "price_changed",
+      amount: 360,
+    } as never);
+    const outcome = await purchaseCosmeticInPlace(
+      STORM,
+      "hard",
+      undefined,
+      undefined,
+      undefined,
+      300,
+    );
+    expect(purchaseWithCurrency).toHaveBeenCalledWith(
+      "cardBackground",
+      "bg_storm_front",
+      "hard",
+      undefined,
+      undefined,
+      { expectedAmount: 300, platform: "web" },
+      expect.any(Function),
+    );
+    // Explained with the Store's message, never "couldn't confirm".
+    expect(outcome.kind).toBe("handled");
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      translateText("store.price_changed"),
+    );
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("with no shown price, the price check is the price now", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({ ok: true } as never);
+    await purchaseCosmeticInPlace(STORM, "hard");
+    expect(vi.mocked(purchaseWithCurrency).mock.calls[0]?.[5]).toEqual({
+      expectedAmount: 320,
+      platform: "web",
+    });
   });
 
   it("charged the price shown: owned, no notice", async () => {

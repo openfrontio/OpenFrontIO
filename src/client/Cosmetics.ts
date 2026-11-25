@@ -764,7 +764,8 @@ export type InPlacePurchase =
   | { kind: "signed_out" }
   // A session, but its profile couldn't be read: nothing sent.
   | { kind: "unreachable" }
-  // Explained already with its own message (a wallet in debt).
+  // Explained already with its own message (a wallet in debt, or a
+  // price_changed refusal: nothing charged).
   | { kind: "handled" };
 
 /**
@@ -786,6 +787,10 @@ export type InPlacePurchase =
  * tab replaces the refresh cookie, so a JWT refresh here could otherwise
  * buy as the other account. A different account (or none) answers
  * `signed_out`, with nothing sent.
+ *
+ * `shownAmount` is the price the confirm box showed: the server refuses
+ * (409 price_changed) to charge more, as for purchaseCosmetic. Without it,
+ * the price the catalogue in hand gives now.
  */
 export async function purchaseCosmeticInPlace(
   resolved: ResolvedCosmetic,
@@ -793,6 +798,7 @@ export async function purchaseCosmeticInPlace(
   placement?: StorePlacement,
   onOwned?: () => void,
   signedInAs?: string | null,
+  shownAmount?: number,
 ): Promise<InPlacePurchase> {
   const c = resolved.cosmetic;
   if (!c || resolved.type === "subscription" || resolved.type === "pack") {
@@ -867,7 +873,7 @@ export async function purchaseCosmeticInPlace(
       method,
       resolved.colorPalette?.name,
       placement,
-      undefined,
+      { expectedAmount: shownAmount ?? price, platform: storePlatform() },
       stillSignedInAs,
     );
   } catch (error) {
@@ -876,6 +882,12 @@ export async function purchaseCosmeticInPlace(
   }
   // Another account by the time the token was read: nothing was sent.
   if (!result.ok && result.code === "cancelled") return { kind: "signed_out" };
+  // The server would charge more than the box showed: nothing charged. The
+  // reload announces the catalogue now, so the end screen re-prices.
+  if (!result.ok && result.code === "price_changed") {
+    await priceChanged();
+    return { kind: "handled" };
+  }
   if (!result.ok && result.code === "insufficient_balance") {
     const fresh = await broadcastFreshUserMe();
     if (fresh === false) return { kind: "failed" };
