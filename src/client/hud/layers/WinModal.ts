@@ -53,6 +53,7 @@ import type { LegendCeremony } from "../../components/LegendCeremony";
 import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import {
+  currentPrice,
   fetchCosmetics,
   getCachedCosmetics,
   purchaseCosmetic,
@@ -882,6 +883,11 @@ export class WinModal extends LitElement implements Controller {
         ${selected.map((resolved) => {
           // Only patterns were selected above.
           const pattern = resolved.cosmetic as Pattern | null;
+          // The price the server charges now, as the Store shows it: once a
+          // sale has ended, its list price, whatever the catalog in hand
+          // (cached up to a minute) says. Shown and sent as the same number.
+          const hard = pattern ? currentPrice(pattern, "hard") : undefined;
+          const soft = pattern ? currentPrice(pattern, "soft") : undefined;
           return html`
             <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
               <cosmetic-card
@@ -889,12 +895,12 @@ export class WinModal extends LitElement implements Controller {
                 .interactive=${false}
               ></cosmetic-card>
               <purchase-button
-                .priceHard=${pattern?.priceHard ?? null}
-                .priceSoft=${pattern?.priceSoft ?? null}
+                .priceHard=${hard ?? null}
+                .priceSoft=${soft ?? null}
                 .rarity=${pattern?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
-                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" }, pattern?.priceHard)}
-                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" }, pattern?.priceSoft)}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" }, hard)}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" }, soft)}
               ></purchase-button>
             </div>
           `;

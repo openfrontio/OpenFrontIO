@@ -13,6 +13,7 @@ import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
+  purchaseCosmetic,
   getCachedCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
@@ -81,6 +82,7 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   >()),
   fetchCosmetics: vi.fn(async () => null),
   getCachedCosmetics: vi.fn(() => null),
+  purchaseCosmetic: vi.fn(async () => undefined),
   resolveCosmetics: vi.fn(() => []),
 }));
 
@@ -323,6 +325,66 @@ describe("WinModal pattern promotion", () => {
     );
     // The same pattern, not a new pick.
     expect(modal.querySelectorAll("purchase-button")).toHaveLength(1);
+  });
+
+  it("shows and sends the price now once a pattern's sale has ended", async () => {
+    // A catalog cached from before the sale ended still says 150/600; the
+    // server charges the list price, as the Store would show it.
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    vi.mocked(resolveCosmetics).mockReturnValue([
+      {
+        type: "pattern",
+        cosmetic: {
+          name: "aurora",
+          pattern: "AAAAAA",
+          product: null,
+          priceHard: 150,
+          listPriceHard: 250,
+          priceSoft: 600,
+          listPriceSoft: 1000,
+          promotion: {
+            id: "1",
+            name: "Flash",
+            percentOff: 40,
+            endsAt: new Date(Date.now() - 1000).toISOString(),
+          },
+          rarity: "rare",
+        } as never,
+        colorPalette: null,
+        relationship: "purchasable",
+        key: "pattern:aurora",
+      },
+    ]);
+
+    modal = document.createElement("win-modal") as WinModal;
+    Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+      rand: 0.75,
+      isWin: true,
+    });
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    const button = modal.querySelector<PurchaseButton>("purchase-button")!;
+    expect(button.priceHard).toBe(250);
+    expect(button.priceSoft).toBe(1000);
+    await button.onPurchaseHard?.();
+    await button.onPurchaseSoft?.();
+    const resolved = expect.objectContaining({ key: "pattern:aurora" });
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      resolved,
+      "hard",
+      { kind: "post_game" },
+      250,
+    );
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      resolved,
+      "soft",
+      { kind: "post_game" },
+      1000,
+    );
   });
 
   it("draws the first offer from a catalog that landed while it loaded", async () => {
