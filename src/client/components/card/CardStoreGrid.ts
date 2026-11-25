@@ -211,6 +211,12 @@ export class CardStoreGrid extends LitElement {
     );
   }
 
+  /** Closes the large preview, if one is open (the Store closing: it hides
+   * without removing this grid, and an open preview keeps its Tab trap). */
+  closePreview(): void {
+    this.previewing = null;
+  }
+
   private renderPreview() {
     const entry = this.previewing;
     if (entry === null) return nothing;
