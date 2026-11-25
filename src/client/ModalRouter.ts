@@ -210,6 +210,14 @@ class ModalRouter {
     }
   }
 
+  /** A page route that never opened (its load failed, or the URL moved on
+   * first) isn't a page under anything: a popup's close never names it. */
+  private forgetUnopenedPage(name: string, entry: RegistryEntry): void {
+    if (this.page !== name) return;
+    if (isOpenModal(document.querySelector(entry.tag))) return;
+    this.page = null;
+  }
+
   /** A popup closed: a page still open under it is the one the router
    * tracks again. */
   private backToPage(closed: string): void {
@@ -272,6 +280,7 @@ class ModalRouter {
       if (this.currentName === name) {
         this.currentName = null;
       }
+      this.forgetUnopenedPage(name, entry);
       return;
     }
     await customElements.whenDefined(entry.tag);
@@ -284,6 +293,7 @@ class ModalRouter {
       if (this.currentName === name) {
         this.currentName = null;
       }
+      this.forgetUnopenedPage(name, entry);
       return;
     }
 

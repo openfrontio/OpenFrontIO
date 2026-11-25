@@ -314,6 +314,22 @@ describe("Inventory: unsaved card changes guard", () => {
       expect(window.location.hash).toContain("modal=inventory");
     });
 
+    it("a page whose route the URL left before it opened isn't named again when a popup closes", async () => {
+      document.body.appendChild(document.createElement("guard-test-popup"));
+      modalRouter.register("popup", { tag: "guard-test-popup" });
+      // Nothing routed yet (an earlier test's modal would be asked first).
+      Object.assign(modalRouter, { currentName: null, page: null });
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      // The URL moves on to a popup before the Store has loaded.
+      history.replaceState(null, "", "/#modal=popup");
+      modalRouter.routeFromHash();
+      await vi.waitFor(() => expect(popupOpens.length).toBeGreaterThan(0));
+      await settle(modal);
+      modalRouter.syncClosed("popup");
+      expect(window.location.hash).toBe("");
+    });
+
     // The app's own showPage (Navigation), which closes the page shown
     // before it opens the one asked for.
     describe("with the real showPage", () => {
