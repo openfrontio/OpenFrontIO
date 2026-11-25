@@ -15,7 +15,11 @@ import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { findClosestBy } from "@openfront/engine-lib/Util";
-import { EventBus } from "@openfront/shared/EventBus";
+import {
+  EventBus,
+  type EventConstructor,
+  type GameEvent,
+} from "@openfront/shared/EventBus";
 import { GameMapLoader } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
@@ -124,6 +128,12 @@ export interface LobbyConfig {
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
+  // Optional fallback to mint a fresh Turnstile token when an initial
+  // turnstileToken: null join is rejected for missing/failed Turnstile.
+  refreshTurnstileToken?: (signal: AbortSignal) => Promise<string | null>;
+  // Notified at most once per joinLobby session when the server admits the
+  // player while lobbyConfig.turnstileToken is non-empty.
+  onTurnstileTokenAdmitted?: () => void;
 }
 
 export interface JoinLobbyResult {
@@ -153,12 +163,27 @@ export function joinLobby(
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
+  // Set once this lobby has been left, so a load that was still pending
+  // doesn't start a runner for it.
+  let lobbyStopped = false;
+  let turnstileTokenAdmittedNotified = false;
+  const notifyTurnstileTokenAdmitted = () => {
+    if (
+      !turnstileTokenAdmittedNotified &&
+      typeof lobbyConfig.turnstileToken === "string" &&
+      lobbyConfig.turnstileToken.length > 0
+    ) {
+      turnstileTokenAdmittedNotified = true;
+      lobbyConfig.onTurnstileTokenAdmitted?.();
+    }
+  };
 
   const onconnect = async () => {
     // Drop the tag if the ownership check failed; the server re-checks anyway.
     if (lobbyConfig.clanTagCheck !== undefined) {
       lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
     }
+    if (lobbyStopped) return;
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     void transport.joinGame();
@@ -229,6 +254,7 @@ export function joinLobby(
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       rememberAdmitted(message.lobby.gameID);
+      notifyTurnstileTokenAdmitted();
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Kept past game start for the in-game level badges.
       rememberLobbyRoster(
@@ -292,6 +318,7 @@ export function joinLobby(
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
       rememberAdmitted(lobbyConfig.gameID);
+      notifyTurnstileTokenAdmitted();
       resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
@@ -303,12 +330,21 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
+        () => lobbyStopped,
       )
         .then((r) => {
+          if (lobbyStopped) {
+            // The lobby was left while this was loading. Dispose the runner
+            // without starting it.
+            r?.stop();
+            return;
+          }
+          if (!r) return;
           currentGameRunner = r;
           r.start();
         })
         .catch((e) => {
+          if (lobbyStopped) return;
           console.error("error creating client game", e);
 
           currentGameRunner = null;
@@ -450,6 +486,7 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
+      lobbyStopped = true;
       if (currentGameRunner) {
         currentGameRunner.stop();
         currentGameRunner = null;
@@ -698,7 +735,8 @@ async function createClientGame(
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
   mapLoader: GameMapLoader,
-): Promise<ClientGameRunner> {
+  isStopped?: () => boolean,
+): Promise<ClientGameRunner | undefined> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
@@ -718,6 +756,7 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMapSize,
     );
   }
+  if (isStopped?.()) return;
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
@@ -726,8 +765,23 @@ async function createClientGame(
     clientID,
     lobbyConfig.snapshot,
   );
-  await worker.initialize();
-  await atlasDataLoad;
+  try {
+    await worker.initialize();
+    if (isStopped?.()) {
+      void atlasDataLoad.catch(() => {});
+      worker.cleanup();
+      return;
+    }
+    await atlasDataLoad;
+  } catch (e) {
+    void atlasDataLoad.catch(() => {});
+    worker.cleanup();
+    throw e;
+  }
+  if (isStopped?.()) {
+    worker.cleanup();
+    return;
+  }
   const gameView = new GameView(
     worker,
     config,
@@ -959,6 +1013,8 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private hasStarted = false;
+  private isStopped = false;
 
   private turnsSeen = 0;
   // True from a (re)join request until the server's start message answers it.
@@ -968,8 +1024,10 @@ export class ClientGameRunner {
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
+  private connectionCheckTimeout: ReturnType<typeof setTimeout> | null = null;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
+  private eventUnsubscribers: Array<() => void> = [];
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -1008,47 +1066,45 @@ export class ClientGameRunner {
     return !!this.myPlayer?.isAlive();
   }
 
+  private onBus<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ): void {
+    this.eventBus.on(eventType, handler);
+    this.eventUnsubscribers.push(() => this.eventBus.off(eventType, handler));
+  }
+
   public start() {
+    if (this.hasStarted || this.isActive || this.isStopped) return;
+    this.hasStarted = true;
+
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
     this.metrics?.start();
-    setTimeout(() => {
+    this.connectionCheckTimeout = setTimeout(() => {
+      this.connectionCheckTimeout = null;
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
         1000,
       );
     }, 20000);
 
-    this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
-    this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
-    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
-    this.eventBus.on(
-      DoBoatAttackEvent,
-      this.doBoatAttackUnderCursor.bind(this),
+    this.onBus(MouseUpEvent, (e) => this.inputEvent(e));
+    this.onBus(MouseMoveEvent, (e) => this.onMouseMove(e));
+    this.onBus(AutoUpgradeEvent, (e) => this.autoUpgradeEvent(e));
+    this.onBus(DoBoatAttackEvent, (e) => this.doBoatAttackUnderCursor(e));
+    this.onBus(DoGroundAttackEvent, () => this.doGroundAttackUnderCursor());
+    this.onBus(DoRetaliateAttackEvent, () =>
+      this.doRetaliateAttackMostRecent(),
     );
-    this.eventBus.on(
-      DoGroundAttackEvent,
-      this.doGroundAttackUnderCursor.bind(this),
+    this.onBus(DoRequestAllianceEvent, (e) =>
+      this.doRequestAllianceUnderCursor(e),
     );
-    this.eventBus.on(
-      DoRetaliateAttackEvent,
-      this.doRetaliateAttackMostRecent.bind(this),
-    );
-    this.eventBus.on(
-      DoRequestAllianceEvent,
-      this.doRequestAllianceUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoBreakAllianceEvent,
-      this.doBreakAllianceUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoTargetPlayerEvent,
-      this.doTargetPlayerUnderCursor.bind(this),
-    );
+    this.onBus(DoBreakAllianceEvent, (e) => this.doBreakAllianceUnderCursor(e));
+    this.onBus(DoTargetPlayerEvent, (e) => this.doTargetPlayerUnderCursor(e));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -1235,6 +1291,15 @@ export class ClientGameRunner {
   }
 
   public stop() {
+    this.isStopped = true;
+    if (this.connectionCheckTimeout !== null) {
+      clearTimeout(this.connectionCheckTimeout);
+      this.connectionCheckTimeout = null;
+    }
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
     // Detach the input handler's window/canvas listeners and its EventBus
@@ -1245,11 +1310,13 @@ export class ClientGameRunner {
     // disposals around it.
     this.input.destroy();
     this.disposeRenderer?.();
+    // Terminate the worker even if the runner never started (a lobby left while
+    // it was loading), otherwise nothing else would ever stop it. Idempotent.
+    this.worker.cleanup();
     if (!this.isActive) return;
 
     this.isActive = false;
     this.metrics?.stop();
-    this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);

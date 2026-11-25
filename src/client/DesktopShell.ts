@@ -12,6 +12,16 @@ export function isDesktopShell(): boolean {
   return typeof window !== "undefined" && window.openfrontDesktop !== undefined;
 }
 
+/**
+ * True inside the Steam (Electron) shell only: its preload exposes the `steam`
+ * namespace, whether or not a Steam client is running.
+ */
+export function isSteamShell(): boolean {
+  if (typeof window === "undefined") return false;
+  const desktop = window.openfrontDesktop as { steam?: unknown } | undefined;
+  return desktop?.steam !== undefined;
+}
+
 // The shell's own version, distinct from the game version this client was
 // built from. Narrowed locally rather than re-declaring the global -- see
 // SteamSDK.ts for why (TS2717).

@@ -929,6 +929,7 @@
     "protocol_error": "The connection was corrupted.",
     "ranked_limit_reached": "You are out of free ranked matches for today.",
     "turnstile_failed": "The bot check failed. Please reload the page and try again.",
+    "turnstile_pass_required": "Your verification pass expired. Please complete the bot check and try again.",
     "unknown": "The server closed the connection.",
     "wrong_worker": "This connection reached the wrong server process. Please reload the page and try again."
   },
@@ -1222,6 +1223,7 @@
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
     },
+    "turnstile_challenge_label": "Verification required",
     "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
   "events_display": {
@@ -2840,6 +2842,11 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
+  },
+  "steam_awards": {
+    "cta": "Nominate",
+    "desc": "Nominate OpenFront for the Just 5 More Minutes award. It takes ten seconds. Nominations close 30 November.",
+    "title": "Steam Awards"
   },
   "steam_grant": {
     "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
