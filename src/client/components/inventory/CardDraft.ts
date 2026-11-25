@@ -560,18 +560,17 @@ export class CardEditor {
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
     this.flares = userMe?.player.flares ?? [];
-    if (!hadChanges) {
+    if (this.sending !== null) {
+      // A save in flight: the draft is left as it is, even with no changes
+      // against the old card (an edit back to it after Save is still an
+      // edit). store() reconciles it with what was sent, and this profile
+      // may be that save's own refresh.
+    } else if (!hadChanges) {
       this.draft = cloneDraft(this.saved);
-    } else if (
-      sameAccount &&
-      this.sending === null &&
-      this.droppedTo === null
-    ) {
+    } else if (sameAccount) {
       // The same card again, changed elsewhere (saved on another device):
       // the edits made on the old one go onto it, and what wasn't edited
       // follows it, so Save never puts back what the player didn't touch.
-      // Not while a save is in flight: store() reconciles with what it
-      // stored, and this profile may be that save's own refresh.
       this.draft = rebase(this.saved, before, this.draft);
     }
     this.emit();

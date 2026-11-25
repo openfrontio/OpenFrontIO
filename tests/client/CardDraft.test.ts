@@ -1263,6 +1263,33 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(0);
   });
 
+  it("an edit back to the old card during a save stays an edit when the save's refresh lands", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // Pacific again while it saves: the same as the old card...
+    editor.pick({ kind: "background" }, "bg_pacific");
+    // ...then the save's refresh brings Storm.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    expect(editor.draft.background).toBe("bg_pacific");
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+    expect(editor.draft.background).toBe("bg_pacific");
+    expect(editor.changeCount()).toBe(1);
+  });
+
   it("an older profile that lands during a save doesn't undo it", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
