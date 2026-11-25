@@ -825,7 +825,11 @@ export async function purchaseCosmeticInPlace(
   // commit after that. Re-read: owned now means it went through. Otherwise
   // say it couldn't be confirmed, never "you weren't charged"; a retry is
   // safe, as a committed buy answers already_owned.
+  // Only the purchasing account's profile can confirm it: one read after a
+  // sign-in elsewhere is another account's, and its owning the item says
+  // nothing about whether this purchase was charged.
   const ownsIt = (fresh: UserMeResponse) =>
+    fresh.player.publicId === userMe.player.publicId &&
     (fresh.player.flares ?? []).includes(resolved.key);
   const settleFailure = async (): Promise<InPlacePurchase> => {
     const fresh = await broadcastFreshUserMe((f) => {
