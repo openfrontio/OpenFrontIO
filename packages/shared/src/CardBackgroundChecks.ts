@@ -40,12 +40,15 @@ const FAST_PERIOD_S = 1.5;
 // right edge columns above which the loop visibly jumps.
 const SEAM_TOLERANCE = 24;
 
-/** Decoded pixels: an ImageData, or anything shaped like one. */
+/**
+ * Decoded pixels: an ImageData, or anything shaped like one, such as a
+ * decoder's Node Buffer.
+ */
 export interface CardCheckImage {
   width: number;
   height: number;
   // RGBA, 4 bytes a pixel, row by row (not premultiplied).
-  data: Uint8ClampedArray;
+  data: Uint8ClampedArray | Uint8Array;
 }
 
 export interface CardBackgroundFiles {
@@ -229,7 +232,7 @@ export function checkLayerSources(
   return issues;
 }
 
-function luma(d: Uint8ClampedArray, i: number): number {
+function luma(d: CardCheckImage["data"], i: number): number {
   return 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
 }
 

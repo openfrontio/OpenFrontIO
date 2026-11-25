@@ -199,17 +199,27 @@ export { issues, issuesDefault, parsedDefault, ok, readonlyHosts };
 import {
   checkCardBackground,
   parseCardAnimation,
+  type CardBackgroundFiles,
+  type CardIssue,
 } from "@openfront/cosmetic-preview/checks";
 
-const files: Parameters<typeof checkCardBackground>[0] = {
+const files: CardBackgroundFiles = {
   base: {
     image: { width: 1, height: 1, data: new Uint8ClampedArray(4) },
     type: "image/webp",
     bytes: 1,
   },
-  layers: [],
+  // A decoder's Node Buffer is a Uint8Array: no cast needed.
+  layers: [
+    {
+      effect: "pulse",
+      image: { width: 1, height: 1, data: new Uint8Array(4) },
+      type: "image/png",
+      bytes: 1,
+    },
+  ],
 };
-const issues = checkCardBackground(files, null, {
+const issues: CardIssue[] = checkCardBackground(files, null, {
   allowedLayerHosts: ["https://cdn.example.com"],
 });
 const parsed = parseCardAnimation({ kind: "layers", layers: [] });
@@ -296,6 +306,11 @@ checkCardBackground(files, {}, { allowedLayerHosts: "https://cdn.example.com" })
       [
         ...Object.keys(checksEntry),
         "CardAnimationResult",
+        "CardBackgroundFiles",
+        "CardCheckImage",
+        "CardEffect",
+        "CardIssue",
+        "CardIssueCode",
         "CardLayerAnimation",
         "LayerSrcOptions",
       ].sort(),

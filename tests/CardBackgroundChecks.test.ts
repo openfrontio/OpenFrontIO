@@ -499,11 +499,11 @@ describe("checkCardBackground", () => {
 
     test("a Uint8Array of pixels is accepted like a Uint8ClampedArray", () => {
       const img = image();
-      const bytes = {
+      const bytes: CardCheckImage = {
         width: W,
         height: H,
         data: new Uint8Array(img.data.buffer),
-      } as unknown as CardCheckImage;
+      };
       const issues = checkCardBackground(
         files({
           base: { image: OPAQUE_BASE, type: "image/webp", bytes: 1 },

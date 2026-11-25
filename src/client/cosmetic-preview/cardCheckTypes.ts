@@ -6,12 +6,15 @@
 
 export type CardEffect = "pulse" | "shimmer" | "flicker" | "drift";
 
-/** Decoded pixels: an ImageData, or anything shaped like one. */
+/**
+ * Decoded pixels: an ImageData, or anything shaped like one, such as a
+ * decoder's Node Buffer.
+ */
 export interface CardCheckImage {
   width: number;
   height: number;
   /** RGBA, 4 bytes a pixel, row by row. */
-  data: Uint8ClampedArray;
+  data: Uint8ClampedArray | Uint8Array;
 }
 
 export interface CardBackgroundFiles {

@@ -32,6 +32,14 @@ export declare const PREVIEW_ASSET_PATHS: readonly string[];
  */
 export const CHECKS_DTS = `import type { CardBackgroundFiles, CardEffect, CardIssue } from "./cardCheckTypes.js";
 
+export type {
+  CardBackgroundFiles,
+  CardCheckImage,
+  CardEffect,
+  CardIssue,
+  CardIssueCode,
+} from "./cardCheckTypes.js";
+
 export declare const CARD_ART_WIDTH: 2800;
 export declare const CARD_ART_HEIGHT: 400;
 export declare const MAX_SET_BYTES: number;

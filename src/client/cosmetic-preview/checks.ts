@@ -26,6 +26,15 @@ export {
   MAX_SET_BYTES,
 } from "@openfront/shared/CardBackgroundChecks";
 export type { LayerSrcOptions } from "@openfront/shared/CardBackgroundChecks";
+// The card check types, as the package root also exports them, so a server
+// can import everything it needs from this entry.
+export type {
+  CardBackgroundFiles,
+  CardCheckImage,
+  CardEffect,
+  CardIssue,
+  CardIssueCode,
+} from "./cardCheckTypes";
 
 // Unlike the game's schema, this entry also requires each layer's src to be
 // a catalogue PNG (a relative path, a file name, or an https:// link from an
