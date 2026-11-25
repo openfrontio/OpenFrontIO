@@ -821,6 +821,47 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(saveCardLoadout).not.toHaveBeenCalled();
   });
 
+  it("the old account's profile after a switch never reaches the Inventory; the new one's does", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    const shown = () =>
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse;
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    session.id = "account-b";
+    await settle(modal);
+    // A's profile, in place (the open Inventory's refresh path) and as a
+    // load: neither is taken.
+    const late = owner();
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: late }));
+    await settle(modal);
+    expect(shown()).not.toBe(late);
+    await modal.onUserMe(late);
+    expect(shown()).not.toBe(late);
+    // B's renders as usual.
+    const b = owner();
+    (b.player as { publicId: string }).publicId = "account-b";
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: b }));
+    await settle(modal);
+    expect(shown()).toBe(b);
+    expect(cardEditor().isSeededWith(b)).toBe(true);
+  });
+
+  it("a profile while the session's account is unknown for now is still shown", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    session.id = null;
+    const fresh = owner();
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    expect(
+      (modal as unknown as { userMeResponse: UserMeResponse | false })
+        .userMeResponse,
+    ).toBe(fresh);
+  });
+
   it("a background sign-out with the Inventory open ends signed out, not loading", async () => {
     // Main hears session-cleared first (it registers at boot) and
     // re-broadcasts the signed-out profile at once.

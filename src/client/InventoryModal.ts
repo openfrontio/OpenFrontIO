@@ -14,7 +14,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { currentPublicId, userAuth } from "./Auth";
 import "./components/baseComponents/Button";
 import { BaseModal } from "./components/BaseModal";
 import {
@@ -435,6 +435,19 @@ export class InventoryModal extends BaseModal {
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
+    // A profile of an account the session is known not to be signed in as
+    // (one that answered after a switch) is never shown, in place or as a
+    // load. An account unknown for now (a token refresh failed) isn't
+    // another account: that profile is taken as before.
+    if (userMeResponse !== false) {
+      const signedInAs = currentPublicId();
+      if (
+        signedInAs !== null &&
+        userMeResponse.player.publicId !== signedInAs
+      ) {
+        return;
+      }
+    }
     // A fresh profile while the Inventory shows a loaded one (a purchase made
     // in place broadcasts one): take it as it is, without the loading state,
     // so the Player card tab and its unsaved changes stay on screen.
