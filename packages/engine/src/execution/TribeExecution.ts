@@ -2,6 +2,7 @@ import { Structures } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   VersionedSchema,
+  zFinite,
   zNum,
   zPlayerRef,
   zRandom,
@@ -201,9 +202,9 @@ const TribeStateSchema = z.object({
   attackBehavior: VersionedSchema.nullable(),
   attackRate: zNum(),
   attackTick: zNum(),
-  triggerRatio: zNum(),
-  reserveRatio: zNum(),
-  expandRatio: zNum(),
+  triggerRatio: zFinite(),
+  reserveRatio: zFinite(),
+  expandRatio: zFinite(),
 });
 type TribeState = z.infer<typeof TribeStateSchema>;
 

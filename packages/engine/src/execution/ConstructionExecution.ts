@@ -1,5 +1,9 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { Tick, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  MAX_UPGRADE_AMOUNT,
+  Tick,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   zInt,
   zPlayerRef,
@@ -241,7 +245,8 @@ const ConstructionStateSchema = z.object({
   // Validated in init, so a pending execution may hold any number.
   tile: zInt(),
   rocketDirectionUp: z.boolean().optional(),
-  amount: zInt().optional(),
+  // As BuildUnitIntentSchema bounds it: a bomb build launches this many.
+  amount: zInt().min(1).max(MAX_UPGRADE_AMOUNT).optional(),
   structure: zRef().nullable(),
   // Unset until a structure with a build time is placed.
   ticksUntilComplete: zInt().optional(),

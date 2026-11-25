@@ -1,6 +1,7 @@
 import {
   Cell,
   Difficulty,
+  GameMode,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -47,6 +48,13 @@ function conquerRect(
 }
 
 function sendNukes(game: Game, nation: Player) {
+  nukeBehavior(game, nation).maybeSendNuke();
+  // First tick initializes the NukeExecutions, the second launches the bombs
+  game.executeNextTick();
+  game.executeNextTick();
+}
+
+function nukeBehavior(game: Game, nation: Player): NationNukeBehavior {
   const emojiBehavior = new NationEmojiBehavior(
     new PseudoRandom(1),
     game,
@@ -68,16 +76,13 @@ function sendNukes(game: Game, nation: Player) {
     emojiBehavior,
     new NationWarshipBehavior(new PseudoRandom(1), game, nation, emojiBehavior),
   );
-  new NationNukeBehavior(
+  return new NationNukeBehavior(
     new PseudoRandom(2),
     game,
     nation,
     attackBehavior,
     emojiBehavior,
-  ).maybeSendNuke();
-  // First tick initializes the NukeExecutions, the second launches the bombs
-  game.executeNextTick();
-  game.executeNextTick();
+  );
 }
 
 describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
@@ -235,6 +240,60 @@ describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
         expect(bomb.targetTile()).toBe(samTile);
       }
       expect(nation.isAlliedWith(other)).toBe(allied);
+    },
+  );
+
+  // A bomb only exists from its execution's first tick, the tick after its launch
+  it.each([0, 1])(
+    "a teammate deciding %i tick(s) after a salvo leaves that SAM to it",
+    async (ticksBetween) => {
+      const ids = ["first", "second", "human"];
+      const game = await setup(
+        "big_plains",
+        {
+          difficulty: Difficulty.Impossible,
+          gameMode: GameMode.Team,
+          playerTeams: 2,
+          disabledUnits: [UnitType.HydrogenBomb],
+        },
+        ids.map(
+          (id, i) =>
+            new PlayerInfo(
+              id,
+              id === "human" ? PlayerType.Human : PlayerType.Nation,
+              null,
+              id,
+              false,
+              null,
+              [],
+              i < 2 ? 0 : 1,
+            ),
+        ),
+        undefined,
+        RealNukeRadiusConfig,
+      );
+      const [first, second, human] = ids.map((id) => game.player(id));
+      for (const [nation, y] of [
+        [first, 0],
+        [second, 185],
+      ] as const) {
+        conquerRect(game, nation, 0, y, 15, y + 15);
+        nation.buildUnit(UnitType.MissileSilo, game.ref(5, y + 5), {});
+        nation.buildUnit(UnitType.MissileSilo, game.ref(10, y + 10), {});
+        nation.addGold(10_000_000n);
+      }
+      conquerRect(game, human, 130, 130, 170, 170);
+      const samTile = game.ref(150, 150);
+      human.buildUnit(UnitType.SAMLauncher, samTile, {});
+
+      nukeBehavior(game, first).maybeSendNuke();
+      for (let t = 0; t < ticksBetween; t++) game.executeNextTick();
+      sendNukes(game, second);
+
+      const salvo = first.units(UnitType.AtomBomb);
+      expect(salvo).toHaveLength(2);
+      for (const bomb of salvo) expect(bomb.targetTile()).toBe(samTile);
+      expect(second.units(UnitType.AtomBomb)).toHaveLength(0);
     },
   );
 

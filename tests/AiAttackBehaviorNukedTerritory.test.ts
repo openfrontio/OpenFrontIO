@@ -395,3 +395,78 @@ describe("NationAttackBehavior - nuked territory early-out", () => {
     });
   });
 });
+
+describe("NationAttackBehavior - troops kept home when taking free land", () => {
+  function withRatios(game: Game, nation: Player) {
+    const emoji = new NationEmojiBehavior(new PseudoRandom(42), game, nation);
+    return new NationAttackBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.15, // expandRatio
+      new NationAllianceBehavior(new PseudoRandom(42), game, nation, emoji),
+      emoji,
+      new NationWarshipBehavior(new PseudoRandom(42), game, nation, emoji),
+    );
+  }
+
+  it.each([
+    [Difficulty.Impossible, true, 0.3],
+    [Difficulty.Easy, true, 0.3],
+    [Difficulty.Impossible, false, 0.15],
+  ])(
+    "%s, bordering fallout: %s, keeps %d of its max troops",
+    async (difficulty, withNuke, ratio) => {
+      const { game, nation } = await setupBehavior(difficulty, {
+        withEnemy: false,
+        withNuke,
+      });
+      expect(
+        withRatios(game, nation)["reserveTroops"](game.terraNullius()),
+      ).toBeCloseTo(game.config().maxTroops(nation) * ratio);
+    },
+  );
+
+  it.each([
+    [true, false],
+    [false, true],
+  ])(
+    "with a fifth of its max troops, bordering fallout: %s, takes free land: %s",
+    async (withNuke, attacks) => {
+      const { game, nation } = await setupBehavior(Difficulty.Impossible, {
+        withEnemy: false,
+        withNuke,
+      });
+      nation.setTroops(Math.floor(game.config().maxTroops(nation) * 0.2));
+      expect(withRatios(game, nation).sendAttack(game.terraNullius())).toBe(
+        attacks,
+      );
+    },
+  );
+
+  // A high starting gold measures the expansion reserve without cities, but troops grown far
+  // past that keep what they would at the trigger ratio: 0.15 / 0.5 of them
+  it("Impossible with a high starting gold and 10x its max troops without cities keeps 30% of them", async () => {
+    const game = await setup(
+      "big_plains",
+      { difficulty: Difficulty.Impossible, startingGold: 1_000_000_000 },
+      [new PlayerInfo("nation", PlayerType.Nation, null, "nation_id")],
+    );
+    const nation = game.player("nation_id");
+    conquerRect(game, nation, 60, 60, 80, 80);
+    for (const tile of Array.from(nation.tiles()).slice(0, 4)) {
+      const city = nation.buildUnit(UnitType.City, tile, {});
+      for (let i = 0; i < 20; i++) city.increaseLevel();
+    }
+    nation.setTroops(game.config().maxTroopsWithoutCities(nation) * 10);
+    expect(game.config().maxTroops(nation)).toBeGreaterThan(
+      nation.troops() * 2,
+    );
+
+    expect(
+      withRatios(game, nation)["reserveTroops"](game.terraNullius()),
+    ).toBeCloseTo(nation.troops() * 0.3);
+  });
+});

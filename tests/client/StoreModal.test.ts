@@ -1451,6 +1451,50 @@ describe("StoreModal cosmetic browser", () => {
     expect(card(modal, flag.key)?.state).toBe("focused");
   });
 
+  it("hides the Card sub-tab when only held-back taunts and titles are sold", async () => {
+    const item = { product: null, rarity: "rare" };
+    const heldBackOnly = {
+      patterns: {},
+      flags: {},
+      cardTitles: {
+        veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
+      },
+      taunts: {
+        salute: {
+          ...item,
+          name: "salute",
+          tauntKind: "icon",
+          preset: "salute",
+          priceSoft: 800,
+        },
+      },
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue(
+      heldBackOnly as unknown as Cosmetics,
+    );
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(modal.querySelector("[data-store-subtab='card']")).toBeNull();
+
+    store?.remove();
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      ...heldBackOnly,
+      cardBackgrounds: {
+        bg_frontline: {
+          ...item,
+          name: "bg_frontline",
+          url: "/bg.webp",
+          priceHard: 240,
+        },
+      },
+    } as unknown as Cosmetics);
+    const withBackground = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(
+        withBackground.querySelector("[data-store-subtab='card']"),
+      ).not.toBeNull(),
+    );
+  });
+
   it("styles cosmetic sub-tabs like the modal's own tab bar", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     const subTab = [
@@ -2752,6 +2796,50 @@ describe("store analytics", () => {
     // Reopened: watched again, from a fresh interval.
     modal.open({ tab: "cosmetics", sub: "sale" });
     await vi.waitFor(() => expect(watched()).toBe(true));
+    resetExperimentsForTest();
+  });
+
+  // Featured leads with the deal hero (data-featured-section="deal"), the
+  // same flash card the On sale tab shows: it is watched for an exposure too.
+  it("watches the Featured deal hero for an exposure", async () => {
+    resetExperimentsForTest();
+    const flashSale = {
+      id: "40",
+      name: "Hot sale",
+      percentOff: 35,
+      endsAt: new Date(Date.now() + 3_600_000).toISOString(),
+      kind: "flash" as const,
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      promotions: [flashSale],
+    } as unknown as Cosmetics);
+    resolvedCatalog = [
+      red,
+      {
+        ...red,
+        cosmetic: {
+          ...pattern,
+          name: "zap",
+          priceHard: 52,
+          listPriceHard: 80,
+          promotion: flashSale,
+        } as never,
+        key: "pattern:zap:red",
+      },
+    ];
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    const modal = store;
+    modal.open();
+    await vi.waitFor(() => {
+      const hero = modal.querySelector('[data-featured-section="deal"]');
+      expect(hero).toBeTruthy();
+      expect(FakeIO.instances.some((io) => io.observed.has(hero!))).toBe(true);
+    });
     resetExperimentsForTest();
   });
 

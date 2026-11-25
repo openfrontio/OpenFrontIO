@@ -74,6 +74,7 @@ import {
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
+import type { CardItemType } from "./components/card/CardItems";
 import { ensureServerList } from "./ServerList";
 import { UserSettings } from "./UserSettings";
 
@@ -1373,7 +1374,7 @@ function priceChangedRefusal(
 // only spend path that takes soft currency. Any error means no debit and no
 // grant. Callers invalidate the cached /users/@me on success.
 export async function purchaseWithCurrency(
-  cosmeticType: "pattern" | "skin" | "flag" | "crown" | "effect",
+  cosmeticType: "pattern" | "skin" | "flag" | "crown" | "effect" | CardItemType,
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,

@@ -38,6 +38,12 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
+import {
+  cardItemName,
+  type CardItem,
+  type CardItemType,
+  isCardItemType,
+} from "./components/card/CardItems";
 import { isDesktopShell } from "./DesktopShell";
 import {
   COSMETICS_CHANGED,
@@ -55,10 +61,13 @@ import {
   startPlayPurchase,
   startPurchase,
 } from "./Payments";
+import { currentPrice } from "./SalePrice";
 import { storePlatform } from "./StoreTracking";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
+
+export { currentPrice } from "./SalePrice";
 
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
@@ -135,6 +144,23 @@ export interface InsufficientCurrency {
 
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
 export type PurchaseResult = InsufficientCurrency | void;
+
+let purchaseReloadStarted = false;
+
+/**
+ * True once a purchase has started reloading the page. `purchaseCosmetic`
+ * calls `location.reload()` and then returns, so the caller runs again
+ * before the page unloads: this is how it tells that apart from a purchase
+ * that ended without a reload (failed, cancelled, or not enough currency).
+ */
+export function purchaseReloading(): boolean {
+  return purchaseReloadStarted;
+}
+
+function reloadAfterPurchase(): void {
+  purchaseReloadStarted = true;
+  window.location.reload();
+}
 
 export interface CosmeticPurchaseReturnActions {
   strip(): void;
@@ -587,7 +613,7 @@ export async function purchaseCosmetic(
       await showInGameAlert(
         translateText("store.change_tier_success", { tier: targetName }),
       );
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     }
   }
@@ -695,6 +721,8 @@ export async function purchaseCosmetic(
     let itemName: string;
     if (resolved.type === "flag") {
       itemName = translateCosmetic("flags", c.name);
+    } else if (isCardItemType(resolved.type)) {
+      itemName = cardItemName(resolved.type, c as CardItem);
     } else if (resolved.type === "crown") {
       itemName = translateCosmetic("crowns", c.name);
     } else {
@@ -730,7 +758,8 @@ export async function purchaseCosmetic(
     | "skin"
     | "flag"
     | "crown"
-    | "effect";
+    | "effect"
+    | CardItemType;
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -792,7 +821,7 @@ export async function purchaseCosmetic(
         // so re-dispatching the profile first would be dead work.
         await showInGameAlert(translateText("store.already_owned"));
         invalidateUserMe();
-        window.location.reload();
+        reloadAfterPurchase();
         return;
       default:
         await showInGameAlert(translateText("store.purchase_failed"));
@@ -803,7 +832,7 @@ export async function purchaseCosmetic(
     purchaseSuccessMessage(c.name, price, result.amount, method),
   );
   invalidateUserMe();
-  window.location.reload();
+  reloadAfterPurchase();
 }
 
 /**
@@ -907,7 +936,7 @@ async function purchasePack(
       ),
     );
     invalidateUserMe();
-    window.location.reload();
+    reloadAfterPurchase();
     return;
   }
   switch (result.code) {
@@ -953,7 +982,7 @@ async function purchasePack(
         }),
       );
       invalidateUserMe();
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     case "unavailable":
       await showInGameAlert(translateText("store.pack_unavailable"));
@@ -994,39 +1023,6 @@ function simpleHash(str: string): string {
     hash = hash & hash;
   }
   return hash.toString(36);
-}
-
-/**
- * An item's price in one currency as the store shows and the server charges
- * it now. While the item's own sale runs that is the catalog price (the sale
- * price); once the sale's endsAt has passed it is the list price, even if the
- * catalog in hand predates the end. The store's buttons and the purchase
- * balance check both read this, so they never disagree.
- */
-export function currentPrice(
-  item: {
-    priceHard?: number;
-    priceSoft?: number;
-    listPriceHard?: number;
-    listPriceSoft?: number;
-    promotion?: { endsAt: string };
-  },
-  currency: "hard" | "soft",
-): number | undefined {
-  const price = currency === "hard" ? item.priceHard : item.priceSoft;
-  const listPrice =
-    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
-  return saleHasEnded(item) ? (listPrice ?? price) : price;
-}
-
-/** Whether the item's own sale has ended (its endsAt has passed). */
-export function saleHasEnded(item: {
-  promotion?: { endsAt: string };
-}): boolean {
-  return (
-    item.promotion !== undefined &&
-    new Date(item.promotion.endsAt).getTime() <= Date.now()
-  );
 }
 
 /**
@@ -1105,6 +1101,16 @@ export function refreshStaleCosmetics(now: number = Date.now()): boolean {
   }
   invalidateCosmetics();
   return true;
+}
+
+/**
+ * Whether the cached catalog is missing or older than COSMETICS_STALE_MS, so
+ * the next open refetches it. Unlike refreshStaleCosmetics, drops nothing.
+ */
+export function cosmeticsCacheIsStale(now: number = Date.now()): boolean {
+  return (
+    __cosmeticsCache === null || now - __cosmeticsFetchedAt > COSMETICS_STALE_MS
+  );
 }
 
 export type TierListingRail = "steam" | "web";
@@ -1517,7 +1523,8 @@ export type ResolvedCosmetic = {
     | "effect"
     | "pack"
     | "cosmeticPack"
-    | "subscription";
+    | "subscription"
+    | CardItemType;
   cosmetic:
     | Pattern
     | Skin
@@ -1527,6 +1534,7 @@ export type ResolvedCosmetic = {
     | Pack
     | CosmeticPack
     | Subscription
+    | CardItem
     | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";

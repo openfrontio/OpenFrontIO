@@ -18,10 +18,12 @@ import {
   BOAT_INDEX_LOST,
   BOAT_INDEX_SENT,
   BoatUnit,
+  BoatUnitSchema,
   BoatUnitType,
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
+  BombUnitSchema,
   DONATION_BROKE_GOLD_THRESHOLD,
   DONATION_INDEX_GOLD_RECV,
   DONATION_INDEX_GOLD_RECV_BROKE,
@@ -38,6 +40,7 @@ import {
   OTHER_INDEX_DESTROY,
   OTHER_INDEX_LOST,
   OTHER_INDEX_UPGRADE,
+  OtherUnitSchema,
   OtherUnitType,
   PLAYER_INDEX_BOT,
   PLAYER_INDEX_HUMAN,
@@ -597,13 +600,48 @@ export class StatsImpl implements Stats {
   lobbyFillTime(fillTimeMs: number): void {}
 }
 
+// PlayerStatsSchema as StatsImpl holds it. The stats code adds to these, so a
+// string or a number in place of a bigint would throw on a later tick.
+const statList = () => z.array(z.bigint()).min(1);
+const LivePlayerStats = z
+  .object({
+    attacks: statList().optional(),
+    betrayals: z.bigint().optional(),
+    killedAt: z.bigint().optional(),
+    killedBy: z.string().nullable().optional(),
+    deathPosition: z.number().int().nonnegative().optional(),
+    finalTiles: z.bigint().optional(),
+    kills: z
+      .array(z.object({ victim: z.string(), tick: z.bigint() }))
+      .optional(),
+    conquests: statList().optional(),
+    boats: z.partialRecord(BoatUnitSchema, statList()).optional(),
+    bombs: z.partialRecord(BombUnitSchema, statList()).optional(),
+    gold: statList().optional(),
+    units: z.partialRecord(OtherUnitSchema, statList()).optional(),
+    tiles: statList().optional(),
+    alliances: statList().optional(),
+    peakTroops: z.bigint().optional(),
+    donations: statList().optional(),
+    spawnTile: z.number().int().nonnegative().optional(),
+  })
+  .optional();
+
 export const StatsSnapshot = snapshotType({
   name: "Stats",
   version: 1,
   schema: z.object({
     // Stored as the live AllPlayersStats tree (bigints and all). Its shape is
     // versioned by StatsSchemas, which game records already keep readable.
-    data: z.record(z.string(), z.unknown()),
+    // Checked against that shape, as live stats (bigints, not the strings
+    // game records may hold), but kept as stored so key order survives.
+    data: z
+      .record(z.string(), z.unknown())
+      .refine(
+        (d) =>
+          Object.values(d).every((p) => LivePlayerStats.safeParse(p).success),
+        "malformed player stats",
+      ),
   }),
 });
 export type StatsState = z.infer<typeof StatsSnapshot.schema>;

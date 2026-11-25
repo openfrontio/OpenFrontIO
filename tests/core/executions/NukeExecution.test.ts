@@ -667,3 +667,56 @@ describe("NukeExecution kill credit", () => {
     expect(warshipsDestroyed(g, launcher)).toBe(1n);
   });
 });
+
+describe("NukeExecution alliance break threshold", () => {
+  // Uses the real nukeAllianceBreakThreshold. Inner and outer radii are equal,
+  // so every tile in the blast weighs 1.
+  async function allianceWithTiles(
+    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+    tileCount: number,
+  ) {
+    const g = await setup("big_plains", { infiniteGold: true }, [
+      new PlayerInfo("launcher", PlayerType.Human, "c1", "launcher_id"),
+      new PlayerInfo("ally", PlayerType.Human, "c2", "ally_id"),
+    ]);
+    (g.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 50,
+      outer: 50,
+    }));
+    const launcher = g.player("launcher_id");
+    const ally = g.player("ally_id");
+    launcher.conquer(g.ref(1, 1));
+    launcher.buildUnit(UnitType.MissileSilo, g.ref(1, 1), {});
+    launcher.createAllianceRequest(ally)!.accept();
+
+    // A 20-wide strip around the target, all within the blast radius.
+    for (let i = 0; i < tileCount; i++) {
+      ally.conquer(g.ref(90 + (i % 20), 90 + Math.floor(i / 20)));
+    }
+
+    g.addExecution(
+      new NukeExecution(nukeType, launcher, g.ref(100, 100), null),
+    );
+    g.executeNextTick(); // init
+    g.executeNextTick(); // launch
+    return { launcher, ally };
+  }
+
+  test.each([
+    [UnitType.AtomBomb, 150],
+    [UnitType.HydrogenBomb, 1000],
+  ] as const)("%s keeps the alliance at %i allied tiles", async (type, n) => {
+    const { launcher, ally } = await allianceWithTiles(type, n);
+    expect(launcher.isAlliedWith(ally)).toBe(true);
+    expect(launcher.isTraitor()).toBe(false);
+  });
+
+  test.each([
+    [UnitType.AtomBomb, 151],
+    [UnitType.HydrogenBomb, 1001],
+  ] as const)("%s breaks the alliance at %i allied tiles", async (type, n) => {
+    const { launcher, ally } = await allianceWithTiles(type, n);
+    expect(launcher.isAlliedWith(ally)).toBe(false);
+    expect(launcher.isTraitor()).toBe(true);
+  });
+});

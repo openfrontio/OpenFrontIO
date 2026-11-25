@@ -835,6 +835,9 @@ async function doSteamLogin(ticket: string): Promise<void> {
 let __reauthPromise: Promise<UserAuth> | null = null;
 export async function reauthAfterPortalChange(): Promise<UserAuth> {
   __reauthPromise ??= (async () => {
+    // Before the old token goes: whatever is queued for the old account (the
+    // card save queue) must not go out under the new one.
+    document.dispatchEvent(new CustomEvent("session-reauth"));
     try {
       if (__refreshPromise) {
         await __refreshPromise.catch(() => {});
@@ -920,6 +923,24 @@ export async function sendMagicLink(email: string): Promise<boolean> {
   } catch (error) {
     console.warn("Error sending recovery email:", error);
     return false;
+  }
+}
+
+/**
+ * The publicId of the account the session is signed in as: the one
+ * /users/@me reported for this JWT's subject (Api records it only while
+ * that session is the active one, and it's dropped when the subject
+ * changes). Null with no session, or before it's known.
+ */
+export function currentPublicId(): string | null {
+  const jwt = __jwt;
+  if (jwt === null) return null;
+  try {
+    const raw = decodeJwt(jwt).sub;
+    if (raw === undefined) return null;
+    return getCachedPublicId(base64urlToUuid(raw));
+  } catch {
+    return null;
   }
 }
 
