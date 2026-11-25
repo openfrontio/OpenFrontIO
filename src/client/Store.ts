@@ -64,6 +64,7 @@ import {
   ResolvedCosmetic,
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
+import { COSMETICS_CHANGED, exposureWatcher } from "./Experiments";
 import {
   fetchPlayPrices,
   priceStringToCents,
@@ -106,6 +107,12 @@ function isFeaturedSection(
     )
   );
 }
+
+// The flash deal's card wherever the store shows it, for the store experiment
+// exposure: the On sale tab's hero, or Featured's deal hero (which is placed
+// as featured/deal, not flash, so it carries a marker of its own). Not the
+// deal slot's owned strip or rollover placeholder, which show no price.
+const FLASH_EXPOSURE_SELECTOR = "[data-store-flash], [data-featured-deal-hero]";
 
 // How many cards a Featured row holds: one row at every width, 2 cards on
 // phones, 3 from Tailwind's sm and 4 from its xl. Without matchMedia, 4.
@@ -360,6 +367,7 @@ export class StoreModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeEvent);
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     // The store loads on demand, usually after Main's broadcast went out.
     const last = lastUserMeResponse();
     if (last !== null) void this.onUserMe(last.response);
@@ -392,6 +400,7 @@ export class StoreModal extends BaseModal {
 
   disconnectedCallback() {
     document.removeEventListener("userMeResponse", this.onUserMeEvent);
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.removeEventListener(
       "open-cosmetic-preview",
       this.onOpenCosmeticPreview,
@@ -420,6 +429,7 @@ export class StoreModal extends BaseModal {
   protected updated(changed: PropertyValues) {
     super.updated(changed);
     this.observeProducts();
+    this.observeFlashExposure();
     // The cards are nested components, so their purchase buttons only exist
     // (and only have positions) after their own updates commit — a frame later.
     alignPurchaseRows(this);
@@ -428,6 +438,40 @@ export class StoreModal extends BaseModal {
       this.alignFrame = null;
       alignPurchaseRows(this);
     });
+  }
+
+  /**
+   * The catalog was refetched (the player's store experiment group landed or
+   * changed, or a purchase met a changed price): show it. The open store
+   * keeps the object it rendered, so this is what moves it on. Analytics are
+   * untouched: no new page view, so no impression is counted twice.
+   */
+  private onCosmeticsChanged = () => {
+    void this.loadCatalog().then(() => {
+      this.selectVisible(this.groupsForTab(this.activeTab));
+      this.refreshOpenedPack();
+      this.requestUpdate();
+    });
+  };
+
+  /**
+   * An open bundle dialog shows (and buys at) the price of the catalog it was
+   * opened from: move it onto the catalog now shown, or close it if the
+   * bundle is no longer there.
+   */
+  private refreshOpenedPack(): void {
+    const opened = this.openedPack;
+    if (opened === null) return;
+    const fresh = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).find(
+      (resolved) =>
+        resolved.type === "cosmeticPack" && resolved.key === opened.key,
+    );
+    if (fresh === undefined) this.closePack();
+    else this.openedPack = fresh;
   }
 
   private onUserMeEvent = (event: Event) => {
@@ -806,6 +850,26 @@ export class StoreModal extends BaseModal {
     }
   }
 
+  /**
+   * The flash deal's card, for the store experiment exposure (Experiments.ts),
+   * which has its own trigger apart from the analytics above. Only purchasable
+   * items reach the hero, so the card always shows a price.
+   */
+  private observeFlashExposure(): void {
+    const flash = this.querySelector(FLASH_EXPOSURE_SELECTOR);
+    if (flash !== null && this.isModalOpen) {
+      // Only once the card shows the catalog now in use: in the Android app
+      // this.cosmetics is swapped in after Play's prices arrive, which can
+      // be after the new group's catalog (and its generation) landed.
+      exposureWatcher.observe(
+        flash,
+        "store_flash",
+        () =>
+          this.cosmetics !== null && this.cosmetics === getCachedCosmetics(),
+      );
+    }
+  }
+
   /** The tile showing this item, or one of its variants. */
   private productFor(resolved: ResolvedCosmetic): Element | null {
     for (const el of this.querySelectorAll<HTMLElement>(
@@ -1033,8 +1097,18 @@ export class StoreModal extends BaseModal {
         return undefined;
       }
     };
+    // With the price this button shows: the server refuses to charge more.
     const purchase = (method: "dollar" | "hard" | "soft") =>
-      purchaseCosmetic(resolved, method, placement());
+      purchaseCosmetic(
+        resolved,
+        method,
+        placement(),
+        method === "hard"
+          ? hard?.price
+          : method === "soft"
+            ? soft?.price
+            : undefined,
+      );
     // Currency packs check out inline (wallet button / in-page card form)
     // when the display price parses; anything else — including subscriptions,
     // which are recurring and not a PaymentIntent — keeps the redirect flow,
@@ -1257,6 +1331,7 @@ export class StoreModal extends BaseModal {
     if (featured) {
       return html`<section
         data-featured-section="deal"
+        data-featured-deal-hero
         class="mx-3 mt-3 flex min-h-56 flex-row items-center gap-4 rounded-xl border border-aquarius/50 bg-gradient-to-br from-deep-navy via-deep-navy to-malibu-blue/50 p-4 shadow-[0_0_28px_rgba(63,169,245,0.25)] sm:min-h-72 sm:items-stretch"
       >
         <div class="w-32 shrink-0 sm:w-52">${card}</div>
@@ -1964,6 +2039,10 @@ export class StoreModal extends BaseModal {
 
   protected onClose(): void {
     this.tracker?.flush();
+    // The store hides rather than disconnects: stop the flash card's exposure
+    // clock now, before the observer reports it hidden. Reopening re-observes.
+    const flash = this.querySelector(FLASH_EXPOSURE_SELECTOR);
+    if (flash !== null) exposureWatcher.unobserve(flash);
     this.dealRollover = null;
     this.shownFlashPromotionId = null;
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);

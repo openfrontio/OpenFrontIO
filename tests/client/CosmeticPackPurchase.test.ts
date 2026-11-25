@@ -103,7 +103,12 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
     await expect(purchaseCosmetic(starter, "hard")).resolves.toBeUndefined();
 
-    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined);
+    // The price the card showed goes along, so the server refuses rather
+    // than charge more (409 price_changed).
+    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined, {
+      expectedAmount: 250,
+      platform: "web",
+    });
     expect(showInGameAlert).toHaveBeenCalledWith("bought Starter Pack");
     expect(invalidateUserMe).toHaveBeenCalled();
     expect(reloadMock).toHaveBeenCalled();
@@ -195,6 +200,92 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(result).toMatchObject({ shortfall: 50 });
   });
 
+  it("checks the balance against the shown sale price after the sale ends", async () => {
+    // The button showed 150; the sale has since ended (250 now). A balance of
+    // 200 covers what was shown, so the server gets to answer price_changed
+    // instead of the player being asked to top up for a price never shown.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(200));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: false,
+      code: "other",
+    } as never);
+    const endedSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(endedSale, "hard", undefined, 150);
+
+    expect(result).not.toMatchObject({ canTopUp: true });
+    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined, {
+      expectedAmount: 150,
+      platform: "web",
+    });
+  });
+
+  it("quotes the shortfall from the current price, not the lower shown one", async () => {
+    // Shown 150, the sale has ended (250 now), balance 100: topping up 50
+    // would only end in price_changed and another shortfall.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(100));
+    const endedSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(endedSale, "hard", undefined, 150);
+
+    expect(result).toMatchObject({ shortfall: 150 });
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+  });
+
+  it("does not block on a higher shown price once a sale has started", async () => {
+    // Shown at 250 before the sale; it now costs 150, which 200 covers.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(200));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: false,
+      code: "other",
+    } as never);
+    const runningSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(runningSale, "hard", undefined, 250);
+
+    expect(result).not.toMatchObject({ canTopUp: true });
+    expect(purchaseCosmeticPack).toHaveBeenCalled();
+  });
+
   it("re-reads the balance when the server rejects for insufficient funds", async () => {
     vi.mocked(getUserMe)
       .mockResolvedValueOnce(userWithHard(300))
@@ -269,6 +360,23 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
     expect(showInGameAlert).toHaveBeenCalledWith("debt 100");
     // Not a shortfall with a top-up button: it cannot clear a debt.
+    expect(result).toBeUndefined();
+  });
+
+  // Shown at 150, now 250: a re-read of 200 covers what the player agreed to
+  // pay, so there is no shortfall to quote (it used to read "-50 more").
+  it("judges the re-read against the shown price, not the current one", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWithHard(300))
+      .mockResolvedValueOnce(userWithHard(200));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard", undefined, 150);
+
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
     expect(result).toBeUndefined();
   });
 

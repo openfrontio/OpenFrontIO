@@ -31,6 +31,10 @@ import { knownSignedOut, sessionUncertain, userAuth } from "../../Auth";
 import "../../components/CosmeticCard";
 import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
 import {
+  CARD_ITEM_GROUP,
+  type CardItem,
+} from "../../components/card/CardItems";
+import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../components/card/PlayerCardModel";
@@ -54,12 +58,15 @@ import type { LegendCeremony } from "../../components/LegendCeremony";
 import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import {
+  currentPrice,
   fetchCosmetics,
   getCachedCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
+  type ResolvedCosmetic,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
+import { COSMETICS_CHANGED } from "../../Experiments";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
@@ -180,6 +187,21 @@ function raisePunctuation(text: string): (string | TemplateResult)[] {
         ? html`<span class=${RAISED_GLYPHS[part]}>${part}</span>`
         : part,
     );
+}
+
+/** The patterns a post-game offer can show. */
+function purchasablePatterns(
+  cosmetics: Cosmetics | null,
+  me: Awaited<ReturnType<typeof getUserMe>>,
+): ResolvedCosmetic[] {
+  return resolveCosmetics(cosmetics, me, null).filter(
+    (r) => r.type === "pattern" && r.relationship === "purchasable",
+  );
+}
+
+/** One offered pattern and colour, across catalogs. */
+function offerKey(resolved: ResolvedCosmetic): string {
+  return `${resolved.cosmetic?.name ?? ""}:${resolved.colorPalette?.name ?? ""}`;
 }
 
 @customElement("win-modal")
@@ -679,8 +701,27 @@ export class WinModal extends LitElement implements Controller {
             items: this.loadout,
           }
         : null;
-    const saved = visible.filter((look) => look.clientID !== killer?.clientID);
+    const saved = visible
+      .filter((look) => look.clientID !== killer?.clientID)
+      .map((look) => ({ ...look, items: this.repriced(look.items) }));
     return endScreenLookRows(killer ? [killer, ...saved] : saved, flares);
+  }
+
+  // A saved look holds its items as the catalogue was when it was saved,
+  // mid-game. Each is taken again, by type and name, from the catalogue the
+  // card uses now, so a look shows (and its confirm sends) the price now: a
+  // reload after price_changed then re-prices it rather than 409 each retry.
+  // An item the catalogue doesn't have is kept as saved.
+  private repriced(items: readonly LoadoutItem[]): LoadoutItem[] {
+    const cosmetics = this.cardCatalogue();
+    if (cosmetics === null) return [...items];
+    return items.map((entry) => {
+      const group = cosmetics[CARD_ITEM_GROUP[entry.type]] as
+        | Record<string, CardItem>
+        | undefined;
+      const fresh = group?.[entry.item.name];
+      return fresh === undefined ? entry : { ...entry, item: fresh };
+    });
   }
 
   // The promo slot: the "Get the look" block whenever there is a look to
@@ -799,15 +840,54 @@ export class WinModal extends LitElement implements Controller {
     `;
   }
 
+  // The patterns the post-game offer picked, by name and palette, so a fresh
+  // catalog (a price_changed refusal reloads it) redraws the same offer at
+  // the prices it now has.
+  private offerKeys: string[] = [];
+
+  private onCosmeticsChanged = (e: Event): void => {
+    const cosmetics = (e as CustomEvent<Cosmetics>).detail;
+    if (!cosmetics) return;
+    // The card's items price from cardCatalogue(): replace the retained
+    // catalog, or it would keep handing back the old one. Saved looks
+    // re-price from it as they render (lookRows).
+    this.endCardCosmetics = cosmetics;
+    this.requestUpdate();
+    // The eliminated-by card's loadout row prices its items from the
+    // catalog it was built with: rebuild it from this one.
+    if (this.endCardMode === "eliminatedBy" && this.endCardView !== null) {
+      void this.loadLoadout(this.endCardView);
+    }
+    // Before the first offer is picked, loadPatternContent takes the newest
+    // catalog itself.
+    if (this.offerKeys.length > 0) void this.redrawOffer(cosmetics);
+  };
+
+  private async redrawOffer(cosmetics: Cosmetics): Promise<void> {
+    const me = await getUserMe();
+    const byKey = new Map(
+      purchasablePatterns(cosmetics, me).map((r) => [offerKey(r), r]),
+    );
+    const selected = this.offerKeys.flatMap((key) => {
+      const resolved = byKey.get(key);
+      return resolved === undefined ? [] : [resolved];
+    });
+    this.renderOffer(selected);
+  }
+
   async loadPatternContent() {
     const me = await getUserMe();
-    const cosmetics = await fetchCosmetics();
+    const fetched = await fetchCosmetics();
+    // A reload can land while this fetch is out (a cohort change, or a
+    // price_changed refusal): this one's answer is then older and isn't
+    // cached, and the reload's event came before any offer existed to
+    // redraw. Take the catalog now in use.
+    const cosmetics = getCachedCosmetics() ?? fetched;
 
-    const purchasable = resolveCosmetics(cosmetics, me, null).filter(
-      (r) => r.type === "pattern" && r.relationship === "purchasable",
-    );
+    const purchasable = purchasablePatterns(cosmetics, me);
 
     if (purchasable.length === 0) {
+      this.offerKeys = [];
       this.patternContent = html``;
       return;
     }
@@ -815,12 +895,25 @@ export class WinModal extends LitElement implements Controller {
     // Shuffle the array and take patterns. Will always be 3 wide to allow scrolling
     const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, Math.min(3, shuffled.length));
+    this.offerKeys = selected.map(offerKey);
+    this.renderOffer(selected);
+  }
 
+  private renderOffer(selected: ResolvedCosmetic[]): void {
+    if (selected.length === 0) {
+      this.patternContent = html``;
+      return;
+    }
     this.patternContent = html`
       <div class="flex gap-4 flex-nowrap justify-start items-start">
         ${selected.map((resolved) => {
           // Only patterns were selected above.
           const pattern = resolved.cosmetic as Pattern | null;
+          // The price the server charges now, as the Store shows it: once a
+          // sale has ended, its list price, whatever the catalog in hand
+          // (cached up to a minute) says. Shown and sent as the same number.
+          const hard = pattern ? currentPrice(pattern, "hard") : undefined;
+          const soft = pattern ? currentPrice(pattern, "soft") : undefined;
           return html`
             <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
               <cosmetic-card
@@ -828,12 +921,12 @@ export class WinModal extends LitElement implements Controller {
                 .interactive=${false}
               ></cosmetic-card>
               <purchase-button
-                .priceHard=${pattern?.priceHard ?? null}
-                .priceSoft=${pattern?.priceSoft ?? null}
+                .priceHard=${hard ?? null}
+                .priceSoft=${soft ?? null}
                 .rarity=${pattern?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
-                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" })}
-                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" })}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" }, hard)}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" }, soft)}
               ></purchase-button>
             </div>
           `;
@@ -936,7 +1029,11 @@ export class WinModal extends LitElement implements Controller {
         void fetchCosmetics()
           .then((fetched) => {
             if (fetched === null || this.lastEndCard !== card) return;
-            this.endCardCosmetics = fetched;
+            // As loadPatternContent: a reload (a cohort change) can land
+            // while this fetch is out, and this older answer isn't cached.
+            // Take the catalog now in use, or a late plain catalog would
+            // replace the cohort one onCosmeticsChanged installed.
+            this.endCardCosmetics = getCachedCosmetics() ?? fetched;
             this.applyEndCard(card);
           })
           .catch(() => {});
@@ -1152,6 +1249,7 @@ export class WinModal extends LitElement implements Controller {
 
   connectedCallback(): void {
     super.connectedCallback();
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.unsubscribeLooks ??= onSavedLooksChanged(() => this.requestUpdate());
     document.addEventListener("userMeResponse", this.onUserMe);
     if (this.xpPollAborted) {
@@ -1161,6 +1259,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   disconnectedCallback(): void {
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.xpAbort?.abort();
     this.unsubscribeLooks?.();
     this.unsubscribeLooks = null;

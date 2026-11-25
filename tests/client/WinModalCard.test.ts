@@ -58,6 +58,7 @@ import {
   clearSavedLooks,
   saveLook,
 } from "../../src/client/components/card/SavedLooks";
+import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 import { WinModal } from "../../src/client/hud/layers/WinModal";
 import { UserSettings } from "../../src/client/UserSettings";
 
@@ -153,6 +154,108 @@ describe("WinModal card section", () => {
     await new Promise((r) => setTimeout(r, 0));
     await modal.updateComplete;
     expect(modal.endCardView?.background?.name).toBe("bg_pacific");
+    catalogue.fetched = null;
+  });
+
+  it("rebuilds the eliminated-by loadout at the new catalog's prices", async () => {
+    const withBackground = (priceHard: number) => ({
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_pacific: {
+          product: null,
+          rarity: "epic",
+          name: "bg_pacific",
+          url: "/bg.webp",
+          priceHard,
+        },
+      },
+    });
+    catalogue.cached = withBackground(240);
+    const modal = (await renderModal({})) as unknown as {
+      game: unknown;
+      setEndCard(choose: () => unknown): void;
+      loadout: { item: { priceHard?: number } }[];
+    };
+    modal.game = {
+      myPlayer: () => null,
+      gameID: () => "g1",
+      config: () => ({ gameConfig: () => ({}) }),
+      resumedFromSave: () => false,
+      playerByClientID: () => ({
+        name: () => "Volt",
+        clanTag: () => null,
+        territoryColor: () => ({ toHex: () => "#123456" }),
+      }),
+      playerCardOf: () => ({
+        card: { background: "bg_pacific", trackers: [] },
+        flag: undefined,
+      }),
+    };
+    modal.setEndCard(() => ({ kind: "eliminatedBy", clientID: "KILLER01" }));
+    await vi.waitFor(() => expect(modal.loadout[0]?.item.priceHard).toBe(240));
+    // A cohort catalog, or a price_changed refusal's reload, lands.
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: withBackground(300) }),
+    );
+    await vi.waitFor(() => expect(modal.loadout[0]?.item.priceHard).toBe(300));
+    catalogue.cached = null;
+  });
+
+  it("a plain catalog that lands after the cohort one doesn't replace it", async () => {
+    const withBackground = (priceHard: number) => ({
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_pacific: {
+          product: null,
+          rarity: "epic",
+          name: "bg_pacific",
+          url: "/bg.webp",
+          priceHard,
+        },
+      },
+    });
+    // Joined by direct link: nothing cached, and the plain catalog (R1) is
+    // still out when the card is chosen.
+    catalogue.cached = null;
+    let landR1!: (c: unknown) => void;
+    catalogue.fetched = new Promise((resolve) => (landR1 = resolve));
+    const modal = (await renderModal({})) as unknown as {
+      game: unknown;
+      setEndCard(choose: () => unknown): void;
+      loadout: { item: { priceHard?: number } }[];
+    };
+    modal.game = {
+      myPlayer: () => null,
+      gameID: () => "g1",
+      config: () => ({ gameConfig: () => ({}) }),
+      resumedFromSave: () => false,
+      playerByClientID: () => ({
+        name: () => "Volt",
+        clanTag: () => null,
+        territoryColor: () => ({ toHex: () => "#123456" }),
+      }),
+      playerCardOf: () => ({
+        card: { background: "bg_pacific", trackers: [] },
+        flag: undefined,
+      }),
+    };
+    modal.setEndCard(() => ({ kind: "eliminatedBy", clientID: "KILLER01" }));
+    // The group lands: the cohort catalog (R2) is cached and announced.
+    const cohort = withBackground(300);
+    catalogue.cached = cohort;
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: cohort }),
+    );
+    // Then R1 lands late, with the plain price.
+    landR1(withBackground(240));
+    await new Promise((r) => setTimeout(r, 0));
+    await vi.waitFor(() => expect(modal.loadout[0]?.item.priceHard).toBe(300));
+    // And stays there once everything has settled.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(modal.loadout[0]?.item.priceHard).toBe(300);
+    catalogue.cached = null;
     catalogue.fetched = null;
   });
 
@@ -413,6 +516,53 @@ describe("WinModal Get the look block", () => {
     });
     expect(block(modal)).toBeNull();
     expect(promo(modal)).toBe(true);
+  });
+
+  it("a saved look re-prices from a new catalogue, so the retry sends the new price", async () => {
+    // Saved mid-game at 300; the server's price is 350 (a cohort catalogue).
+    saveLook(
+      "g1",
+      look("a", "Ada", [
+        {
+          type: "cardBackground",
+          item: { name: "bg_a", rarity: "epic", product: null, priceHard: 300 },
+          state: "buy",
+        },
+      ]),
+    );
+    const modal = await renderModal({ ...base, endCardMode: "none" });
+    // The price the row's buy button shows, and its confirm box sends.
+    const price = () =>
+      (
+        block(modal)?.looks[0]?.items[0] as
+          | { item: { priceHard?: number } }
+          | undefined
+      )?.item.priceHard;
+    await vi.waitFor(() => expect(price()).toBe(300));
+    // The buy gets 409 price_changed, whose reload announces the catalogue.
+    const raised = {
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_a: {
+          name: "bg_a",
+          rarity: "epic",
+          product: null,
+          url: "/a.webp",
+          priceHard: 350,
+        },
+      },
+    };
+    catalogue.cached = raised;
+    try {
+      document.dispatchEvent(
+        new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+      );
+      // The retry's confirm box shows (and sends) the price now.
+      await vi.waitFor(() => expect(price()).toBe(350));
+    } finally {
+      catalogue.cached = null;
+    }
   });
 
   it("not by real name while the viewer anonymises names", async () => {

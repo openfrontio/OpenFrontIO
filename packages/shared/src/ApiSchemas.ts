@@ -1807,3 +1807,49 @@ export const StoreEventsBodySchema = z.object({
     .max(50),
 });
 export type StoreEventsBody = z.infer<typeof StoreEventsBodySchema>;
+
+// Store experiments (infra lib/Experiments.ts). GET /users/@me/experiments:
+// the signed-in player's test groups, and the catalog cohort to fetch
+// cosmetics.json with (null: the plain catalog). Lenient on surfaces and
+// params, so a test on a surface this build doesn't know never fails the
+// parse: the client only acts on the surfaces it knows.
+export const ExperimentsResponseSchema = z.object({
+  assignments: z.array(
+    z.object({
+      key: z.string(),
+      surface: z.string(),
+      variant: z.string(),
+      counted: z.boolean(),
+      params: z.record(z.string(), z.unknown()).optional(),
+    }),
+  ),
+  catalogCohort: z.string().nullable(),
+});
+export type ExperimentsResponse = z.infer<typeof ExperimentsResponseSchema>;
+export type ExperimentAssignment = ExperimentsResponse["assignments"][number];
+
+// POST /users/@me/experiments/exposures: the player saw the tested thing, in
+// the variant the client rendered. Steam never sends one.
+export const ExperimentExposureSurfaceSchema = z.enum([
+  "store_flash",
+  "home_banner",
+]);
+export type ExperimentExposureSurface = z.infer<
+  typeof ExperimentExposureSurfaceSchema
+>;
+export const ExperimentExposureBodySchema = z.object({
+  platform: z.enum(["web", "crazygames"]),
+  exposures: z
+    .array(
+      z.object({
+        key: z.string(),
+        variant: z.string(),
+        surface: ExperimentExposureSurfaceSchema,
+      }),
+    )
+    .min(1)
+    .max(10),
+});
+export type ExperimentExposureBody = z.infer<
+  typeof ExperimentExposureBodySchema
+>;

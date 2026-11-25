@@ -4,6 +4,7 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateCosmetic } from "../Cosmetics";
 import { isSteamShell } from "../DesktopShell";
+import { exposureWatcher } from "../Experiments";
 import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 import "./SaleCountdown";
@@ -164,6 +165,15 @@ export class SaleBanner extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  // On the home screen, the deal line is a store experiment exposure surface
+  // (Experiments.ts): watched once it's on screen for a second. The store's
+  // own (unlinked) banner isn't: there the flash card is the surface.
+  protected updated(): void {
+    if (!this.linked) return;
+    const line = this.querySelector("[data-store-flash-banner]");
+    if (line !== null) exposureWatcher.observe(line, "home_banner");
   }
 
   private openSale(): void {
