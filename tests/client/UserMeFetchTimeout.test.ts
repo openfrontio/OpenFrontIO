@@ -9,6 +9,7 @@ vi.mock("../../src/client/Auth", () => ({
   getPlayToken: vi.fn(async () => null),
   logOut: vi.fn(async () => {}),
   isSessionActive: vi.fn(() => true),
+  isOtherSession: vi.fn(() => false),
   rememberPublicId: vi.fn(),
   userAuth: vi.fn(async () => ({
     jwt: "test-jwt",
@@ -21,7 +22,12 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "../../src/client/Api";
-import { isSessionActive, logOut } from "../../src/client/Auth";
+import {
+  isOtherSession,
+  isSessionActive,
+  logOut,
+  userAuth,
+} from "../../src/client/Auth";
 
 // The bound the rest of the authenticated surface already uses.
 const AUTH_FETCH_TIMEOUT_MS = 10_000;
@@ -304,7 +310,24 @@ describe("/users/@me from a session that has gone", () => {
     vi.mocked(isSessionActive).mockImplementation(
       (sub: string) => sub !== "player-1",
     );
+    vi.mocked(isOtherSession).mockImplementation(
+      (sub: string) => sub === "player-1",
+    );
     await getUserMe();
     expect(meCalls()).toHaveLength(2);
+    vi.mocked(isOtherSession).mockReturnValue(false);
+  });
+
+  it("a brief refresh outage keeps the cached profile, and never caches signed out", async () => {
+    expect(await getUserMe()).toEqual(profile);
+    // /auth/refresh answers 5xx: no token for now (isSessionActive is false
+    // for every subject), but no other account either.
+    vi.mocked(isSessionActive).mockReturnValue(false);
+    vi.mocked(userAuth).mockResolvedValueOnce(false as never);
+    expect(await getUserMe()).toEqual(profile);
+    // Recovered.
+    vi.mocked(isSessionActive).mockReturnValue(true);
+    expect(await getUserMe()).toEqual(profile);
+    expect(meCalls()).toHaveLength(1);
   });
 });

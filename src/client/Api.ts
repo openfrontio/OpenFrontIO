@@ -68,6 +68,7 @@ import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
   getPlayToken,
+  isOtherSession,
   isSessionActive,
   logOut,
   rememberPublicId,
@@ -318,10 +319,13 @@ let __userMeSub: string | undefined;
 export async function getUserMe(): Promise<UserMeResponse | false> {
   // Cached for a session that isn't the current one any more (a silent
   // refresh into another account): that account's profile, not this one's.
+  // No session for now (a refresh that failed) isn't another account: the
+  // profile stays, rather than being swapped for a "signed out" that would
+  // then stay cached past the recovery.
   if (
     __userMe !== null &&
     __userMeSub !== undefined &&
-    !isSessionActive(__userMeSub)
+    isOtherSession(__userMeSub)
   ) {
     __userMe = null;
     __userMeSub = undefined;
