@@ -202,14 +202,29 @@ describe("Inventory: unsaved card changes guard", () => {
   });
 
   describe("hash routes", () => {
+    // A stand-in for the Store: the router opens it by tag.
+    const storeOpens: unknown[] = [];
+    if (customElements.get("guard-test-store") === undefined) {
+      customElements.define(
+        "guard-test-store",
+        class extends HTMLElement {
+          open(args?: Record<string, unknown>) {
+            storeOpens.push(args);
+          }
+          close() {}
+        },
+      );
+    }
     beforeEach(() => {
       history.replaceState(null, "", "/");
+      storeOpens.length = 0;
+      document.body.appendChild(document.createElement("guard-test-store"));
       modalRouter.register("inventory", {
         tag: "inventory-modal",
         pageId: "page-inventory",
       });
       modalRouter.register("store", {
-        tag: "store-modal",
+        tag: "guard-test-store",
         pageId: "page-item-store",
       });
     });
@@ -264,6 +279,42 @@ describe("Inventory: unsaved card changes guard", () => {
       await back();
       expect(q("[data-card-guard]")).toBeNull();
       expect(modal.isOpen()).toBe(false);
+    });
+
+    // Main routes a Back or a typed hash twice: on popstate, then on
+    // hashchange. The second must not answer the first's prompt.
+    for (const choice of ["discard", "save"] as const) {
+      it(`a typed hash to the Store, routed twice, then ${choice}: the Store opens`, async () => {
+        vi.mocked(saveCardLoadout).mockResolvedValue({
+          ok: true,
+          loadout: {} as never,
+        });
+        await openWithChange();
+        history.replaceState(null, "", "/#modal=store&tab=packs");
+        expect(modalRouter.routeFromHash()).toBe(true);
+        expect(modalRouter.routeFromHash()).toBe(true);
+        await settle(modal);
+        expect(q("[data-card-guard]")).not.toBeNull();
+        await click(`[data-card-guard-${choice}]`);
+        await vi.waitFor(() => expect(storeOpens).toHaveLength(1));
+        expect(storeOpens[0]).toEqual({ tab: "packs" });
+        expect(window.location.hash).toBe("#modal=store&tab=packs");
+        expect(
+          (modalRouter as unknown as { currentName: string | null })
+            .currentName,
+        ).toBe("store");
+      });
+    }
+
+    it("Back routed twice, then Discard: closes once, and the URL stays clear", async () => {
+      await openWithChange();
+      history.replaceState(null, "", "/");
+      modalRouter.closeCurrent();
+      modalRouter.closeCurrent();
+      await settle(modal);
+      await click("[data-card-guard-discard]");
+      expect(modal.isOpen()).toBe(false);
+      expect(window.location.hash).toBe("");
     });
 
     it("a route to the Store with an unsaved change asks first; Keep editing stays", async () => {
