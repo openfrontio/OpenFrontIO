@@ -582,6 +582,18 @@ export class CardEditor {
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
     this.flares = userMe?.player.flares ?? [];
+    // A profile of this account that shows a PUT stored unseen has caught
+    // up with it: from here the profiles are the baseline (one changed
+    // elsewhere since must not be rebased back onto that PUT's card).
+    if (owner !== null) {
+      const landed = this.landed.get(owner);
+      if (
+        landed !== undefined &&
+        showsSave(this.saved, landed.replaced, landed.sent)
+      ) {
+        this.landed.delete(owner);
+      }
+    }
     if (this.sending !== null) {
       // A save in flight: the draft is left as it is, even with no changes
       // against the old card (an edit back to it after Save is still an

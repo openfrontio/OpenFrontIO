@@ -907,6 +907,35 @@ describe("CardEditor", () => {
     expect(api.save.mock.calls[1][0].background).toBe("bg_storm");
   });
 
+  it("once a profile shows an unseen PUT, a change made elsewhere after it isn't overwritten", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const first = editor.save();
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    finishOld({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    await first;
+    // A later profile shows Storm; then Ocean is set on a phone.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, B_FLARES, "account-a"));
+    editor.seed(me({ ...CARD, background: "bg_ocean" }, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    expect(await editor.save()).toBe(true);
+    expect(api.save.mock.calls[1][0].background).toBe("bg_ocean");
+  });
+
   it("pending saves are kept per account: A waits only for A's earlier PUT", async () => {
     const stored = (trackers: string[]) => ({
       ok: true,
