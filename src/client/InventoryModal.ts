@@ -67,6 +67,7 @@ import {
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
+import { COSMETICS_CHANGED } from "./Experiments";
 import { type PricedItem, saleEndsAt } from "./ShownPrice";
 import {
   type CosmeticLoadout,
@@ -229,9 +230,21 @@ export class InventoryModal extends BaseModal {
     this.previewingCosmetic = customEvent.detail;
   };
 
+  /** A new catalogue is in use (a store-experiment group changed, or a
+   * price_changed refusal reloaded it): show its prices, as the Store does,
+   * so a retry sends the price now and doesn't loop on the 409. */
+  private onCosmeticsChanged = (e: Event): void => {
+    const cosmetics = (e as CustomEvent<Cosmetics | null>).detail;
+    if (!cosmetics || this.cosmetics === null) return;
+    this.cosmetics = cosmetics;
+    this.catalogFetchedAt = Date.now();
+    this.priceEpoch++;
+  };
+
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.addEventListener(
@@ -250,6 +263,7 @@ export class InventoryModal extends BaseModal {
     );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
@@ -1137,8 +1151,8 @@ export class InventoryModal extends BaseModal {
               .resolved=${this.currentBuying()}
               .bought=${this.buyingBought}
               .priceEpoch=${this.priceEpoch}
-              .onPurchase=${(method: "hard" | "soft") =>
-                this.purchase(this.currentBuying()!, method)}
+              .onPurchase=${(method: "hard" | "soft", shownAmount?: number) =>
+                this.purchase(this.currentBuying()!, method, shownAmount)}
               .onEquip=${() => this.equipBought()}
               .onPreview=${() => {
                 this.previewingCosmetic = this.buying;
@@ -1505,6 +1519,7 @@ export class InventoryModal extends BaseModal {
   private async purchase(
     resolved: ResolvedCosmetic,
     method: "hard" | "soft",
+    shownAmount?: number,
   ): Promise<PurchaseResult> {
     const remembered =
       this.userMeResponse !== false
@@ -1514,10 +1529,14 @@ export class InventoryModal extends BaseModal {
           )
         : null;
     try {
-      return await purchaseCosmetic(resolved, method, {
-        kind: "inventory",
-        subTab: inventoryCategoryOf(resolved),
-      });
+      // With the price the confirm box showed: the server refuses (409) to
+      // charge more than that.
+      return await purchaseCosmetic(
+        resolved,
+        method,
+        { kind: "inventory", subTab: inventoryCategoryOf(resolved) },
+        shownAmount,
+      );
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would

@@ -29,6 +29,7 @@ import {
   purchaseCosmetic,
   purchaseReloading,
 } from "../../src/client/Cosmetics";
+import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import {
@@ -975,6 +976,46 @@ describe("Inventory In game tab", () => {
       expect(new UserSettings().getSelectedCrownName()).toBeNull();
     });
 
+    it("sends the confirmed price, and after a price_changed reload the retry sends the new one", async () => {
+      // Confirms the popup's purchase button, as a player would.
+      const buyHard = async () => {
+        const button = modal.querySelector<PurchaseButton>(
+          "inventory-buy-dialog purchase-button",
+        )!;
+        button.requestCurrencyPurchase("hard");
+        await settle(modal);
+        button
+          .querySelector("confirm-dialog")!
+          .dispatchEvent(new CustomEvent("confirm"));
+        await settle(modal);
+      };
+      // The first try gets 409 price_changed, whose reload announces the
+      // catalogue now in use (the group's price, 350).
+      const raised = makeCatalog();
+      (raised.crowns!.sale_crown as { priceHard: number }).priceHard = 350;
+      vi.mocked(purchaseCosmetic).mockImplementationOnce(async () => {
+        document.dispatchEvent(
+          new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+        );
+        return undefined;
+      });
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+
+      await buyHard();
+      expect(vi.mocked(purchaseCosmetic).mock.calls[0]?.[3]).toBe(300);
+      expect(
+        modal.querySelector<PurchaseButton>(
+          "inventory-buy-dialog purchase-button",
+        )!.priceHard,
+      ).toBe(350);
+
+      await buyHard();
+      expect(purchaseCosmetic).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(purchaseCosmetic).mock.calls[1]?.[3]).toBe(350);
+    });
+
     it("after a purchase the popup offers Equip now, which equips it", async () => {
       // A successful purchase reloads the page; the profile can land first.
       vi.mocked(purchaseReloading).mockReturnValue(true);
@@ -998,6 +1039,8 @@ describe("Inventory In game tab", () => {
         expect.objectContaining({ key: "crown:sale_crown" }),
         "hard",
         { kind: "inventory", subTab: "crowns" },
+        // Called straight, with no confirm box: no shown amount.
+        undefined,
       );
       // The infra API's schema for this kind: these sub-tabs, required.
       for (const subTab of ["skins", "flags", "crowns", "effects", "card"]) {
