@@ -30,6 +30,10 @@ import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import { knownSignedOut, sessionUncertain, userAuth } from "../../Auth";
 import "../../components/CosmeticCard";
 import {
+  CARD_ITEM_GROUP,
+  type CardItem,
+} from "../../components/card/CardItems";
+import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../components/card/PlayerCardModel";
@@ -696,8 +700,27 @@ export class WinModal extends LitElement implements Controller {
             items: this.loadout,
           }
         : null;
-    const saved = visible.filter((look) => look.clientID !== killer?.clientID);
+    const saved = visible
+      .filter((look) => look.clientID !== killer?.clientID)
+      .map((look) => ({ ...look, items: this.repriced(look.items) }));
     return endScreenLookRows(killer ? [killer, ...saved] : saved, flares);
+  }
+
+  // A saved look holds its items as the catalogue was when it was saved,
+  // mid-game. Each is taken again, by type and name, from the catalogue the
+  // card uses now, so a look shows (and its confirm sends) the price now: a
+  // reload after price_changed then re-prices it rather than 409 each retry.
+  // An item the catalogue doesn't have is kept as saved.
+  private repriced(items: readonly LoadoutItem[]): LoadoutItem[] {
+    const cosmetics = this.cardCatalogue();
+    if (cosmetics === null) return [...items];
+    return items.map((entry) => {
+      const group = cosmetics[CARD_ITEM_GROUP[entry.type]] as
+        | Record<string, CardItem>
+        | undefined;
+      const fresh = group?.[entry.item.name];
+      return fresh === undefined ? entry : { ...entry, item: fresh };
+    });
   }
 
   // The promo slot: the "Get the look" block whenever there is a look to
@@ -824,12 +847,14 @@ export class WinModal extends LitElement implements Controller {
   private onCosmeticsChanged = (e: Event): void => {
     const cosmetics = (e as CustomEvent<Cosmetics>).detail;
     if (!cosmetics) return;
+    // The card's items price from cardCatalogue(): replace the retained
+    // catalog, or it would keep handing back the old one. Saved looks
+    // re-price from it as they render (lookRows).
+    this.endCardCosmetics = cosmetics;
+    this.requestUpdate();
     // The eliminated-by card's loadout row prices its items from the
-    // catalog it was built with: rebuild it from this one. The retained
-    // catalog is replaced too, or cardCatalogue() would keep handing back
-    // the old one.
+    // catalog it was built with: rebuild it from this one.
     if (this.endCardMode === "eliminatedBy" && this.endCardView !== null) {
-      this.endCardCosmetics = cosmetics;
       void this.loadLoadout(this.endCardView);
     }
     // Before the first offer is picked, loadPatternContent takes the newest

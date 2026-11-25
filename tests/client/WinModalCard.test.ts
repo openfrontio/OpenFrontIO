@@ -518,6 +518,53 @@ describe("WinModal Get the look block", () => {
     expect(promo(modal)).toBe(true);
   });
 
+  it("a saved look re-prices from a new catalogue, so the retry sends the new price", async () => {
+    // Saved mid-game at 300; the server's price is 350 (a cohort catalogue).
+    saveLook(
+      "g1",
+      look("a", "Ada", [
+        {
+          type: "cardBackground",
+          item: { name: "bg_a", rarity: "epic", product: null, priceHard: 300 },
+          state: "buy",
+        },
+      ]),
+    );
+    const modal = await renderModal({ ...base, endCardMode: "none" });
+    // The price the row's buy button shows, and its confirm box sends.
+    const price = () =>
+      (
+        block(modal)?.looks[0]?.items[0] as
+          | { item: { priceHard?: number } }
+          | undefined
+      )?.item.priceHard;
+    await vi.waitFor(() => expect(price()).toBe(300));
+    // The buy gets 409 price_changed, whose reload announces the catalogue.
+    const raised = {
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_a: {
+          name: "bg_a",
+          rarity: "epic",
+          product: null,
+          url: "/a.webp",
+          priceHard: 350,
+        },
+      },
+    };
+    catalogue.cached = raised;
+    try {
+      document.dispatchEvent(
+        new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+      );
+      // The retry's confirm box shows (and sends) the price now.
+      await vi.waitFor(() => expect(price()).toBe(350));
+    } finally {
+      catalogue.cached = null;
+    }
+  });
+
   it("not by real name while the viewer anonymises names", async () => {
     vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(true);
     saveLook("g1", look("a", "Ada", [bg("bg_a")]));
