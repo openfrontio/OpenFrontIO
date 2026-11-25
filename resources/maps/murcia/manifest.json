@@ -1,0 +1,143 @@
+{
+  "categories": ["europe", "new"],
+  "id": "Murcia",
+  "map": {
+    "height": 1920,
+    "num_land_tiles": 3116700,
+    "width": 2220
+  },
+  "map16x": {
+    "height": 480,
+    "num_land_tiles": 193818,
+    "width": 555
+  },
+  "map4x": {
+    "height": 960,
+    "num_land_tiles": 779157,
+    "width": 1110
+  },
+  "name": "Murcia",
+  "nations": [
+    {
+      "coordinates": [1430, 1550],
+      "flag": "es",
+      "name": "La Unión"
+    },
+    {
+      "coordinates": [1863, 1503],
+      "flag": "es",
+      "name": "Cabo de Palos"
+    },
+    {
+      "coordinates": [1131, 1531],
+      "flag": "es",
+      "name": "Cartagena"
+    },
+    {
+      "coordinates": [552, 1518],
+      "flag": "es",
+      "name": "Mazarrón"
+    },
+    {
+      "coordinates": [369, 1113],
+      "flag": "es",
+      "name": "Bajo Guadalentín"
+    },
+    {
+      "coordinates": [1402, 550],
+      "flag": "es",
+      "name": "Beniel"
+    },
+    {
+      "coordinates": [1641, 987],
+      "flag": "es",
+      "name": "San Javier"
+    },
+    {
+      "coordinates": [1601, 1139],
+      "flag": "es",
+      "name": "Los Alcázares"
+    },
+    {
+      "coordinates": [1773, 1299],
+      "flag": "es",
+      "name": "Isla del Barón"
+    },
+    {
+      "coordinates": [1710, 1282],
+      "flag": "es",
+      "name": "Isla de la Perdiguera"
+    },
+    {
+      "coordinates": [1910, 1206],
+      "flag": "es",
+      "name": "Isla Grosa"
+    },
+    {
+      "coordinates": [1395, 1149],
+      "flag": "es",
+      "name": "Torre-Pacheco"
+    },
+    {
+      "coordinates": [513, 735],
+      "flag": "es",
+      "name": "Librilla"
+    },
+    {
+      "coordinates": [237, 279],
+      "flag": "es",
+      "name": "Mula"
+    },
+    {
+      "coordinates": [201, 423],
+      "flag": "es",
+      "name": "Pliego"
+    },
+    {
+      "coordinates": [1200, 697],
+      "flag": "es",
+      "name": "Murcia City"
+    },
+    {
+      "coordinates": [909, 1176],
+      "flag": "es",
+      "name": "Fuente Álamo"
+    },
+    {
+      "coordinates": [1794, 930],
+      "flag": "es",
+      "name": "San Pedro del Pinatar"
+    },
+    {
+      "coordinates": [336, 798],
+      "flag": "es",
+      "name": "Alhama de Murcia"
+    },
+    {
+      "coordinates": [150, 1200],
+      "flag": "es",
+      "name": "Lorca"
+    },
+    {
+      "coordinates": [250, 950],
+      "flag": "es",
+      "name": "Totana"
+    },
+    {
+      "coordinates": [300, 1800],
+      "flag": "es",
+      "name": "Águilas"
+    },
+    {
+      "coordinates": [900, 50],
+      "flag": "es",
+      "name": "Yecla"
+    },
+    {
+      "coordinates": [600, 300],
+      "flag": "es",
+      "name": "Cieza"
+    }
+  ],
+  "translation_key": "map.murcia"
+}

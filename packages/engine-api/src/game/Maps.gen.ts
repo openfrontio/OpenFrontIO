@@ -96,6 +96,7 @@ export enum GameMapType {
   MississippiRiver = "Mississippi River", // map-generator/assets/maps/mississippiriver/info.json
   Montreal = "Montreal", // map-generator/assets/maps/montreal/info.json
   MoreThanLuck = "More Than Luck", // map-generator/assets/maps/morethanluck/info.json
+  Murcia = "Murcia", // map-generator/assets/maps/murcia/info.json
   NewYorkCity = "New York City", // map-generator/assets/maps/newyorkcity/info.json
   NewZealand = "New Zealand", // map-generator/assets/maps/newzealand/info.json
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
@@ -1968,6 +1969,16 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 5,
     author: "Patrick Plays Badly",
     descriptionKey: "map_description.morethanluck",
+  },
+  {
+    id: "Murcia",
+    type: GameMapType.Murcia,
+    translationKey: "map.murcia",
+    categories: ["europe", "new"],
+    defaultNationCount: 24,
+    author: "panymilloconbocadillo",
+    descriptionKey: "map_description.murcia",
+    location: { lat: 37.9, lon: -1.2 },
   },
   {
     id: "NewYorkCity",
