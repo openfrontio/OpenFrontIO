@@ -321,6 +321,28 @@ describe("buying on the end screen", () => {
     expect(outcome.kind).toBe("failed");
   });
 
+  it("the charged-different notice compares with the price shown", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    const buy = (charged: number) => {
+      vi.mocked(purchaseWithCurrency).mockResolvedValueOnce({
+        ok: true,
+        amount: charged,
+      } as never);
+      return purchaseCosmeticInPlace(
+        STORM,
+        "hard",
+        undefined,
+        undefined,
+        undefined,
+        300,
+      );
+    };
+    // Charged what the box showed (though the catalogue now says 320).
+    expect(((await buy(300)) as { notice?: string }).notice).toBeUndefined();
+    // Charged the price now, not what was shown: say so.
+    expect(((await buy(320)) as { notice?: string }).notice).toBeDefined();
+  });
+
   it("with no shown price, the price check is the price now", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     vi.mocked(purchaseWithCurrency).mockResolvedValue({ ok: true } as never);

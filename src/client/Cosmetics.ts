@@ -913,10 +913,12 @@ export async function purchaseCosmeticInPlace(
   }
   // Charged something other than the price shown (a sale started or ended
   // since the catalogue loaded): say what was taken, as the Store does, and
-  // drop the catalogue that showed the wrong price.
+  // drop the catalogue that showed the wrong price. Judged against what the
+  // confirm box showed, when the caller says.
+  const shown = shownAmount ?? price;
   const notice =
-    result.ok && result.amount !== undefined && result.amount !== price
-      ? purchaseSuccessMessage(c.name, price, result.amount, method)
+    result.ok && result.amount !== undefined && result.amount !== shown
+      ? purchaseSuccessMessage(c.name, shown, result.amount, method)
       : undefined;
   onOwned?.();
   return owned(await broadcastFreshUserMe(), notice);
