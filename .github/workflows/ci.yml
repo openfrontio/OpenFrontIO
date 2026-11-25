@@ -131,10 +131,6 @@ jobs:
           cache: "npm"
       - name: Setup npm
         run: npm install --global --ignore-scripts npm@12.1.0
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: map-generator/go.mod
-          cache-dependency-path: map-generator/go.sum
       - run: npm ci
       - run: npm run gen-maps
       - name: Check for diff
