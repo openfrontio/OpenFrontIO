@@ -887,6 +887,63 @@ describe("CardEditor", () => {
     expect(editor.draft.rows.tracker[0]).toBe("games_played");
   });
 
+  it("a token refresh that fails while a save waits ends it failed, with a Retry, and nothing sent", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    // The PUT is asked whether it's still wanted once it holds a token.
+    let asked: boolean | undefined;
+    api.save.mockImplementationOnce(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        asked = stillWanted();
+        return asked
+          ? { ok: true, loadout: null }
+          : { ok: false, error: "cancelled" };
+      },
+    );
+    const saving = editor.save();
+    await Promise.resolve();
+    // The session's account can't be read for now (a refresh failed), and
+    // the session stays.
+    session.id = null;
+    finishOld({ ok: false, error: "failed" });
+    expect(await saving).toBe(false);
+    expect(asked).toBe(false);
+    expect(editor.saveState).toBe("failed");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+  });
+
+  it("a save whose changes a fresh profile already shows after the wait ends done", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    await Promise.resolve();
+    // The old PUT stored the same card, and its profile lands first.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, B_FLARES, "account-a"));
+    finishOld({ ok: true, loadout: null });
+    // Nothing left to save: done (the guard's Save then lets the player
+    // leave), with nothing sent.
+    expect(await saving).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(1);
+    expect(editor.changeCount()).toBe(0);
+    expect(editor.saveState).toBe("idle");
+  });
+
   it("a save that succeeds after the session moved to another account isn't taken", async () => {
     // Sent as A, then an ordinary token refresh installs B (no session
     // event) before the answer lands.
