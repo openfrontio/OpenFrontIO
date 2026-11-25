@@ -26,7 +26,8 @@ vi.mock("../../../src/client/Api", () => ({
   ]),
 }));
 
-vi.mock("../../../src/client/Cosmetics", () => ({
+vi.mock("../../../src/client/Cosmetics", async (importActual) => ({
+  ...(await importActual<typeof import("../../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(async () => null),
   invalidateCosmetics: vi.fn(),
   refreshStaleCosmetics: vi.fn(() => true),
@@ -179,6 +180,95 @@ describe("NewsBox", () => {
 
       (banner as HTMLButtonElement).click();
       expect(window.location.hash).toBe("#modal=store&tab=cosmetics&sub=sale");
+    });
+
+    it("drops the banner of a flash deal on an item the player owns", async () => {
+      const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+      const deal = { id: "7", name: "Daily Hot Sale", endsAt, kind: "flash" };
+      vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce({
+        ...catalogWith(deal),
+        flags: {
+          aurora: {
+            name: "aurora",
+            url: "",
+            priceHard: 10,
+            listPriceHard: 100,
+            promotion: { percentOff: 90, ...deal },
+          },
+        },
+      } as unknown as Cosmetics);
+      const box = document.createElement("news-box");
+      document.body.appendChild(box);
+
+      // Signed out: the deal can be bought, so it has a banner.
+      await vi.waitFor(() =>
+        expect(box.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+      );
+
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: { player: { flares: ["flag:aurora"] } },
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(box.querySelector("[data-store-sale-banner]")).toBeNull(),
+      );
+      expect(box.textContent).toContain("Patch notes");
+    });
+
+    it("drops the banner of a sale on only what the On sale tab doesn't list", async () => {
+      const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+      const sale = { id: "7", name: "Supporter Sale", endsAt };
+      const onSale = {
+        priceHard: 10,
+        listPriceHard: 100,
+        promotion: { percentOff: 90, ...sale },
+      };
+      const catalog = {
+        ...catalogWith(sale),
+        subscriptions: { supporter: { name: "supporter", ...onSale } },
+      } as unknown as Cosmetics;
+      const boxShowing = async (cosmetics: Cosmetics) => {
+        vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+        vi.mocked(fetchCosmetics).mockResolvedValueOnce(cosmetics);
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() =>
+          expect(
+            box.textContent?.includes("Patch notes") ||
+              box.querySelector("[data-store-sale-banner]") !== null,
+          ).toBe(true),
+        );
+        return box;
+      };
+
+      // The Android shell: Play is the only way to pay there, and the Store
+      // sells no subscription at all.
+      const shell = window as { openfrontDesktop?: unknown };
+      shell.openfrontDesktop = {};
+      try {
+        const android = await boxShowing(catalog);
+        expect(android.querySelector("[data-store-sale-banner]")).toBeNull();
+        android.remove();
+      } finally {
+        delete shell.openfrontDesktop;
+      }
+
+      // On the web the Store sells it, but not on the On sale tab.
+      const web = await boxShowing(catalog);
+      expect(web.querySelector("[data-store-sale-banner]")).toBeNull();
+      web.remove();
+
+      // A flag in the same sale is on the tab, so the sale has its banner. Not
+      // aurora: an earlier test broadcast an account that owns it.
+      const withFlag = await boxShowing({
+        ...catalog,
+        flags: { borealis: { name: "borealis", url: "", ...onSale } },
+      } as unknown as Cosmetics);
+      await vi.waitFor(() =>
+        expect(withFlag.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+      );
     });
 
     it("leaves the news alone for a sale not set to announce", async () => {
