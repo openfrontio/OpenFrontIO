@@ -5,6 +5,8 @@ import { getApiBase } from "../../src/client/ApiBase";
 import {
   clearLocalSession,
   currentPublicId,
+  currentSessionSub,
+  isOtherSession,
   PUBLIC_ID_CACHE_PREFIX,
   rememberPublicId,
   userAuth,
@@ -209,6 +211,31 @@ describe("cosmetic scope derived from the session JWT and cached publicId (#5660
       await signInWith(payloadFor(ME));
       clearLocalSession();
       expect(currentPublicId()).toBeNull();
+    });
+  });
+
+  // Whether another account holds the session: what a request started under
+  // one account checks before its answer is taken.
+  describe("isOtherSession and currentSessionSub", () => {
+    it("this account's session is not another one", async () => {
+      await signInWith(payloadFor(ME));
+      expect(currentSessionSub()).toBe(ME);
+      expect(isOtherSession(ME)).toBe(false);
+    });
+
+    it("another account's session is", async () => {
+      await signInWith(payloadFor(ME));
+      clearLocalSession();
+      await signInWith(payloadFor(SOMEONE_ELSE));
+      expect(currentSessionSub()).toBe(SOMEONE_ELSE);
+      expect(isOtherSession(ME)).toBe(true);
+    });
+
+    it("no session (signed out, or a refresh that failed) is not another account", async () => {
+      await signInWith(payloadFor(ME));
+      clearLocalSession();
+      expect(currentSessionSub()).toBeNull();
+      expect(isOtherSession(ME)).toBe(false);
     });
   });
 

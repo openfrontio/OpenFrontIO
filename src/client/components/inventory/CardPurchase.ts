@@ -119,5 +119,10 @@ export async function buyCardItem(
     case "handled":
       // Already explained with its own message (a wallet in debt).
       return;
+    default: {
+      // Every outcome has its branch: a new one fails the type check here.
+      const unhandled: never = outcome;
+      return unhandled;
+    }
   }
 }

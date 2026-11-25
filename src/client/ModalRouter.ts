@@ -54,6 +54,13 @@ class ModalRouter {
   private currentName: string | null = null;
   /** The hash that named currentName, to put back when it stays open. */
   private currentHash = "";
+  /**
+   * A route the open modal is still being asked about (confirmRouteLeave).
+   * Main routes one Back or typed hash twice (popstate, then hashchange):
+   * the repeat must not ask again, since a second ask would be answered
+   * "no" at once and undo the first's URL while its prompt is showing.
+   */
+  private pendingAsk: Promise<void> | null = null;
   /** True while we're routing from the URL (suppress modal→URL sync). */
   private routingFromUrl = false;
   private pathRoutes = new Map<string, PathRouteParser>();
@@ -140,11 +147,21 @@ class ModalRouter {
       args[key] = value;
     });
 
+    // Already asking about a route: this is its repeat (or one made while
+    // the prompt shows), and the answer to that ask decides.
+    if (this.pendingAsk !== null) return true;
     // Another page replaces the one shown: its modal may ask first.
     const leaving = this.currentName !== name && entry.pageId !== undefined;
     const guarded = leaving ? this.guardedCurrent() : null;
     if (guarded !== null) {
-      void this.askThen(guarded, () => this.routeTo(name, entry, args));
+      // The route asked about is this hash: approved, it opens with it,
+      // even if the URL moved on while the prompt was up (a route made
+      // meanwhile is left to this one's answer).
+      const target = window.location.hash;
+      void this.askThen(guarded, () => {
+        this.replaceHash(target);
+        this.routeTo(name, entry, args);
+      });
     } else {
       this.routeTo(name, entry, args);
     }
@@ -181,7 +198,15 @@ class ModalRouter {
    * open and the URL names it again (Back has already moved the URL on, and
    * an open modal the URL doesn't name would close nothing on the next one).
    */
-  private async askThen(el: RoutableModal, proceed: () => void): Promise<void> {
+  private askThen(el: RoutableModal, proceed: () => void): Promise<void> {
+    const ask = this.ask(el, proceed).finally(() => {
+      if (this.pendingAsk === ask) this.pendingAsk = null;
+    });
+    this.pendingAsk = ask;
+    return ask;
+  }
+
+  private async ask(el: RoutableModal, proceed: () => void): Promise<void> {
     const name = this.currentName;
     const hash = this.currentHash;
     const ok = await el.confirmRouteLeave!();
@@ -271,11 +296,18 @@ class ModalRouter {
    */
   closeCurrent(): boolean {
     if (this.currentName === null) return false;
+    // Already asking about a route: its answer decides.
+    if (this.pendingAsk !== null) return true;
     const guarded = this.guardedCurrent();
     if (guarded !== null) {
       const name = this.currentName;
+      // The URL this close was asked about (Back's): approved, it's the URL
+      // again, even if a route typed meanwhile moved it on.
+      const target = window.location.hash;
       void this.askThen(guarded, () => {
-        if (this.currentName === name) this.closeNow();
+        if (this.currentName !== name) return;
+        this.replaceHash(target);
+        this.closeNow();
       });
       return true;
     }

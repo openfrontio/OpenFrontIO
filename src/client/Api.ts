@@ -68,6 +68,7 @@ import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
   getPlayToken,
+  isOtherSession,
   isSessionActive,
   logOut,
   rememberPublicId,
@@ -233,7 +234,7 @@ function isAbortError(e: unknown): boolean {
  * when signed out). Only getUserMe acts on these; see the un-caching rule
  * there.
  */
-async function requestUserMe(): Promise<{
+async function requestUserMe(onSub?: (sub: string) => void): Promise<{
   profile: UserMeResponse | false;
   aborted: boolean;
   sessionGone?: boolean;
@@ -247,6 +248,7 @@ async function requestUserMe(): Promise<{
     if (!userAuthResult) return { profile: false, aborted: false };
     const { jwt, claims } = userAuthResult;
     sub = claims.sub;
+    onSub?.(sub);
 
     // Get the user object. Bounded like the other auth calls (see
     // Auth.ts doSteamLogin) because getUserMe memoises the promise around
@@ -310,18 +312,22 @@ async function requestUserMe(): Promise<{
   }
 }
 
-// The session the cached /users/@me was fetched for (none: signed out, or
-// not known yet). A token refresh can install another account without a
-// session event, so a hit is checked against it.
+// The session the cached /users/@me is for (none: signed out, or its token
+// not read yet), recorded as soon as its token is in hand, so a request
+// still in flight is checked too. A token refresh can install another
+// account without a session event, so a hit is checked against it.
 let __userMeSub: string | undefined;
 
 export async function getUserMe(): Promise<UserMeResponse | false> {
   // Cached for a session that isn't the current one any more (a silent
   // refresh into another account): that account's profile, not this one's.
+  // No session for now (a refresh that failed) isn't another account: the
+  // profile stays, rather than being swapped for a "signed out" that would
+  // then stay cached past the recovery.
   if (
     __userMe !== null &&
     __userMeSub !== undefined &&
-    !isSessionActive(__userMeSub)
+    isOtherSession(__userMeSub)
   ) {
     __userMe = null;
     __userMeSub = undefined;
@@ -334,7 +340,11 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   // always before any await inside can resume.
   const attempt: { request?: Promise<UserMeResponse | false> } = {};
   attempt.request = (async () => {
-    const { profile, aborted, sessionGone, sub } = await requestUserMe();
+    const { profile, aborted, sessionGone, sub } = await requestUserMe(
+      (sub) => {
+        if (__userMe === attempt.request) __userMeSub = sub;
+      },
+    );
     if (__userMe === attempt.request) __userMeSub = sub;
     // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
     // a conclusion about the account — signed out, a 401, a rejected token

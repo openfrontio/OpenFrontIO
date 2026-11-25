@@ -5,10 +5,16 @@ vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
 }));
 // The account the session is signed in as (Auth's currentPublicId).
-const session = vi.hoisted(() => ({ id: "p1" as string | null }));
+// `sub` is the session's JWT subject (null: no token for now).
+const session = vi.hoisted(() => ({
+  id: "p1" as string | null,
+  sub: "sub-1" as string | null,
+}));
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
   currentPublicId: () => session.id,
+  currentSessionSub: () => session.sub,
+  isOtherSession: (sub: string) => session.sub !== null && session.sub !== sub,
 }));
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
@@ -183,6 +189,7 @@ describe("card draft", () => {
 describe("CardEditor", () => {
   beforeEach(() => {
     session.id = "p1";
+    session.sub = "sub-1";
     api.save.mockReset();
     vi.useFakeTimers();
   });
@@ -749,6 +756,41 @@ describe("CardEditor", () => {
     ]);
   });
 
+  it("after a reauth into the same account, a new save waits for the old PUT, then sends", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // session-reauth into the same account: the editor drops and reseeds.
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["games_played", "nukes_launched", "best_elo"],
+      },
+    });
+    const saving = editor.save();
+    await Promise.resolve();
+    await Promise.resolve();
+    // Two PUTs for one account never race: the new one waits.
+    expect(api.save).toHaveBeenCalledTimes(1);
+    expect(editor.saveState).toBe("saving");
+    // The old one settles (its answer decides nothing here)...
+    finishOld({ ok: false, error: "failed" });
+    // ...and the new one goes, and decides.
+    expect(await saving).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(editor.saved.rows.tracker[0]).toBe("games_played");
+  });
+
   it("a save that succeeds after the session moved to another account isn't taken", async () => {
     // Sent as A, then an ordinary token refresh installs B (no session
     // event) before the answer lands.
@@ -773,6 +815,34 @@ describe("CardEditor", () => {
     editor.pick({ kind: "background" }, "bg_storm");
     expect(await editor.save()).toBe(false);
     // A's card isn't taken as saved while B is signed in, and no "Saved".
+    expect(editor.saved.background).toBe("bg_pacific");
+    expect(editor.saveState).toBe("idle");
+  });
+
+  it("a save that succeeds after a refresh installed an account whose id isn't known yet isn't taken", async () => {
+    // B's publicId isn't stored yet, so currentPublicId() is null: only
+    // the session's subject says it's another account.
+    session.id = "account-a";
+    api.save.mockImplementationOnce(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        expect(stillWanted()).toBe(true);
+        session.id = null;
+        session.sub = "sub-b";
+        return {
+          ok: true,
+          loadout: {
+            background: "bg_storm",
+            title: null,
+            taunt: null,
+            trackers: ["wins", "nukes_launched", "best_elo"],
+          },
+        };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
     expect(editor.saved.background).toBe("bg_pacific");
     expect(editor.saveState).toBe("idle");
   });
@@ -925,6 +995,105 @@ describe("CardEditor", () => {
       "games_played",
     ]);
     expect(editor.changeCount()).toBe(1);
+  });
+
+  it("a fresh profile of the same card keeps a local tracker move", () => {
+    const editor = new CardEditor();
+    editor.seed(
+      me(
+        {
+          background: "bg_pacific",
+          trackers: [
+            { stat: "wins", value: 1 },
+            { stat: "nukes_launched", value: 2 },
+          ],
+        },
+        ALL_OWNED,
+      ),
+    );
+    // Nukes moves to the first row.
+    editor.move("tracker", 1, 0);
+    // A refresh brings Best Elo, saved elsewhere into the empty row.
+    editor.seed(
+      me(
+        {
+          background: "bg_pacific",
+          trackers: [
+            { stat: "wins", value: 1 },
+            { stat: "nukes_launched", value: 2 },
+            { stat: "best_elo", value: 3 },
+          ],
+        },
+        ALL_OWNED,
+      ),
+    );
+    expect(editor.draft.rows.tracker).toEqual([
+      "nukes_launched",
+      "wins",
+      "best_elo",
+    ]);
+    expect(editor.changeCount()).toBeGreaterThan(0);
+  });
+
+  it("a newer profile that lands during a save stays the saved card", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // The refresh the save broadcasts is already newer: another session
+    // changed the trackers after this PUT committed.
+    const newer = me(
+      {
+        background: "bg_storm",
+        trackers: [
+          { stat: "games_played", value: 9 },
+          { stat: "nukes_launched", value: 4880 },
+          { stat: "best_elo", value: 1612 },
+        ],
+      },
+      ALL_OWNED,
+    );
+    editor.seed(newer);
+    // Then the PUT's own answer: the card as this save stored it.
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.rows.tracker[0]).toBe("games_played");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("an older profile that lands during a save doesn't undo it", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // A purchase's refresh read before this PUT committed: the old card.
+    editor.seed(me(CARD, [...ALL_OWNED, "cardBackground:bg_neon"]));
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.changeCount()).toBe(0);
   });
 
   it("Discard while a save is in flight: the draft follows what it stores", async () => {

@@ -24,6 +24,7 @@ const { getAuthHeader, logOut, userAuth, isSessionActive, getPlayToken } =
       claims: { sub: "player-1" },
     })),
     isSessionActive: vi.fn(() => true),
+    isOtherSession: vi.fn(() => false),
     getPlayToken: vi.fn(async () => "token"),
   }));
 vi.mock("../src/client/Auth", () => ({

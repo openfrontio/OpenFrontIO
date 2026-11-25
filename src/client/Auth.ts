@@ -591,6 +591,28 @@ export function isSessionActive(sub: string): boolean {
   }
 }
 
+/**
+ * True when a session exists and it isn't `sub`'s: another account is
+ * signed in. No session at all (signed out, or a refresh that failed for
+ * now: a 5xx or a timeout drops the token without ending the session) says
+ * nothing about whose it is, so it's false.
+ */
+export function isOtherSession(sub: string): boolean {
+  return __jwt !== null && !isSessionActive(sub);
+}
+
+/** The session's subject (the JWT `sub`, as a UUID): null with no token. */
+export function currentSessionSub(): string | null {
+  const jwt = __jwt;
+  if (jwt === null) return null;
+  try {
+    const raw = decodeJwt(jwt).sub;
+    return raw === undefined ? null : base64urlToUuid(raw);
+  } catch {
+    return null;
+  }
+}
+
 export async function userAuth(
   shouldRefresh: boolean = true,
 ): Promise<UserAuth> {

@@ -15,6 +15,8 @@ export class CardUnsavedDialog extends LitElement {
   @property({ type: Number }) count = 0;
   @property({ attribute: false }) lines: readonly string[] = [];
   @property({ type: Boolean }) canSave = true;
+  /** An item in the changes isn't owned yet: the note says to buy it. */
+  @property({ type: Boolean }) buyFirst = false;
   @property({ type: Boolean }) saving = false;
   @property({ attribute: false }) onChoose?: (choice: CardGuardChoice) => void;
 
@@ -107,7 +109,7 @@ export class CardUnsavedDialog extends LitElement {
               </p>`,
           )}
           ${
-            this.canSave
+            !this.buyFirst
               ? nothing
               : html`<p
                   data-card-guard-buy-first

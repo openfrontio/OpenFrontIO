@@ -43,6 +43,10 @@ const clientForksTests = [
   "tests/client/MainInitialize.test.ts",
   "tests/client/Matchmaking.test.ts",
   "tests/client/Platform.test.ts",
+  // Mocks Utils (translateText) for <purchase-button>, which other client
+  // files load too: in a vmThreads worker it could get a PurchaseButton
+  // another file evaluated with the real translateText.
+  "tests/client/PurchaseButtonEndScreen.test.ts",
   "tests/client/ServerList.test.ts",
   "tests/client/ShareLinks.test.ts",
   "tests/client/TransportConnectionRefused.test.ts",

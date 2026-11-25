@@ -9,6 +9,7 @@ vi.mock("../../src/client/Auth", () => ({
   getPlayToken: vi.fn(async () => null),
   logOut: vi.fn(async () => {}),
   isSessionActive: vi.fn(() => true),
+  isOtherSession: vi.fn(() => false),
   rememberPublicId: vi.fn(),
   userAuth: vi.fn(async () => ({
     jwt: "test-jwt",
@@ -21,7 +22,12 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "../../src/client/Api";
-import { isSessionActive, logOut } from "../../src/client/Auth";
+import {
+  isOtherSession,
+  isSessionActive,
+  logOut,
+  userAuth,
+} from "../../src/client/Auth";
 
 // The bound the rest of the authenticated surface already uses.
 const AUTH_FETCH_TIMEOUT_MS = 10_000;
@@ -252,6 +258,7 @@ describe("/users/@me from a session that has gone", () => {
 
   afterEach(() => {
     vi.mocked(isSessionActive).mockReturnValue(true);
+    vi.mocked(isOtherSession).mockReturnValue(false);
     invalidateUserMe();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -304,7 +311,45 @@ describe("/users/@me from a session that has gone", () => {
     vi.mocked(isSessionActive).mockImplementation(
       (sub: string) => sub !== "player-1",
     );
+    vi.mocked(isOtherSession).mockImplementation(
+      (sub: string) => sub === "player-1",
+    );
     await getUserMe();
     expect(meCalls()).toHaveLength(2);
+    vi.mocked(isOtherSession).mockReturnValue(false);
+  });
+
+  it("a request still in flight isn't joined once the session is another account's", async () => {
+    let answer!: (v: unknown) => void;
+    fetchMock.mockReturnValueOnce(new Promise((r) => (answer = r)));
+    // A's request has its token and is waiting on the network...
+    const first = getUserMe();
+    await vi.waitFor(() => expect(meCalls()).toHaveLength(1));
+    // ...when a silent refresh installs B.
+    vi.mocked(isOtherSession).mockImplementation(
+      (sub: string) => sub === "player-1",
+    );
+    const second = getUserMe();
+    // B's caller doesn't wait on A's request: it asks again.
+    expect(meCalls()).toHaveLength(1);
+    await vi.waitFor(() => expect(meCalls()).toHaveLength(2));
+    answer({ status: 200, json: async () => profile });
+    // A's caller still gets its own answer.
+    expect(await first).toEqual(profile);
+    await second;
+    vi.mocked(isOtherSession).mockReturnValue(false);
+  });
+
+  it("a brief refresh outage keeps the cached profile, and never caches signed out", async () => {
+    expect(await getUserMe()).toEqual(profile);
+    // /auth/refresh answers 5xx: no token for now (isSessionActive is false
+    // for every subject), but no other account either.
+    vi.mocked(isSessionActive).mockReturnValue(false);
+    vi.mocked(userAuth).mockResolvedValueOnce(false as never);
+    expect(await getUserMe()).toEqual(profile);
+    // Recovered.
+    vi.mocked(isSessionActive).mockReturnValue(true);
+    expect(await getUserMe()).toEqual(profile);
+    expect(meCalls()).toHaveLength(1);
   });
 });

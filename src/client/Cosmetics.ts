@@ -38,7 +38,13 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
-import { currentPublicId, sessionUncertain, userAuth } from "./Auth";
+import {
+  currentPublicId,
+  currentSessionSub,
+  isOtherSession,
+  sessionUncertain,
+  userAuth,
+} from "./Auth";
 import {
   cardItemName,
   type CardItem,
@@ -421,6 +427,8 @@ export async function broadcastFreshUserMe(
 ): Promise<UserMeResponse | false> {
   const requestId = ++freshUserMeRequestId;
   const session = freshUserMeSession;
+  // The session's subject when this read starts: the account it's for.
+  const sub = currentSessionSub();
   invalidateUserMe();
   const fresh = await getUserMe();
   if (fresh !== false) beforeBroadcast?.(fresh);
@@ -428,11 +436,16 @@ export async function broadcastFreshUserMe(
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   if (session !== freshUserMeSession) return fresh;
   // An ordinary token refresh can install another account (another tab's
-  // sign-in) with no session event: a profile of an account other than the
-  // one signed in now is never broadcast either. An account not known right
-  // now (a refresh that failed) isn't another one; a sign-out has its event.
+  // sign-in) with no session event: a profile read under one account is
+  // never broadcast while another holds the session. That's a session for
+  // another subject than this read started under (its publicId may not be
+  // known yet), or one whose known publicId differs. No session for now (a
+  // refresh that failed) isn't another account; a sign-out has its event.
   const signedInAs = currentPublicId();
-  if (signedInAs !== null && fresh.player.publicId !== signedInAs) {
+  if (
+    (sub !== null && isOtherSession(sub)) ||
+    (signedInAs !== null && fresh.player.publicId !== signedInAs)
+  ) {
     return fresh;
   }
   document.dispatchEvent(
