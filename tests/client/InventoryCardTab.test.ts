@@ -493,6 +493,22 @@ describe("<inventory-card-tab> save bar", () => {
     expect(q("[data-card-save-toast]")).toBeNull();
     expect(saveButton().textContent).toContain("inventory_card.saved");
   });
+
+  it("the toast's Retry is off while the editor can't save, like Save's", async () => {
+    api.save.mockResolvedValue({ ok: false, error: "failed" });
+    await render(userMe(OWNER));
+    await changeTracker3();
+    await click(saveButton());
+    // A token refresh failed: the account can't be read for now.
+    session.id = null;
+    tab.requestUpdate();
+    await settle();
+    expect(saveButton().disabled).toBe(true);
+    const retry = q<HTMLButtonElement>("[data-card-toast-retry]")!;
+    expect(retry.disabled).toBe(true);
+    await click(retry);
+    expect(api.save).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("<inventory-card-tab> without the card", () => {

@@ -1040,7 +1040,8 @@ export class InventoryCardTab extends LitElement {
       <button
         type="button"
         data-card-toast-retry
-        class="min-h-11 shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-bold hover:bg-white/20"
+        ?disabled=${!this.editor.canSave()}
+        class="min-h-11 shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-bold hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
         @click=${() => this.save()}
       >
         ${translateText("inventory_card.retry")}
