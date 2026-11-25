@@ -5,10 +5,16 @@ vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
 }));
 // The account the session is signed in as (Auth's currentPublicId).
-const session = vi.hoisted(() => ({ id: "p1" as string | null }));
+// `sub` is the session's JWT subject (null: no token for now).
+const session = vi.hoisted(() => ({
+  id: "p1" as string | null,
+  sub: "sub-1" as string | null,
+}));
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
   currentPublicId: () => session.id,
+  currentSessionSub: () => session.sub,
+  isOtherSession: (sub: string) => session.sub !== null && session.sub !== sub,
 }));
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
@@ -183,6 +189,7 @@ describe("card draft", () => {
 describe("CardEditor", () => {
   beforeEach(() => {
     session.id = "p1";
+    session.sub = "sub-1";
     api.save.mockReset();
     vi.useFakeTimers();
   });
@@ -773,6 +780,34 @@ describe("CardEditor", () => {
     editor.pick({ kind: "background" }, "bg_storm");
     expect(await editor.save()).toBe(false);
     // A's card isn't taken as saved while B is signed in, and no "Saved".
+    expect(editor.saved.background).toBe("bg_pacific");
+    expect(editor.saveState).toBe("idle");
+  });
+
+  it("a save that succeeds after a refresh installed an account whose id isn't known yet isn't taken", async () => {
+    // B's publicId isn't stored yet, so currentPublicId() is null: only
+    // the session's subject says it's another account.
+    session.id = "account-a";
+    api.save.mockImplementationOnce(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        expect(stillWanted()).toBe(true);
+        session.id = null;
+        session.sub = "sub-b";
+        return {
+          ok: true,
+          loadout: {
+            background: "bg_storm",
+            title: null,
+            taunt: null,
+            trackers: ["wins", "nukes_launched", "best_elo"],
+          },
+        };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
     expect(editor.saved.background).toBe("bg_pacific");
     expect(editor.saveState).toBe("idle");
   });

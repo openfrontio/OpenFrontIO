@@ -4,7 +4,7 @@ import {
   MAX_CARD_TRACKERS,
   type TrackerStat,
 } from "@openfront/shared/PlayerCardSchemas";
-import { currentPublicId } from "../../Auth";
+import { currentPublicId, currentSessionSub, isOtherSession } from "../../Auth";
 import { type CardLoadoutBody, saveCardLoadout } from "../../CardLoadoutApi";
 import type { CardItem, CardItemType } from "../card/CardItems";
 
@@ -605,6 +605,9 @@ export class CardEditor {
     const epoch = sessionEpoch;
     const account = this.account;
     const owner = this.seededFrom?.player.publicId ?? null;
+    // The session's subject as the save starts: the account it's for, even
+    // when another account's publicId isn't known yet.
+    const ownerSub = currentSessionSub();
     // Asked once the token is read, right before the PUT: still the session
     // it started under, and still signed in as this card's account.
     const result = await saveCardLoadout(
@@ -650,7 +653,10 @@ export class CardEditor {
     // profile seeds it. Unknown for now (a refresh that failed) isn't
     // another account.
     const signedInAs = this.sessionAccount();
-    if (signedInAs !== null && signedInAs !== owner) {
+    if (
+      (signedInAs !== null && signedInAs !== owner) ||
+      (ownerSub !== null && isOtherSession(ownerSub))
+    ) {
       this.droppedTo = null;
       this.saveState = "idle";
       this.emit();
