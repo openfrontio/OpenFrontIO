@@ -17,6 +17,9 @@ interface Flags {
   log: LogFlags;
 }
 
+const TRUE = new Set(["1", "t", "T", "true", "TRUE", "True"]);
+const FALSE = new Set(["0", "f", "F", "false", "FALSE", "False"]);
+
 // Go's flag package: -name or --name, "=value" or a separate argument for non-bools.
 function parseFlags(argv: string[]): Flags {
   const f: Flags = {
@@ -52,11 +55,12 @@ function parseFlags(argv: string[]): Flags {
     }
     // Own keys only: --toString must be an unknown flag.
     const own = (o: object) => Object.prototype.hasOwnProperty.call(o, name);
-    if (own(bools))
-      bools[name](
-        inline === undefined ? true : inline === "true" || inline === "1",
-      );
-    else if (own(values)) {
+    if (own(bools)) {
+      // strconv.ParseBool's spellings, as Go's flag package accepts.
+      if (inline === undefined || TRUE.has(inline)) bools[name](true);
+      else if (FALSE.has(inline)) bools[name](false);
+      else usage(`invalid boolean value "${inline}" for -${name}: parse error`);
+    } else if (own(values)) {
       const v = inline ?? argv[++i];
       if (v === undefined) usage(`flag needs an argument: -${name}`);
       values[name](v);

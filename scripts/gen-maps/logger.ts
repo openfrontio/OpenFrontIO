@@ -21,13 +21,18 @@ export function determineLogLevel(f: LogFlags): number {
   let level = LEVEL_INFO;
   if (f.verbose || f.performance || f.removal) level = LEVEL_DEBUG;
   if (f.logLevel !== "") {
-    const parsed = {
+    const levels: Record<string, number> = {
       all: LEVEL_ALL,
       debug: LEVEL_DEBUG,
       info: LEVEL_INFO,
       warn: LEVEL_WARN,
       error: LEVEL_ERROR,
-    }[f.logLevel.toLowerCase()];
+    };
+    const key = f.logLevel.toLowerCase();
+    // Own keys only: --log-level=constructor must fall back to info.
+    const parsed = Object.prototype.hasOwnProperty.call(levels, key)
+      ? levels[key]
+      : undefined;
     if (parsed === undefined) {
       process.stdout.write(
         `invalid log level: ${f.logLevel}, defaulting to info\n`,

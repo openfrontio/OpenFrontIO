@@ -48,14 +48,22 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
   }
 
   const manifestPath = join(inDir, "info.json");
-  let manifest: Record<string, unknown>;
+  let parsedInfo: unknown;
   try {
-    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    parsedInfo = JSON.parse(readFileSync(manifestPath, "utf8"));
   } catch (e) {
     throw new Error(
       `failed to parse info.json for ${name}: ${(e as Error).message}`,
     );
   }
+  if (
+    parsedInfo === null ||
+    typeof parsedInfo !== "object" ||
+    Array.isArray(parsedInfo)
+  ) {
+    throw new Error(`failed to parse info.json for ${name}: not an object`);
+  }
+  const manifest = parsedInfo as Record<string, unknown>;
 
   let result: GeneratedMap;
   try {
