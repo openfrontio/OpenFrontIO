@@ -12,8 +12,9 @@ import {
 import { renderTroops } from "@openfront/engine-lib/Format";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
+  SnapshotError,
+  zFinite,
   zInt,
-  zNum,
   zPlayerRef,
   zRandom,
   zRef,
@@ -523,6 +524,20 @@ export class AttackExecution implements Execution {
   }
 
   restoreSnapshot(s: AttackExecutionState, r: SnapshotReader): void {
+    // The heap starts at 1024 and doubles as it fills. A tile can be queued
+    // once per conquered neighbour, so it stays within a few per map tile;
+    // the stored capacity is allocated, so it must stay within that too.
+    const heap = s.toConquer;
+    const tiles = r.game.width() * r.game.height();
+    if (
+      heap.capacity < 1024 ||
+      (heap.capacity & (heap.capacity - 1)) !== 0 ||
+      heap.capacity > Math.max(1024, 8 * tiles) ||
+      heap.tiles.length !== heap.pri.length ||
+      heap.tiles.length > heap.capacity
+    ) {
+      throw new SnapshotError(`invalid attack queue of ${heap.capacity}`);
+    }
     this.active = s.active;
     this.toConquer = FlatBinaryHeap.fromState(s.toConquer);
     this.random = r.random(s.random);
@@ -564,7 +579,7 @@ const AttackExecutionStateSchema = z.object({
   /** Null until init() resolves the target. */
   target: zPlayerRef().nullable(),
   attack: zRef().nullable(),
-  startTroops: zNum().nullable(),
+  startTroops: zFinite().nullable(),
   owner: zPlayerRef(),
   targetID: z.string().nullable(),
   sourceTile: zTile().nullable(),

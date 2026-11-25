@@ -15,6 +15,7 @@ import {
   rotSpeckleNoise,
 } from "@openfront/engine-lib/game/DoomsdayClock";
 import {
+  SnapshotError,
   zInt,
   zPlayerRef,
   zTiles,
@@ -412,6 +413,18 @@ export class DoomsdayClockExecution implements Execution {
   }
 
   restoreSnapshot(s: DoomsdayClockState, r: SnapshotReader): void {
+    // held is territory once owned, and sizes each tick's rot; each front
+    // tile has a count of its rotted neighbours.
+    for (const st of s.rotState) {
+      if (
+        st.held < 0 ||
+        st.held > r.game.width() * r.game.height() ||
+        st.frontRotted.length !== st.frontTiles.length ||
+        st.frontRotted.some((n) => n < 0)
+      ) {
+        throw new SnapshotError("invalid doomsday clock rot state");
+      }
+    }
     this.active = s.active;
     this.mg = s.initialized ? r.game : null;
     this.rotState = new Map(

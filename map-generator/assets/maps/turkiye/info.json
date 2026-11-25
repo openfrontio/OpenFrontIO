@@ -5,6 +5,8 @@
   "display_name": "Türkiye",
   "translation_key": "map.turkiye",
   "location": { "lat": 39, "lon": 35 },
+  "author": "halil1054",
+  "description": "A transcontinental country bridging Europe and Asia, holding the Bosphorus and the Dardanelles between the Black Sea and the Mediterranean. The rugged Anatolian plateau, the Taurus and Pontic mountains and great rivers like the Kızılırmak and the Euphrates turn every border into a natural front line.",
   "categories": ["countries", "europe", "asia"],
   "nations": [
     {

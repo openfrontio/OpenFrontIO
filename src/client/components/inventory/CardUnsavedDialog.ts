@@ -58,7 +58,12 @@ export class CardUnsavedDialog extends LitElement {
   private onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Tab") {
       const items = this.buttons();
-      if (items.length === 0) return;
+      // Every button disabled (a save running): focus stays where it is,
+      // never on the page behind this modal dialog.
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
       const active = document.activeElement;

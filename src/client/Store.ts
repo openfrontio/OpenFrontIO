@@ -21,7 +21,10 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import { isCardItemType } from "./components/card/CardItems";
-import { cardStoreItems } from "./components/card/CardStoreGrid";
+import {
+  type CardStoreGrid,
+  cardStoreItems,
+} from "./components/card/CardStoreGrid";
 import "./components/CosmeticCard";
 import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -1977,6 +1980,9 @@ export class StoreModal extends BaseModal {
     )) {
       inline.closeCardModal();
     }
+    // Likewise the Card sub-tab's large preview: left open, its Tab trap
+    // would hold keyboard focus on a hidden page.
+    this.querySelector<CardStoreGrid>("card-store-grid")?.closePreview();
     this.affiliateCode = null;
     this.openedPack = null;
     this.previewingCosmetic = null;

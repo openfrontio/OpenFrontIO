@@ -112,7 +112,12 @@ export async function buyCardItem(
     case "failed":
       await showInGameAlert(translateText("inventory_card.purchase_failed"));
       return;
-    default:
+    case "unreachable":
+      // Signed in, but the profile couldn't be read: nothing was sent.
+      await showInGameAlert(translateText("inventory_card.server_unreachable"));
+      return;
+    case "handled":
+      // Already explained with its own message (a wallet in debt).
       return;
   }
 }

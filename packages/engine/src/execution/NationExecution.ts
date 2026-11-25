@@ -13,6 +13,7 @@ import { GameID } from "@openfront/engine-api/Schemas";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   VersionedSchema,
+  zFinite,
   zNum,
   zPlayerRef,
   zRandom,
@@ -537,9 +538,9 @@ const NationStateSchema = z.object({
   player: zPlayerRef().nullable(),
   attackRate: zNum().nullable(),
   attackTick: zNum().nullable(),
-  triggerRatio: zNum(),
-  reserveRatio: zNum(),
-  expandRatio: zNum(),
+  triggerRatio: zFinite(),
+  reserveRatio: zFinite(),
+  expandRatio: zFinite(),
   embargoMalusApplied: z.array(z.string()),
   spawnExecAdded: z.boolean(),
   behaviors: z

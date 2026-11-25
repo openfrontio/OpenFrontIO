@@ -15,6 +15,11 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
   currentPublicId: () => session.id,
 }));
+const alerts = vi.hoisted(() => ({ show: vi.fn(async () => {}) }));
+vi.mock("../../src/client/InGameModal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/InGameModal")>()),
+  showInGameAlert: alerts.show,
+}));
 const shop = vi.hoisted(() => ({
   buy: vi.fn(),
   check: vi.fn(),
@@ -323,8 +328,9 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     const values = [...card.querySelectorAll("[data-card-tracker]")].map(
       (t) => t.textContent ?? "",
     );
+    // Never 0 (the stat has no value), but "—".
+    expect(values.some((v) => /\b0\b/.test(v))).toBe(false);
     expect(values.some((v) => v.includes("—"))).toBe(true);
-    expect(values.some((v) => /0/.test(v))).toBe(false);
   });
 
   it("a tracker whose name isn't its stat is never offered (rows save names as stats)", async () => {
@@ -577,6 +583,16 @@ describe("<inventory-card-tab> without the card", () => {
     expect(
       StorePlacementSchema.safeParse(shop.buy.mock.calls[0][2]).success,
     ).toBe(true);
+  });
+
+  it("a buy whose profile read can't reach the server says so", async () => {
+    shop.buy.mockResolvedValue({ kind: "unreachable" });
+    alerts.show.mockClear();
+    await render(userMe(NO_CARD, null));
+    await buyButton().onPurchaseHard();
+    expect(alerts.show).toHaveBeenCalledWith(
+      "inventory_card.server_unreachable",
+    );
   });
 
   it("a buy is sent only as the account signed in now", async () => {

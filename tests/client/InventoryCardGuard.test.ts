@@ -27,6 +27,7 @@ import {
 } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
+import { modalRouter } from "../../src/client/ModalRouter";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),
@@ -198,6 +199,84 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(q("[data-card-guard]")).toBeNull();
     expect(onCardTab()).toBe(true);
     expect(q("[data-card-save-bar]")).not.toBeNull();
+  });
+
+  describe("hash routes", () => {
+    beforeEach(() => {
+      history.replaceState(null, "", "/");
+      modalRouter.register("inventory", {
+        tag: "inventory-modal",
+        pageId: "page-inventory",
+      });
+      modalRouter.register("store", {
+        tag: "store-modal",
+        pageId: "page-item-store",
+      });
+    });
+    // What Main's hashchange handler does for a hash that names no modal
+    // (browser Back to the home page, or the hash cleared by hand).
+    async function back() {
+      history.replaceState(null, "", "/");
+      expect(modalRouter.isHashRouted()).toBe(false);
+      modalRouter.closeCurrent();
+      await settle(modal);
+    }
+
+    it("Back with an unsaved change asks first; Keep editing stays, and the URL names the Inventory again", async () => {
+      await openWithChange();
+      const hash = window.location.hash;
+      expect(hash).toContain("modal=inventory");
+      await back();
+      expect(q("[data-card-guard]")).not.toBeNull();
+      expect(modal.isOpen()).toBe(true);
+      await click("[data-card-guard-keep]");
+      expect(modal.isOpen()).toBe(true);
+      expect(window.location.hash).toBe(hash);
+      expect(q("[data-card-save-bar]")).not.toBeNull();
+    });
+
+    it("Back with an unsaved change, then Discard: closes, and the change is gone", async () => {
+      await openWithChange();
+      await back();
+      await click("[data-card-guard-discard]");
+      expect(modal.isOpen()).toBe(false);
+      expect(window.location.hash).toBe("");
+      modal.open({ tab: "card" });
+      await settle(modal);
+      expect(q("[data-card-save-bar]")).toBeNull();
+    });
+
+    it("Back with an unsaved change, then Save: saves, then closes", async () => {
+      vi.mocked(saveCardLoadout).mockResolvedValue({
+        ok: true,
+        loadout: {} as never,
+      });
+      await openWithChange();
+      await back();
+      await click("[data-card-guard-save]");
+      expect(saveCardLoadout).toHaveBeenCalledTimes(1);
+      expect(modal.isOpen()).toBe(false);
+    });
+
+    it("Back with no changes closes at once", async () => {
+      modal.open({ tab: "card" });
+      await settle(modal);
+      await back();
+      expect(q("[data-card-guard]")).toBeNull();
+      expect(modal.isOpen()).toBe(false);
+    });
+
+    it("a route to the Store with an unsaved change asks first; Keep editing stays", async () => {
+      await openWithChange();
+      const hash = window.location.hash;
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      expect(modalRouter.routeFromHash()).toBe(true);
+      await settle(modal);
+      expect(q("[data-card-guard]")).not.toBeNull();
+      await click("[data-card-guard-keep]");
+      expect(modal.isOpen()).toBe(true);
+      expect(window.location.hash).toBe(hash);
+    });
   });
 
   it("Discard drops the changes and goes", async () => {

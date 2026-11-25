@@ -427,6 +427,14 @@ export async function broadcastFreshUserMe(
   // A newer refresh owns the broadcast, even if it is still pending or failed.
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   if (session !== freshUserMeSession) return fresh;
+  // An ordinary token refresh can install another account (another tab's
+  // sign-in) with no session event: a profile of an account other than the
+  // one signed in now is never broadcast either. An account not known right
+  // now (a refresh that failed) isn't another one; a sign-out has its event.
+  const signedInAs = currentPublicId();
+  if (signedInAs !== null && fresh.player.publicId !== signedInAs) {
+    return fresh;
+  }
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
@@ -812,7 +820,11 @@ export async function purchaseCosmeticInPlace(
   // commit after that. Re-read: owned now means it went through. Otherwise
   // say it couldn't be confirmed, never "you weren't charged"; a retry is
   // safe, as a committed buy answers already_owned.
+  // Only the purchasing account's profile can confirm it: one read after a
+  // sign-in elsewhere is another account's, and its owning the item says
+  // nothing about whether this purchase was charged.
   const ownsIt = (fresh: UserMeResponse) =>
+    fresh.player.publicId === userMe.player.publicId &&
     (fresh.player.flares ?? []).includes(resolved.key);
   const settleFailure = async (): Promise<InPlacePurchase> => {
     const fresh = await broadcastFreshUserMe((f) => {

@@ -93,6 +93,10 @@ describe("card draft", () => {
     ]);
     expect(moveRow(d, "tracker", 0, -1)).toBe(d);
     expect(moveRow(d, "tracker", 2, 3)).toBe(d);
+    // A source row past the end (or before the start) moves nothing either:
+    // never an undefined row in the draft.
+    expect(moveRow(d, "tracker", 3, 0)).toBe(d);
+    expect(moveRow(d, "tracker", -1, 0)).toBe(d);
   });
 
   it("lists each changed slot", () => {
@@ -714,6 +718,65 @@ describe("CardEditor", () => {
     expect(api.save).not.toHaveBeenCalled();
   });
 
+  it("a discarded account's save in flight neither holds up nor decides the next account's Save", async () => {
+    session.id = "account-a";
+    // A's PUT never settles.
+    api.save.mockReturnValueOnce(new Promise(() => {}));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // Signed out of A and into B.
+    editor.dropAccount();
+    session.id = "account-b";
+    editor.seed(me(CARD, B_FLARES, "account-b"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["games_played", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await editor.save()).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(api.save.mock.calls[1][0].trackers).toEqual([
+      "games_played",
+      "nukes_launched",
+      "best_elo",
+    ]);
+  });
+
+  it("a save that succeeds after the session moved to another account isn't taken", async () => {
+    // Sent as A, then an ordinary token refresh installs B (no session
+    // event) before the answer lands.
+    session.id = "account-a";
+    api.save.mockImplementationOnce(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        expect(stillWanted()).toBe(true);
+        session.id = "account-b";
+        return {
+          ok: true,
+          loadout: {
+            background: "bg_storm",
+            title: null,
+            taunt: null,
+            trackers: ["wins", "nukes_launched", "best_elo"],
+          },
+        };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
+    // A's card isn't taken as saved while B is signed in, and no "Saved".
+    expect(editor.saved.background).toBe("bg_pacific");
+    expect(editor.saveState).toBe("idle");
+  });
+
   it("a session that moves to another account while saving isn't sent", async () => {
     session.id = "account-a";
     api.save.mockImplementation(
@@ -787,6 +850,81 @@ describe("CardEditor", () => {
     await saving;
     expect(editor.saveState).toBe("idle");
     expect(editor.changeCount()).toBe(0);
+  });
+
+  // Owns every item the tests below pick.
+  const ALL_OWNED = [
+    "cardBackground:bg_pacific",
+    "cardBackground:bg_storm",
+    ...["wins", "nukes_launched", "best_elo", "games_played"].map(
+      (s) => `cardTracker:${s}`,
+    ),
+  ];
+
+  it("a move made after closing mid-save survives the save failing", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    // Only the background changes, then the Inventory closes mid-save.
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.settle();
+    // Reopened: Best Elo moves to the first row.
+    editor.move("tracker", 2, 0);
+    finish({ ok: false, error: "failed" });
+    await saving;
+    expect(editor.draft.rows.tracker).toEqual([
+      "best_elo",
+      "wins",
+      "nukes_launched",
+    ]);
+  });
+
+  it("a tracker removal saved while the background changed isn't two new edits", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    // Nukes comes off the middle row, and that's saved...
+    editor.pick({ kind: "tracker", index: 1 }, null);
+    const saving = editor.save();
+    // ...while only the background changes.
+    editor.pick({ kind: "background" }, "bg_storm");
+    // The server closes the gap up.
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.draft.rows.tracker).toEqual(["wins", "best_elo", null]);
+    // Only the background is left to save.
+    expect(editor.changeCount()).toBe(1);
+  });
+
+  it("a fresh profile of the same card keeps the edits and takes what changed elsewhere", async () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    // Only a tracker is edited...
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    // ...when a purchase's refresh brings a background saved on another
+    // device.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    expect(editor.saved.background).toBe("bg_storm");
+    // The untouched background follows the fresh card; the edit stays.
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker).toEqual([
+      "wins",
+      "nukes_launched",
+      "games_played",
+    ]);
+    expect(editor.changeCount()).toBe(1);
   });
 
   it("Discard while a save is in flight: the draft follows what it stores", async () => {

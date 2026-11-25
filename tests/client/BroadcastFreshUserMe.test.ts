@@ -1,5 +1,5 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import { broadcastFreshUserMe } from "../../src/client/Cosmetics";
 
@@ -13,12 +13,22 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   invalidateUserMe: vi.fn(),
 }));
 
+// The account the session is signed in as (Auth's currentPublicId).
+const session = vi.hoisted(() => ({ id: "account-a" as string | null }));
+vi.mock("../../src/client/Auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Auth")>()),
+  currentPublicId: () => session.id,
+}));
+
 const profile = (publicId: string) =>
   ({ user: {}, player: { publicId } }) as unknown as UserMeResponse;
 
 describe("broadcastFreshUserMe", () => {
   const heard = vi.fn();
   document.addEventListener("userMeResponse", heard);
+  beforeEach(() => {
+    session.id = "account-a";
+  });
   afterEach(() => heard.mockClear());
 
   it("broadcasts the fresh profile", async () => {
@@ -45,7 +55,21 @@ describe("broadcastFreshUserMe", () => {
     });
   }
 
+  it("a profile fetched before a silent refresh into another account isn't broadcast", async () => {
+    // No session event: an ordinary token refresh picked up another tab's
+    // sign-in while A's profile was being read.
+    let answer!: (v: UserMeResponse) => void;
+    vi.mocked(getUserMe).mockReturnValueOnce(new Promise((r) => (answer = r)));
+    const fetching = broadcastFreshUserMe();
+    session.id = "account-b";
+    const late = profile("account-a");
+    answer(late);
+    expect(await fetching).toBe(late);
+    expect(heard).not.toHaveBeenCalled();
+  });
+
   it("one started after the change is broadcast", async () => {
+    session.id = "account-b";
     document.dispatchEvent(new CustomEvent("session-reauth"));
     const b = profile("account-b");
     vi.mocked(getUserMe).mockResolvedValueOnce(b);
