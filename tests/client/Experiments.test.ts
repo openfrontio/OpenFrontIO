@@ -844,6 +844,35 @@ describe("exposures", () => {
     expect(exposureBodies()).toHaveLength(1);
   });
 
+  it("sends nothing while the card still shows an older catalog", async () => {
+    // The Store swaps in a new group's catalog late (Play's prices first in
+    // the Android app): until the card shows the catalog in use, no exposure.
+    await known("deeper");
+    const el = flashCard();
+    let shows = false;
+    Experiments.exposureWatcher.observe(el, "store_flash", () => shows);
+    setVisible(el, true);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(exposureBodies()).toEqual([]);
+    // It re-renders on the current catalog: armed again, and sent.
+    shows = true;
+    Experiments.exposureWatcher.observe(el, "store_flash", () => shows);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(exposureBodies()).toHaveLength(1);
+  });
+
+  it("drops an armed exposure when the card falls behind before it fires", async () => {
+    await known("deeper");
+    const el = flashCard();
+    let shows = true;
+    Experiments.exposureWatcher.observe(el, "store_flash", () => shows);
+    setVisible(el, true);
+    await vi.advanceTimersByTimeAsync(500);
+    shows = false;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(exposureBodies()).toEqual([]);
+  });
+
   it("sends once per test, from either surface, and remembers it across loads", async () => {
     await known("deeper");
     const card = flashCard();

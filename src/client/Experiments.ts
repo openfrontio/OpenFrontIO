@@ -352,6 +352,8 @@ export async function recordExposure(
 
 interface Watched {
   surface: ExperimentExposureSurface;
+  // Whether the element shows the catalog now in use (see observe).
+  shows: () => boolean;
   timer: ReturnType<typeof setTimeout> | null;
   visible: boolean;
 }
@@ -369,16 +371,35 @@ export class ExposureWatcher {
   private readonly watched = new Map<Element, Watched>();
   private listening = false;
 
-  observe(el: Element, surface: ExperimentExposureSurface): void {
+  /**
+   * Watches `el` for `surface`. `shows` says whether it renders the catalog
+   * now in use: a surface that swaps its catalog in late (the Store waits on
+   * Play's prices in the Android app) would otherwise send an exposure for
+   * the new group while still showing the old one's card. It's asked when
+   * the timer arms and again when it fires; observing the same element again
+   * (its next render) re-arms it once it does.
+   */
+  observe(
+    el: Element,
+    surface: ExperimentExposureSurface,
+    shows: () => boolean = () => true,
+  ): void {
     this.release();
     if (typeof IntersectionObserver === "undefined") return;
-    if (this.watched.get(el)?.surface === surface) return;
+    const existing = this.watched.get(el);
+    if (existing?.surface === surface) {
+      existing.shows = shows;
+      if (existing.visible && existing.timer === null) {
+        this.startTimer(existing);
+      }
+      return;
+    }
     this.listen();
     this.observer ??= new IntersectionObserver(
       (entries) => this.onEntries(entries),
       { threshold: EXPOSURE_RATIO },
     );
-    this.watched.set(el, { surface, timer: null, visible: false });
+    this.watched.set(el, { surface, shows, timer: null, visible: false });
     this.observer.observe(el);
   }
 
@@ -443,8 +464,10 @@ export class ExposureWatcher {
     // Disarmed until the catalog on screen was fetched with the group known.
     if (document.visibilityState === "hidden") return;
     if (exposableAssignments().length === 0) return;
+    if (!w.shows()) return;
     w.timer = setTimeout(() => {
       w.timer = null;
+      if (!w.shows()) return;
       for (const a of exposableAssignments()) {
         void recordExposure(a.key, w.surface);
       }

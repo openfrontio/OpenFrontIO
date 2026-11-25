@@ -6,12 +6,14 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { GAME_ID_REGEX, type Winner } from "@openfront/engine-api/Schemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating/FfaRatingPanel";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
+  getCachedCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
@@ -78,6 +80,7 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
     typeof import("../../../../src/client/Cosmetics")
   >()),
   fetchCosmetics: vi.fn(async () => null),
+  getCachedCosmetics: vi.fn(() => null),
   resolveCosmetics: vi.fn(() => []),
 }));
 
@@ -320,6 +323,50 @@ describe("WinModal pattern promotion", () => {
     );
     // The same pattern, not a new pick.
     expect(modal.querySelectorAll("purchase-button")).toHaveLength(1);
+  });
+
+  it("draws the first offer from a catalog that landed while it loaded", async () => {
+    // Load A is out when reload B lands (and announces before any offer
+    // exists). A comes back uncached: the offer must use B's prices.
+    const older = { name: "A" } as unknown as Cosmetics;
+    const newer = { name: "B" } as unknown as Cosmetics;
+    const aurora = (priceHard: number): ResolvedCosmetic => ({
+      type: "pattern",
+      cosmetic: {
+        name: "aurora",
+        pattern: "AAAAAA",
+        product: null,
+        priceHard,
+        rarity: "rare",
+      } as never,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: "pattern:aurora",
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(older);
+    vi.mocked(getCachedCosmetics).mockReturnValue(newer);
+    vi.mocked(resolveCosmetics).mockImplementation((catalog) =>
+      catalog === newer ? [aurora(100)] : [aurora(80)],
+    );
+    try {
+      modal = document.createElement("win-modal") as WinModal;
+      Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+        rand: 0.75,
+        isWin: true,
+      });
+      document.body.appendChild(modal);
+      await modal.updateComplete;
+      await modal.loadPatternContent();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(
+        modal.querySelector<PurchaseButton>("purchase-button")?.priceHard,
+      ).toBe(100);
+    } finally {
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      vi.mocked(getCachedCosmetics).mockReturnValue(null);
+      vi.mocked(resolveCosmetics).mockReturnValue([]);
+    }
   });
 
   it("drops the ad-free pitch in the desktop shell, which has no ads", async () => {

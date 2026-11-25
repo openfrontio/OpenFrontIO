@@ -839,7 +839,15 @@ export class StoreModal extends BaseModal {
   private observeFlashExposure(): void {
     const flash = this.querySelector(FLASH_EXPOSURE_SELECTOR);
     if (flash !== null && this.isModalOpen) {
-      exposureWatcher.observe(flash, "store_flash");
+      // Only once the card shows the catalog now in use: in the Android app
+      // this.cosmetics is swapped in after Play's prices arrive, which can
+      // be after the new group's catalog (and its generation) landed.
+      exposureWatcher.observe(
+        flash,
+        "store_flash",
+        () =>
+          this.cosmetics !== null && this.cosmetics === getCachedCosmetics(),
+      );
     }
   }
 

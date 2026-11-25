@@ -707,8 +707,18 @@ export class WinModal extends LitElement implements Controller {
 
   private onCosmeticsChanged = (e: Event): void => {
     const cosmetics = (e as CustomEvent<Cosmetics>).detail;
-    if (this.offerKeys.length === 0 || !cosmetics) return;
-    void this.redrawOffer(cosmetics);
+    if (!cosmetics) return;
+    // The eliminated-by card's loadout row prices its items from the
+    // catalog it was built with: rebuild it from this one. The retained
+    // catalog is replaced too, or cardCatalogue() would keep handing back
+    // the old one.
+    if (this.endCardMode === "eliminatedBy" && this.endCardView !== null) {
+      this.endCardCosmetics = cosmetics;
+      void this.loadLoadout(this.endCardView);
+    }
+    // Before the first offer is picked, loadPatternContent takes the newest
+    // catalog itself.
+    if (this.offerKeys.length > 0) void this.redrawOffer(cosmetics);
   };
 
   private async redrawOffer(cosmetics: Cosmetics): Promise<void> {
@@ -725,7 +735,12 @@ export class WinModal extends LitElement implements Controller {
 
   async loadPatternContent() {
     const me = await getUserMe();
-    const cosmetics = await fetchCosmetics();
+    const fetched = await fetchCosmetics();
+    // A reload can land while this fetch is out (a cohort change, or a
+    // price_changed refusal): this one's answer is then older and isn't
+    // cached, and the reload's event came before any offer existed to
+    // redraw. Take the catalog now in use.
+    const cosmetics = getCachedCosmetics() ?? fetched;
 
     const purchasable = purchasablePatterns(cosmetics, me);
 

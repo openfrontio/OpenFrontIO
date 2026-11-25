@@ -17,6 +17,7 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
 }));
 
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
+import { COSMETICS_CHANGED } from "../../src/client/Experiments";
 import { WinModal } from "../../src/client/hud/layers/WinModal";
 
 if (!customElements.get("win-modal")) {
@@ -130,6 +131,51 @@ describe("WinModal card section", () => {
     await modal.updateComplete;
     expect(modal.endCardView?.background?.name).toBe("bg_pacific");
     catalogue.fetched = null;
+  });
+
+  it("rebuilds the eliminated-by loadout at the new catalog's prices", async () => {
+    const withBackground = (priceHard: number) => ({
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_pacific: {
+          product: null,
+          rarity: "epic",
+          name: "bg_pacific",
+          url: "/bg.webp",
+          priceHard,
+        },
+      },
+    });
+    catalogue.cached = withBackground(240);
+    const modal = (await renderModal({})) as unknown as {
+      game: unknown;
+      setEndCard(choose: () => unknown): void;
+      loadout: { priceHard?: number }[];
+    };
+    modal.game = {
+      myPlayer: () => null,
+      gameID: () => "g1",
+      config: () => ({ gameConfig: () => ({}) }),
+      resumedFromSave: () => false,
+      playerByClientID: () => ({
+        name: () => "Volt",
+        clanTag: () => null,
+        territoryColor: () => ({ toHex: () => "#123456" }),
+      }),
+      playerCardOf: () => ({
+        card: { background: "bg_pacific", trackers: [] },
+        flag: undefined,
+      }),
+    };
+    modal.setEndCard(() => ({ kind: "eliminatedBy", clientID: "KILLER01" }));
+    await vi.waitFor(() => expect(modal.loadout[0]?.priceHard).toBe(240));
+    // A cohort catalog, or a price_changed refusal's reload, lands.
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: withBackground(300) }),
+    );
+    await vi.waitFor(() => expect(modal.loadout[0]?.priceHard).toBe(300));
+    catalogue.cached = null;
   });
 
   it("a failure choosing the card leaves today's screen", async () => {
