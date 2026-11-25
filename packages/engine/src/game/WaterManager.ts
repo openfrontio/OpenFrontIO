@@ -2,6 +2,7 @@ import { authoredTerrain } from "@openfront/engine-api/EditorCommands";
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import {
+  SnapshotError,
   snapshotType,
   zBytes,
   zInt,
@@ -127,6 +128,11 @@ export class WaterManager {
     this._waterGraphDirty = s.waterGraphDirty;
     this._waterGraphLastRebuildTick = s.waterGraphLastRebuildTick;
     this._pendingWaterTiles = new Set(s.pendingWaterTiles);
+    // zTiles checks refs against the full map; these are minimap tiles.
+    const miniTiles = this.miniMap.width() * this.miniMap.height();
+    if (s.dirtyMiniTiles.some((t) => t >= miniTiles)) {
+      throw new SnapshotError("dirty minimap tile is off the minimap");
+    }
     this._dirtyMiniTiles = new Set(s.dirtyMiniTiles);
     if (s.components !== null && this._miniWaterCC !== null) {
       this._miniWaterCC.restoreSnapshot(s.components);

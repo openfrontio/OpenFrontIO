@@ -17,6 +17,7 @@ const APPLE_SCRIPT_URL =
 // site without one has no Apple button: the API answers 501 until that
 // environment is configured.
 const SERVICES_IDS: Record<string, string> = {
+  "openfront.io": "io.openfront.web",
   "openfront.dev": "io.openfront.web.staging",
 };
 

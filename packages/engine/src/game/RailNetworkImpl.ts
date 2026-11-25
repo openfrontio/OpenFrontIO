@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import {
+  SnapshotError,
   snapshotType,
   zInt,
   zRef,
@@ -31,6 +32,10 @@ export interface StationManager {
   getById(id: number): TrainStation | undefined;
   count(): number;
 }
+
+// Far more stations than a game builds; bounds what a snapshot can make
+// station pathfinding allocate.
+const MAX_STATION_ID = 1 << 20;
 
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
@@ -95,9 +100,20 @@ export class StationManagerImpl implements StationManager {
     r: SnapshotReader,
   ): void {
     this.stations = new Set(s.stations.map((i) => r.station(i)));
+    // Station pathfinding sizes its arrays by nextId, and ids index them.
+    if (s.nextId < 1 || s.nextId > MAX_STATION_ID) {
+      throw new SnapshotError(`next station id is ${s.nextId}`);
+    }
     this.stationsById = [];
     for (const station of this.stations) {
-      this.stationsById[station.id] = station;
+      const id = station.id;
+      if (id < 1 || id >= s.nextId || this.stationsById[id] !== undefined) {
+        throw new SnapshotError(`invalid train station id ${id}`);
+      }
+      this.stationsById[id] = station;
+    }
+    if (this.stations.size !== s.stations.length) {
+      throw new SnapshotError("a train station is listed twice");
     }
     this.rebuildStationsByUnit();
     this.nextId = s.nextId;

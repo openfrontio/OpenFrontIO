@@ -1,6 +1,7 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { PlayerID, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { UnitLike, UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import { SnapshotError } from "../snapshot/SnapshotType";
 
 export class UnitGrid<U extends UnitLike = UnitLike> {
   private grid: Map<UnitType, Set<U>>[][];
@@ -39,10 +40,29 @@ export class UnitGrid<U extends UnitLike = UnitLike> {
     unit: (ref: number) => U,
   ): void {
     const width = this.grid[0]?.length ?? 0;
+    if (cells.length !== this.grid.length * width) {
+      throw new SnapshotError(`unit grid has ${cells.length} cells`);
+    }
     cells.forEach((entries, i) => {
-      const cell = this.grid[Math.floor(i / width)][i % width];
+      const [x, y] = [i % width, Math.floor(i / width)];
+      const cell = this.grid[y][x];
       for (const [type, refs] of entries) {
-        cell.set(type, new Set(refs.map(unit)));
+        const units = new Set(refs.map(unit));
+        // Each unit sits under its own type, in the cell of its tile.
+        for (const u of units) {
+          const tile = u.tile();
+          const [gridX, gridY] = this.getGridCoords(
+            this.gm.x(tile),
+            this.gm.y(tile),
+          );
+          if (u.type() !== type || gridX !== x || gridY !== y) {
+            throw new SnapshotError(`unit grid misplaces a ${u.type()}`);
+          }
+        }
+        if (cell.has(type) || units.size !== refs.length) {
+          throw new SnapshotError("unit grid lists a unit twice");
+        }
+        cell.set(type, units);
       }
     });
   }
