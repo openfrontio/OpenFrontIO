@@ -102,11 +102,19 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
   ]);
 
   if (Array.isArray(manifest.layers)) {
-    for (const layer of manifest.layers) {
-      if (layer === null || typeof layer !== "object" || Array.isArray(layer))
-        continue;
-      const layerID = typeof layer.id === "string" ? layer.id : "";
-      if (layerID === "") continue;
+    for (const [i, layer] of manifest.layers.entries()) {
+      // Test maps skip loadMapInfos' layer checks, so check here: a layer
+      // with no id has no file to encode and would break the manifest.
+      if (
+        layer === null ||
+        typeof layer !== "object" ||
+        Array.isArray(layer) ||
+        typeof layer.id !== "string" ||
+        layer.id === ""
+      ) {
+        throw new Error(`map ${name}: layer ${i} has no string id`);
+      }
+      const layerID: string = layer.id;
       const placement =
         typeof layer.placement === "string" ? layer.placement : "";
       if (placement !== "land" && placement !== "water") {
