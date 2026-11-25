@@ -33,7 +33,10 @@ export class InventoryBuyDialog extends LitElement {
    * through shownPrice at render, so this only asks for a re-render. */
   @property({ type: Number }) priceEpoch = 0;
   @property({ attribute: false })
-  onPurchase?: (method: "hard" | "soft") => Promise<PurchaseResult>;
+  onPurchase?: (
+    method: "hard" | "soft",
+    shownAmount?: number,
+  ) => Promise<PurchaseResult>;
   @property({ attribute: false }) onEquip?: () => void;
   /** Opens the Store's full-screen 3D preview (skins and effects). */
   @property({ attribute: false }) onPreview?: () => void;
@@ -217,8 +220,12 @@ export class InventoryBuyDialog extends LitElement {
         .rarity=${resolved.cosmetic?.rarity ?? "common"}
         .itemName=${cosmeticSelectionLabel(resolved)}
         .busyKey=${resolved.key}
-        .onPurchaseHard=${hard ? () => this.onPurchase!("hard") : undefined}
-        .onPurchaseSoft=${soft ? () => this.onPurchase!("soft") : undefined}
+        .onPurchaseHard=${
+          hard ? (shown?: number) => this.onPurchase!("hard", shown) : undefined
+        }
+        .onPurchaseSoft=${
+          soft ? (shown?: number) => this.onPurchase!("soft", shown) : undefined
+        }
       ></purchase-button>
     </div>`;
   }

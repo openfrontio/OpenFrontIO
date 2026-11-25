@@ -67,6 +67,7 @@ import {
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
+import { COSMETICS_CHANGED } from "./Experiments";
 import { type PricedItem, saleEndsAt } from "./ShownPrice";
 import {
   type CosmeticLoadout,
@@ -229,9 +230,34 @@ export class InventoryModal extends BaseModal {
     this.previewingCosmetic = customEvent.detail;
   };
 
+  // Bumped on each COSMETICS_CHANGED, so a load or refresh that was out
+  // across one knows its answer is older (loadInventory, refreshCatalog).
+  private catalogChangeSeq = 0;
+  // The last catalogue COSMETICS_CHANGED announced: what a load that was out
+  // across it installs instead of its own, older answer.
+  private announcedCosmetics: Cosmetics | null = null;
+
+  /** A new catalogue is in use (a store-experiment group changed, or a
+   * price_changed refusal reloaded it): show its prices, as the Store does,
+   * so a retry sends the price now and doesn't loop on the 409. */
+  private onCosmeticsChanged = (e: Event): void => {
+    const cosmetics = (e as CustomEvent<Cosmetics | null>).detail;
+    if (!cosmetics) return;
+    // Counted even with no catalogue shown yet: a first load still out
+    // takes this one rather than its own.
+    this.catalogChangeSeq++;
+    this.announcedCosmetics = cosmetics;
+    if (this.cosmetics === null) return;
+    this.cosmetics = cosmetics;
+    this.catalogFetchedAt = Date.now();
+    this.priceEpoch++;
+    this.closeBuyIfGone();
+  };
+
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.addEventListener(
@@ -250,6 +276,7 @@ export class InventoryModal extends BaseModal {
     );
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     for (const key of [PATTERN_KEY, FLAG_KEY, CROWN_KEY, EFFECTS_KEY]) {
       window.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${key}`,
@@ -327,12 +354,19 @@ export class InventoryModal extends BaseModal {
       this.ownershipState = "loading";
     }
     this.loadFailed = false;
+    const seq = this.catalogChangeSeq;
     try {
-      const [cosmetics] = await Promise.all([
+      const [loaded] = await Promise.all([
         this.loadCatalog(),
         this.loadOwnership(userMeResponse),
       ]);
       if (loadId !== this.inventoryLoadId) return;
+      // A catalogue announced while this load was out is newer than its
+      // answer (a group's, say, over the plain one): install that instead.
+      const cosmetics =
+        seq !== this.catalogChangeSeq && this.announcedCosmetics !== null
+          ? this.announcedCosmetics
+          : loaded;
       // A refresh whose fetch failed keeps the catalogue already shown, as
       // refreshCatalog does: the error view would unmount the Player card
       // tab. A first load or a sign-out has none to keep.
@@ -1137,8 +1171,8 @@ export class InventoryModal extends BaseModal {
               .resolved=${this.currentBuying()}
               .bought=${this.buyingBought}
               .priceEpoch=${this.priceEpoch}
-              .onPurchase=${(method: "hard" | "soft") =>
-                this.purchase(this.currentBuying()!, method)}
+              .onPurchase=${(method: "hard" | "soft", shownAmount?: number) =>
+                this.purchase(this.currentBuying()!, method, shownAmount)}
               .onEquip=${() => this.equipBought()}
               .onPreview=${() => {
                 this.previewingCosmetic = this.buying;
@@ -1310,11 +1344,18 @@ export class InventoryModal extends BaseModal {
   /** Loads the catalogue again and shows it, without the loading state. A
    * failed fetch keeps the catalogue already shown. */
   private async refreshCatalog(): Promise<void> {
+    const seq = this.catalogChangeSeq;
     const fresh = await this.loadCatalog().catch(() => null);
     if (!fresh || !this.isModalOpen) return;
+    // A catalogue change (onCosmeticsChanged) landed while this fetch was
+    // out: its catalogue is newer than this answer, so keep it. Not the
+    // cache: a request dropped by another invalidation leaves it older
+    // than `fresh`.
+    if (seq !== this.catalogChangeSeq) return;
     this.cosmetics = fresh;
     this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
+    this.closeBuyIfGone();
   }
 
   private salePromotions(): PricedItem[] {
@@ -1505,6 +1546,7 @@ export class InventoryModal extends BaseModal {
   private async purchase(
     resolved: ResolvedCosmetic,
     method: "hard" | "soft",
+    shownAmount?: number,
   ): Promise<PurchaseResult> {
     const remembered =
       this.userMeResponse !== false
@@ -1514,10 +1556,14 @@ export class InventoryModal extends BaseModal {
           )
         : null;
     try {
-      return await purchaseCosmetic(resolved, method, {
-        kind: "inventory",
-        subTab: inventoryCategoryOf(resolved),
-      });
+      // With the price the confirm box showed: the server refuses (409) to
+      // charge more than that.
+      return await purchaseCosmetic(
+        resolved,
+        method,
+        { kind: "inventory", subTab: inventoryCategoryOf(resolved) },
+        shownAmount,
+      );
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would
@@ -1559,6 +1605,18 @@ export class InventoryModal extends BaseModal {
   private closeBuy() {
     this.buying = null;
     this.buyingBought = false;
+  }
+
+  /** An open buy popup re-prices from the catalogue now shown
+   * (currentBuying); one whose item that catalogue no longer has closes, as
+   * the Store's bundle dialog does, rather than selling from the old one.
+   * Not once bought: Equip now is still on offer. */
+  private closeBuyIfGone() {
+    const key = this.buying?.key;
+    if (key === undefined || this.buyingBought) return;
+    if (!this.resolvedItems().some((item) => item.key === key)) {
+      this.closeBuy();
+    }
   }
 
   /**

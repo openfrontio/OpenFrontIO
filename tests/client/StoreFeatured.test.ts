@@ -895,10 +895,13 @@ describe("store Featured tab", () => {
         .querySelector("confirm-dialog")!
         .dispatchEvent(new CustomEvent("confirm"));
       await vi.waitFor(() =>
-        expect(purchaseCosmetic).toHaveBeenCalledWith(deal, "hard", {
-          kind: "featured",
-          section: "deal",
-        }),
+        expect(purchaseCosmetic).toHaveBeenCalledWith(
+          deal,
+          "hard",
+          { kind: "featured", section: "deal" },
+          // The price on the button: the server refuses to charge more.
+          60,
+        ),
       );
     });
 

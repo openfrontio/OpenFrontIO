@@ -565,7 +565,7 @@ describe("<loadout-row> buying", () => {
     q("purchase-button") as unknown as {
       busyKey: string;
       preflight: ((m: "hard" | "soft") => Promise<unknown>) | null;
-      onPurchaseHard: () => Promise<unknown>;
+      onPurchaseHard: (shownAmount?: number) => Promise<unknown>;
     };
 
   it("the button checks fresh on tap and shares the item's busy key", async () => {
@@ -596,6 +596,7 @@ describe("<loadout-row> buying", () => {
       { kind: "card_loadout" },
       expect.any(Function),
       "p1",
+      undefined,
     );
     expect(heard).toHaveBeenCalledWith({ key: "cardBackground:bg_frontline" });
     expect(showInGameAlert).not.toHaveBeenCalled();
@@ -665,6 +666,13 @@ describe("<loadout-row> buying", () => {
     );
   });
 
+  it("sends the price the confirm box showed", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({ kind: "handled" });
+    await render({});
+    await button().onPurchaseHard(400);
+    expect(vi.mocked(purchaseCosmeticInPlace).mock.calls[0]?.[5]).toBe(400);
+  });
+
   it("the buy is bound to the account the tap check confirmed", async () => {
     vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
       kind: "signed_out",
@@ -684,6 +692,7 @@ describe("<loadout-row> buying", () => {
       { kind: "card_loadout" },
       expect.any(Function),
       "p1",
+      undefined,
     );
     expect(showInGameConfirm).toHaveBeenCalledWith(
       "win_modal.sign_in_leaves_game",

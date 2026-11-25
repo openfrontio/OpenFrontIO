@@ -11,6 +11,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
 import { StorePlacementSubTabSchema } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardStoreGrid } from "../../src/client/components/card/CardStoreGrid";
+import { purchaseCosmetic } from "../../src/client/Cosmetics";
 
 if (!customElements.get("card-store-grid")) {
   customElements.define("card-store-grid", CardStoreGrid);
@@ -192,6 +193,34 @@ describe("<card-store-grid>", () => {
     )!;
     expect(wins.querySelector("purchase-button")).toBeNull();
     expect(wins.textContent).toContain("my_card.owned");
+  });
+
+  it("sends the price the confirm box showed, even if the catalogue changes while it is open", async () => {
+    await render(["playerCard:standard"]);
+    const button = (grid as unknown as Element).querySelector(
+      "[data-card-store-item='cardBackground:bg_frontline'] purchase-button",
+    ) as unknown as HTMLElement & {
+      requestCurrencyPurchase(method: "hard"): void;
+      updateComplete: Promise<unknown>;
+    };
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    // A new catalogue lands while the box is open (a cohort reload).
+    const raised = structuredClone(COSMETICS) as Cosmetics;
+    (raised.cardBackgrounds!.bg_frontline as { priceHard: number }).priceHard =
+      2600;
+    grid.cosmetics = raised;
+    await grid.updateComplete;
+    button
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(vi.mocked(purchaseCosmetic)).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "cardBackground:bg_frontline" }),
+      "hard",
+      expect.anything(),
+      2400,
+    );
   });
 
   it("a sale that ends while on screen switches to the list price", async () => {
