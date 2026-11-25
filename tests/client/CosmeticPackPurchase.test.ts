@@ -233,7 +233,9 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     });
   });
 
-  it("quotes a shortfall from the shown price when that is the lower one", async () => {
+  it("quotes the shortfall from the current price, not the lower shown one", async () => {
+    // Shown 150, the sale has ended (250 now), balance 100: topping up 50
+    // would only end in price_changed and another shortfall.
     vi.mocked(getUserMe).mockResolvedValue(userWithHard(100));
     const endedSale: ResolvedCosmetic = {
       ...starter,
@@ -252,7 +254,7 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
     const result = await purchaseCosmetic(endedSale, "hard", undefined, 150);
 
-    expect(result).toMatchObject({ shortfall: 50 });
+    expect(result).toMatchObject({ shortfall: 150 });
     expect(purchaseCosmeticPack).not.toHaveBeenCalled();
   });
 

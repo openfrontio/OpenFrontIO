@@ -1165,9 +1165,11 @@ export async function purchaseCosmetic(
     return;
   }
   // Built for the pre-check below and reused when the server refuses for the
-  // same reason, so both routes describe the same item the same way.
+  // same reason, so both routes describe the same item the same way. Quoted
+  // from the price now, not `needed`: after a sale ends, a top-up to the
+  // shown price would only end in price_changed and another shortfall.
   const insufficient = (available: number): InsufficientCurrency =>
-    currencyShortfall(resolved, method, needed, available);
+    currencyShortfall(resolved, method, price, available);
   if (balance < needed) {
     return insufficient(balance);
   }
@@ -1335,8 +1337,9 @@ async function purchasePack(
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
     currency: translateText("cosmetics.hard"),
-    // Clamped like the single-cosmetic path: never zero or negative.
-    shortfall: Math.max(1, needed - balance),
+    // Clamped like the single-cosmetic path: never zero or negative. From
+    // the price now, as there: `needed` only decides whether to send.
+    shortfall: Math.max(1, price - balance),
     item: pack.displayName,
     canTopUp: true,
   });
