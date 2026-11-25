@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "Murcia",
+  "name": "Murcia",
+  "translation_key": "map.murcia",
+  "categories": ["europe", "new"],
+  "author": "panymilloconbocadillo",
+  "description": "A region of southeastern Spain on the Mediterranean coast, home to the Mar Menor, Europe's largest saltwater lagoon, and the historic naval port of Cartagena.",
+  "location": { "lat": 37.9, "lon": -1.2 },
+  "nations": [
+    { "coordinates": [1430, 1550], "name": "La Unión", "flag": "es" },
+    { "coordinates": [1863, 1503], "name": "Cabo de Palos", "flag": "es" },
+    { "coordinates": [1131, 1531], "name": "Cartagena", "flag": "es" },
+    { "coordinates": [552, 1518], "name": "Mazarrón", "flag": "es" },
+    { "coordinates": [369, 1113], "name": "Bajo Guadalentín", "flag": "es" },
+    { "coordinates": [1402, 550], "name": "Beniel", "flag": "es" },
+    { "coordinates": [1641, 987], "name": "San Javier", "flag": "es" },
+    { "coordinates": [1601, 1139], "name": "Los Alcázares", "flag": "es" },
+    { "coordinates": [1773, 1299], "name": "Isla del Barón", "flag": "es" },
+    {
+      "coordinates": [1710, 1282],
+      "name": "Isla de la Perdiguera",
+      "flag": "es"
+    },
+    { "coordinates": [1910, 1206], "name": "Isla Grosa", "flag": "es" },
+    { "coordinates": [1395, 1149], "name": "Torre-Pacheco", "flag": "es" },
+    { "coordinates": [513, 735], "name": "Librilla", "flag": "es" },
+    { "coordinates": [237, 279], "name": "Mula", "flag": "es" },
+    { "coordinates": [201, 423], "name": "Pliego", "flag": "es" },
+    { "coordinates": [1200, 697], "name": "Murcia City", "flag": "es" },
+    { "coordinates": [909, 1176], "name": "Fuente Álamo", "flag": "es" },
+    {
+      "coordinates": [1794, 930],
+      "name": "San Pedro del Pinatar",
+      "flag": "es"
+    },
+    { "coordinates": [336, 798], "name": "Alhama de Murcia", "flag": "es" },
+    { "coordinates": [150, 1200], "name": "Lorca", "flag": "es" },
+    { "coordinates": [250, 950], "name": "Totana", "flag": "es" },
+    { "coordinates": [300, 1800], "name": "Águilas", "flag": "es" },
+    { "coordinates": [900, 50], "name": "Yecla", "flag": "es" },
+    { "coordinates": [600, 300], "name": "Cieza", "flag": "es" }
+  ]
+}
