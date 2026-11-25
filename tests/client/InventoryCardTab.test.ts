@@ -732,6 +732,21 @@ describe("<inventory-card-tab> unowned items in the changes", () => {
     expect(shown).toBe("bg_storm");
   });
 
+  it("a picked unowned item stays under Not owned, never under Owned", async () => {
+    await render(userMe(OWNER));
+    await pickStorm();
+    if (q("[data-card-filter='notOwned']") === null) {
+      await click(q("[data-card-slot='background']"));
+    }
+    await click(q("[data-card-filter='notOwned']"));
+    expect(q("[data-card-pick='cardBackground:bg_storm']")).not.toBeNull();
+    expect(tileState("cardBackground:bg_storm")).toBe("unsaved");
+    await click(q("[data-card-filter='owned']"));
+    expect(q("[data-card-pick='cardBackground:bg_storm']")).toBeNull();
+    // The saved one, owned, is still there.
+    expect(q("[data-card-pick='cardBackground:bg_pacific']")).not.toBeNull();
+  });
+
   it("the bar offers Buy <item> in both currencies, and Save is disabled", async () => {
     await render(userMe(OWNER));
     await pickStorm();
