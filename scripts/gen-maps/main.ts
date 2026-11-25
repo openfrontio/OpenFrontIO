@@ -50,11 +50,13 @@ function parseFlags(argv: string[]): Flags {
       process.stderr.write(HELP);
       process.exit(0);
     }
-    if (bools[name])
+    // Own keys only: --toString must be an unknown flag.
+    const own = (o: object) => Object.prototype.hasOwnProperty.call(o, name);
+    if (own(bools))
       bools[name](
         inline === undefined ? true : inline === "true" || inline === "1",
       );
-    else if (values[name]) {
+    else if (own(values)) {
       const v = inline ?? argv[++i];
       if (v === undefined) usage(`flag needs an argument: -${name}`);
       values[name](v);
