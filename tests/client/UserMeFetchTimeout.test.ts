@@ -280,4 +280,31 @@ describe("/users/@me from a session that has gone", () => {
     await getUserMe();
     expect(meCalls()).toHaveLength(1);
   });
+
+  it("nor is one whose body couldn't be read after the session went", async () => {
+    // 200 headers for the old session, then the body read fails.
+    fetchMock.mockResolvedValueOnce({
+      status: 200,
+      json: async () => {
+        vi.mocked(isSessionActive).mockReturnValue(false);
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    });
+    expect(await getUserMe()).toBe(false);
+    vi.mocked(isSessionActive).mockReturnValue(true);
+    expect(await getUserMe()).toEqual(profile);
+    expect(meCalls()).toHaveLength(2);
+  });
+
+  it("a cached profile isn't reused once the session is another account's", async () => {
+    // Cached for player-1's session...
+    expect(await getUserMe()).toEqual(profile);
+    // ...then a silent token refresh installs another account, with no
+    // session event to clear the cache.
+    vi.mocked(isSessionActive).mockImplementation(
+      (sub: string) => sub !== "player-1",
+    );
+    await getUserMe();
+    expect(meCalls()).toHaveLength(2);
+  });
 });
