@@ -40,12 +40,20 @@ interface RegistryEntry {
 interface RoutableModal extends HTMLElement {
   open(args?: Record<string, unknown>): void;
   close(args?: Record<string, unknown>): void;
+  /**
+   * Asked before a route (browser Back, a hash edited by hand, a route to
+   * another page) takes this modal away. False keeps it open, and the URL
+   * names it again. A modal without one closes at once, as before.
+   */
+  confirmRouteLeave?(): boolean | Promise<boolean>;
 }
 
 class ModalRouter {
   private registry = new Map<string, RegistryEntry>();
   /** Name of the modal currently reflected in the URL, if any. */
   private currentName: string | null = null;
+  /** The hash that named currentName, to put back when it stays open. */
+  private currentHash = "";
   /** True while we're routing from the URL (suppress modal→URL sync). */
   private routingFromUrl = false;
   private pathRoutes = new Map<string, PathRouteParser>();
@@ -132,14 +140,58 @@ class ModalRouter {
       args[key] = value;
     });
 
+    // Another page replaces the one shown: its modal may ask first.
+    const leaving = this.currentName !== name && entry.pageId !== undefined;
+    const guarded = leaving ? this.guardedCurrent() : null;
+    if (guarded !== null) {
+      void this.askThen(guarded, () => this.routeTo(name, entry, args));
+    } else {
+      this.routeTo(name, entry, args);
+    }
+    return true;
+  }
+
+  private routeTo(
+    name: string,
+    entry: RegistryEntry,
+    args: Record<string, unknown>,
+  ): void {
     // The hash names the modal now, as when one opens in-app (syncOpened).
     // Left on, the path would outlive the modal it names: the router stops
     // tracking that modal, so its close wouldn't clear the path, and the next
     // reload would open it again.
     this.leavePath();
     this.currentName = name;
+    this.currentHash = window.location.hash;
     void this.openRegistered(name, entry, args);
-    return true;
+  }
+
+  /** The open modal the URL names, when it asks before a route takes it
+   * away (confirmRouteLeave). */
+  private guardedCurrent(): RoutableModal | null {
+    if (this.currentName === null) return null;
+    const entry = this.registry.get(this.currentName);
+    if (entry === undefined) return null;
+    const el = document.querySelector(entry.tag) as RoutableModal | null;
+    return typeof el?.confirmRouteLeave === "function" ? el : null;
+  }
+
+  /**
+   * Asks `el` before a route takes it away. Yes: `proceed`. No: it stays
+   * open and the URL names it again (Back has already moved the URL on, and
+   * an open modal the URL doesn't name would close nothing on the next one).
+   */
+  private async askThen(el: RoutableModal, proceed: () => void): Promise<void> {
+    const name = this.currentName;
+    const hash = this.currentHash;
+    const ok = await el.confirmRouteLeave!();
+    if (ok) {
+      proceed();
+      return;
+    }
+    // Something else moved the router on meanwhile: not this ask's to undo.
+    if (this.currentName !== name) return;
+    this.replaceHash(hash);
   }
 
   private async openRegistered(
@@ -219,6 +271,20 @@ class ModalRouter {
    */
   closeCurrent(): boolean {
     if (this.currentName === null) return false;
+    const guarded = this.guardedCurrent();
+    if (guarded !== null) {
+      const name = this.currentName;
+      void this.askThen(guarded, () => {
+        if (this.currentName === name) this.closeNow();
+      });
+      return true;
+    }
+    this.closeNow();
+    return true;
+  }
+
+  private closeNow(): void {
+    if (this.currentName === null) return;
     const name = this.currentName;
     this.currentName = null;
     if (this.pathRoutedName === name) {
@@ -236,7 +302,6 @@ class ModalRouter {
         this.routingFromUrl = false;
       }
     }
-    return true;
   }
 
   /** Called by BaseModal.setActiveTab() when a router-managed modal switches tabs. */
@@ -319,6 +384,12 @@ class ModalRouter {
   }
 
   private replaceHash(hash: string): void {
+    if (
+      this.currentName !== null &&
+      new URLSearchParams(hash.slice(1)).get("modal") === this.currentName
+    ) {
+      this.currentHash = hash;
+    }
     const url = window.location.pathname + window.location.search + hash;
     history.replaceState(history.state, "", url);
   }

@@ -1608,6 +1608,13 @@ export class InventoryModal extends BaseModal {
     return this.confirmLeaveCard();
   }
 
+  /** A route (browser Back, a hash edited by hand, a route to another page)
+   * takes the Inventory away: ask first, as for any other close. */
+  public confirmRouteLeave(): Promise<boolean> {
+    if (!this.isModalOpen) return Promise.resolve(true);
+    return this.confirmLeaveCard();
+  }
+
   /** Leaving the Player card tab for In game: ask first. */
   public setActiveTab(key: string): void {
     if (key === CARD_TAB || this.activeTab !== CARD_TAB) {
