@@ -96,11 +96,30 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
     ["map4x.bin", result.map4x.terrain],
     ["map16x.bin", result.map16x.terrain],
   ];
+  // Name the map and file: libwebp's own error doesn't say which one.
+  const addWebP = (
+    file: string,
+    rgba: Uint8Array,
+    w: number,
+    h: number,
+    quality: number,
+  ) => {
+    try {
+      outputs.push([file, encodeWebP(rgba, w, h, quality)]);
+    } catch (e) {
+      throw new Error(
+        `map ${name}: failed to encode ${file} (${w}x${h}): ${(e as Error).message}`,
+      );
+    }
+  };
   const thumb = result.thumbnail;
-  outputs.push([
+  addWebP(
     "thumbnail.webp",
-    encodeWebP(thumb.rgba, thumb.width, thumb.height, thumbnailWebPQuality),
-  ]);
+    thumb.rgba,
+    thumb.width,
+    thumb.height,
+    thumbnailWebPQuality,
+  );
 
   for (const { id: layerID } of parseLayers(name, manifest)) {
     const srcPng = join(inDir, layerID + ".png");
@@ -132,16 +151,16 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
     const { width, height } = result.map;
     const full = cropToNRGBA(img, width, height);
     img = null;
-    outputs.push([
-      layerID + ".webp",
-      encodeWebP(full, width, height, layerWebPQuality),
-    ]);
+    addWebP(layerID + ".webp", full, width, height, layerWebPQuality);
     const hw = result.map4x.width;
     const hh = result.map4x.height;
-    outputs.push([
+    addWebP(
       layerID + ".4x.webp",
-      encodeWebP(downscaleHalf(full, width, hw, hh), hw, hh, layerWebPQuality),
-    ]);
+      downscaleHalf(full, width, hw, hh),
+      hw,
+      hh,
+      layerWebPQuality,
+    );
   }
 
   for (const key of ["$schema", "author", "description", "location"])
