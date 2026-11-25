@@ -379,6 +379,23 @@ describe("Inventory: unsaved card changes guard", () => {
     });
   });
 
+  it("the guard's Save is off when the editor can't save (the account unknown for now)", async () => {
+    await openWithChange();
+    // A token refresh failed: no session account, the draft is kept.
+    session.id = null;
+    await click("[data-inventory-top-tab='ingame']");
+    expect(q("[data-card-guard]")).not.toBeNull();
+    expect(q<HTMLButtonElement>("[data-card-guard-save]")!.disabled).toBe(true);
+    // Nothing to buy: no "buy it first" note.
+    expect(q("[data-card-guard-buy-first]")).toBeNull();
+    // Discard and Keep editing still work.
+    expect(q<HTMLButtonElement>("[data-card-guard-discard]")!.disabled).toBe(
+      false,
+    );
+    await click("[data-card-guard-keep]");
+    expect(onCardTab()).toBe(true);
+  });
+
   it("Discard drops the changes and goes", async () => {
     await openWithChange();
     await click("[data-inventory-top-tab='ingame']");

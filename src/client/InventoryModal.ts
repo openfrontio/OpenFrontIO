@@ -1597,7 +1597,8 @@ export class InventoryModal extends BaseModal {
     return html`<card-unsaved-dialog
       .count=${changes.length}
       .lines=${changes.map((c) => cardChangeLine(this.cosmetics, c))}
-      .canSave=${this.cardEditor.unownedInChanges().length === 0}
+      .canSave=${guard.saving || this.cardEditor.canSave()}
+      .buyFirst=${this.cardEditor.unownedInChanges().length > 0}
       .saving=${guard.saving}
       .onChoose=${(choice: CardGuardChoice) => void this.chooseCardGuard(choice)}
     ></card-unsaved-dialog>`;
