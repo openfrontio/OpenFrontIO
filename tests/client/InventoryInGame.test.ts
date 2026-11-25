@@ -25,6 +25,7 @@ import {
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
+  getCachedCosmetics,
   invalidateCosmetics,
   purchaseCosmetic,
   purchaseReloading,
@@ -54,6 +55,7 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(),
+  getCachedCosmetics: vi.fn(() => null),
   purchaseCosmetic: vi.fn(),
   purchaseReloading: vi.fn(() => false),
   invalidateCosmetics: vi.fn(),
@@ -262,6 +264,7 @@ describe("Inventory In game tab", () => {
     } as Awaited<ReturnType<typeof userAuth>>);
     vi.mocked(getUserMe).mockResolvedValue(makeUser(OWNED));
     vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(getCachedCosmetics).mockReset().mockReturnValue(null);
     vi.mocked(purchaseReloading).mockReset().mockReturnValue(false);
     modal = document.createElement("inventory-modal") as InventoryModal;
     modal.setAttribute("inline", "");
@@ -1014,6 +1017,50 @@ describe("Inventory In game tab", () => {
       await buyHard();
       expect(purchaseCosmetic).toHaveBeenCalledTimes(2);
       expect(vi.mocked(purchaseCosmetic).mock.calls[1]?.[3]).toBe(350);
+    });
+
+    it("a catalogue refresh that lands after a catalogue change keeps the newer one", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      // A refresh (the sale-end timer, or reopening) goes out...
+      let landOld!: (c: Cosmetics) => void;
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise<Cosmetics>((resolve) => (landOld = resolve)),
+      );
+      const refresh = (
+        modal as unknown as { refreshCatalog(): Promise<void> }
+      ).refreshCatalog();
+      // ...then the group's catalogue is cached and announced...
+      const raised = makeCatalog();
+      (raised.crowns!.sale_crown as { priceHard: number }).priceHard = 350;
+      vi.mocked(getCachedCosmetics).mockReturnValue(raised);
+      document.dispatchEvent(
+        new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
+      );
+      // ...and the older answer lands last.
+      landOld(makeCatalog());
+      await refresh;
+      await settle(modal);
+      expect(
+        modal.querySelector<PurchaseButton>(
+          "inventory-buy-dialog purchase-button",
+        )!.priceHard,
+      ).toBe(350);
+    });
+
+    it("closes the buy popup when a new catalogue no longer sells the item", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      expect(modal.querySelector("inventory-buy-dialog")).not.toBeNull();
+      const without = makeCatalog();
+      delete without.crowns!.sale_crown;
+      document.dispatchEvent(
+        new CustomEvent(COSMETICS_CHANGED, { detail: without }),
+      );
+      await settle(modal);
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
     });
 
     it("after a purchase the popup offers Equip now, which equips it", async () => {

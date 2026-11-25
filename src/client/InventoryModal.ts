@@ -57,6 +57,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import {
   fetchCosmetics,
+  getCachedCosmetics,
   groupCosmeticVariants,
   invalidateCosmetics,
   purchaseCosmetic,
@@ -239,6 +240,7 @@ export class InventoryModal extends BaseModal {
     this.cosmetics = cosmetics;
     this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
+    this.closeBuyIfGone();
   };
 
   connectedCallback() {
@@ -1326,9 +1328,13 @@ export class InventoryModal extends BaseModal {
   private async refreshCatalog(): Promise<void> {
     const fresh = await this.loadCatalog().catch(() => null);
     if (!fresh || !this.isModalOpen) return;
-    this.cosmetics = fresh;
+    // A catalogue change (onCosmeticsChanged) can land while this fetch is
+    // out, and this older answer isn't cached: take the catalogue now in
+    // use, as the end screen does.
+    this.cosmetics = getCachedCosmetics() ?? fresh;
     this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
+    this.closeBuyIfGone();
   }
 
   private salePromotions(): PricedItem[] {
@@ -1578,6 +1584,18 @@ export class InventoryModal extends BaseModal {
   private closeBuy() {
     this.buying = null;
     this.buyingBought = false;
+  }
+
+  /** An open buy popup re-prices from the catalogue now shown
+   * (currentBuying); one whose item that catalogue no longer has closes, as
+   * the Store's bundle dialog does, rather than selling from the old one.
+   * Not once bought: Equip now is still on offer. */
+  private closeBuyIfGone() {
+    const key = this.buying?.key;
+    if (key === undefined || this.buyingBought) return;
+    if (!this.resolvedItems().some((item) => item.key === key)) {
+      this.closeBuy();
+    }
   }
 
   /**
