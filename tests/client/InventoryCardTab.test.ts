@@ -323,8 +323,9 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     const values = [...card.querySelectorAll("[data-card-tracker]")].map(
       (t) => t.textContent ?? "",
     );
+    // Never 0 (the stat has no value), but "—".
+    expect(values.some((v) => /\b0\b/.test(v))).toBe(false);
     expect(values.some((v) => v.includes("—"))).toBe(true);
-    expect(values.some((v) => /0/.test(v))).toBe(false);
   });
 
   it("a tracker whose name isn't its stat is never offered (rows save names as stats)", async () => {
