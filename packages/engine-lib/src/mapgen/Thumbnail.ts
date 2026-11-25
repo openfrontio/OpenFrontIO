@@ -17,7 +17,7 @@ export function thumbnailPixels(
   w4: number,
   h4: number,
   elevation?: Uint8Array,
-): { rgba: Uint8Array; width: number; height: number } {
+): { rgba: Uint8Array<ArrayBuffer>; width: number; height: number } {
   const width = Math.max(1, Math.floor(w4 / 2));
   const height = Math.max(1, Math.floor(h4 / 2));
   const rgba = new Uint8Array(width * height * 4);
