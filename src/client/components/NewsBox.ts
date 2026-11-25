@@ -162,11 +162,21 @@ export class NewsBox extends LitElement {
     return items;
   }
 
-  /** Asks Play for the catalog's pack prices, once per catalog. */
+  /**
+   * Asks Play for the catalog's pack prices, once per catalog. A failed ask
+   * is tried again on the next catalog check.
+   */
   private async loadPlayPrices(cosmetics: Cosmetics): Promise<void> {
     if (!sellsOnlyThroughPlay() || this.playPricesFor === cosmetics) return;
     this.playPricesFor = cosmetics;
-    const prices = await fetchPlayPrices(playProductIds(cosmetics));
+    let prices: PlayPrices;
+    try {
+      prices = await fetchPlayPrices(playProductIds(cosmetics));
+    } catch (error) {
+      console.warn("Play prices unavailable", error);
+      if (this.playPricesFor === cosmetics) this.playPricesFor = null;
+      return;
+    }
     if (this.playPricesFor !== cosmetics) return;
     this.playPrices = prices;
     this.requestUpdate();

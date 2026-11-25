@@ -190,18 +190,30 @@ describe("salesPlayerCanBuy", () => {
     expect(salesPlayerCanBuy([flash], catalog, [resolved(stale)])).toEqual([]);
   });
 
-  it("drops a sale tagged only on a subscription the store doesn't sell", () => {
+  it("drops a sale tagged only on what the On sale tab doesn't list", () => {
     const supporter = { name: "supporter", ...onSale, promotion: flash };
+    const coins = { name: "coins", ...onSale, promotion: flash };
     const withSub = {
       ...catalog,
       flags: {},
       subscriptions: { supporter },
+      currencyPacks: { coins },
     } as unknown as Cosmetics;
-    // Left out of `purchasable` (the Android app sells no subscription).
+    const asType = (type: string, cosmetic: object): ResolvedCosmetic =>
+      ({ ...resolved(cosmetic), type }) as ResolvedCosmetic;
+    // Buyable or not, a subscription or a currency pack isn't on the tab.
     expect(salesPlayerCanBuy([flash], withSub, [])).toEqual([]);
-    expect(salesPlayerCanBuy([flash], withSub, [resolved(supporter)])).toEqual([
-      flash,
-    ]);
+    expect(
+      salesPlayerCanBuy([flash], withSub, [
+        asType("subscription", supporter),
+        asType("pack", coins),
+      ]),
+    ).toEqual([]);
+    // A bundle in the same sale is on the tab, so the sale keeps its banner.
+    const bundle = { name: "starter", ...onSale, promotion: flash };
+    expect(
+      salesPlayerCanBuy([flash], withSub, [asType("cosmeticPack", bundle)]),
+    ).toEqual([flash]);
   });
 
   it("keeps a sale the catalog tags no item with", () => {

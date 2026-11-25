@@ -71,6 +71,20 @@ function taggableItems(cosmetics: Cosmetics): object[] {
   ];
 }
 
+/**
+ * The kinds of item the Store's On sale tab lists (`cosmeticsGroups("sale")`).
+ * A sale tagged only on anything else (a currency pack, a subscription) would
+ * send the player to an empty tab.
+ */
+const ON_SALE_TAB_TYPES: ReadonlySet<ResolvedCosmetic["type"]> = new Set([
+  "pattern",
+  "skin",
+  "flag",
+  "crown",
+  "effect",
+  "cosmeticPack",
+]);
+
 const promotionIdOf = (item: unknown): string | undefined =>
   (item as { promotion?: { id: string } } | null)?.promotion?.id;
 
@@ -78,9 +92,9 @@ const promotionIdOf = (item: unknown): string | undefined =>
  * The sales this player can buy something in. A sale whose discounted items
  * the player can't buy (a flash deal on an item they already own, say) would
  * send them to an On sale tab without it, so its banner is left out. A sale
- * the catalog tags no item with (an older or partial catalog) is kept.
- * `purchasable` is the catalog resolved for the player, filtered to what the
- * store would sell them.
+ * the catalog tags no item with (an older or partial catalog) is kept. Only
+ * what the On sale tab lists counts as buyable. `purchasable` is the catalog
+ * resolved for the player, filtered to what the store would sell them.
  */
 export function salesPlayerCanBuy(
   sales: Promotion[],
@@ -92,7 +106,11 @@ export function salesPlayerCanBuy(
   const tagged = new Set(taggableItems(cosmetics).map(promotionIdOf));
   const buyable = new Set(
     purchasable
-      .filter((resolved) => activeSale(resolved.cosmetic, now) !== null)
+      .filter(
+        (resolved) =>
+          ON_SALE_TAB_TYPES.has(resolved.type) &&
+          activeSale(resolved.cosmetic, now) !== null,
+      )
       .map((resolved) => promotionIdOf(resolved.cosmetic)),
   );
   return sales.filter((sale) => !tagged.has(sale.id) || buyable.has(sale.id));
