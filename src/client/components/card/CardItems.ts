@@ -2,6 +2,7 @@ import {
   type CardBackground,
   type CardTracker,
   cardTrackerNamedByStat,
+  type Cosmetics,
   type PlayerCardItem,
 } from "@openfront/shared/CosmeticSchemas";
 import { type PricedItem, type ShownPrice, shownPrice } from "../../ShownPrice";
@@ -17,6 +18,14 @@ export const CARD_ITEM_TYPES = [
   "cardBackground",
 ] as const;
 export type CardItemType = (typeof CARD_ITEM_TYPES)[number];
+
+// Where each card item type lives in the catalogue. The one copy: the Store
+// grid, My Card and the end screen's price lookup all read it.
+export const CARD_ITEM_GROUP = {
+  playerCard: "playerCards",
+  cardTracker: "cardTrackers",
+  cardBackground: "cardBackgrounds",
+} as const satisfies Record<CardItemType, keyof Cosmetics>;
 
 export type CardItem = PlayerCardItem | CardTracker | CardBackground;
 

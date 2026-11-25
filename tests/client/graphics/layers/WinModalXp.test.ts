@@ -27,6 +27,11 @@ vi.mock("../../../../src/client/Api", () => ({ getUserMe, invalidateUserMe }));
 vi.mock("../../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
   isLoggedIn,
+  // The end screen's "Get the look" asks the session itself (userAuth)
+  // when /users/@me fails; it follows the same mocked session.
+  userAuth: vi.fn(async () =>
+    (await isLoggedIn()) ? { jwt: "test-token", claims: {} } : false,
+  ),
 }));
 
 vi.mock("../../../../src/client/ApiBase", () => ({

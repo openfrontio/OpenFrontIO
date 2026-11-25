@@ -31,6 +31,7 @@ import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
 import {
+  CARD_ITEM_GROUP,
   type CardItem,
   type CardItemType,
   cardItemName,
@@ -59,8 +60,8 @@ const SECTION: Record<
   Exclude<Slot, "flag">,
   { key: keyof Cosmetics; type: CardItemType }
 > = {
-  background: { key: "cardBackgrounds", type: "cardBackground" },
-  trackers: { key: "cardTrackers", type: "cardTracker" },
+  background: { key: CARD_ITEM_GROUP.cardBackground, type: "cardBackground" },
+  trackers: { key: CARD_ITEM_GROUP.cardTracker, type: "cardTracker" },
 };
 
 const EMPTY: CardLoadoutBody = {

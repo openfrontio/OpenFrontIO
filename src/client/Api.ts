@@ -1324,6 +1324,9 @@ export type PurchaseWithCurrencyResult =
   // the price the store showed (a stale catalog, or a store experiment that
   // stopped since). Nothing charged. `amount` is the price now, when given.
   | { ok: false; code: "price_changed"; amount?: number }
+  // `stillWanted` said no: the account changed, so nothing was sent (or a
+  // 401 came back for a token that's no longer the session's).
+  | { ok: false; code: "cancelled" }
   | { ok: false; code: "failed" };
 
 /**
@@ -1380,13 +1383,18 @@ export async function purchaseWithCurrency(
   colorPaletteName?: string,
   placement?: StorePlacement,
   priceCheck?: PurchasePriceCheck,
+  stillWanted: () => boolean = () => true,
 ): Promise<PurchaseWithCurrencyResult> {
   try {
+    // Asked once the token is in hand, as saveCardLoadout does: reading it
+    // can refresh the JWT, and the refresh can pick up another tab's sign-in.
+    const authorization = await getAuthHeader();
+    if (!stillWanted()) return { ok: false, code: "cancelled" };
     const response = await fetch(`${getApiBase()}/shop/purchase`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: await getAuthHeader(),
+        Authorization: authorization,
       },
       body: JSON.stringify({
         cosmeticType,
@@ -1398,6 +1406,9 @@ export async function purchaseWithCurrency(
       }),
     });
     if (response.status === 401) {
+      // A 401 for a token that's no longer the session's says nothing about
+      // the session now, so it mustn't end it.
+      if (!stillWanted()) return { ok: false, code: "cancelled" };
       await logOut();
       return { ok: false, code: "failed" };
     }
