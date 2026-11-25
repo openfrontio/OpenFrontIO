@@ -2,11 +2,26 @@
 // packages/engine-api/src/game/Maps.gen.ts and the map sections of en.json.
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { formatFloatF, goJSON, goQuote } from "./gofmt";
 import type { MapEntry } from "./paths";
 import { inputMapDir, repoRoot } from "./paths";
 
-const q = goQuote;
+const q = (s: string) => JSON.stringify(s);
+
+/** JSON.stringify with every object's keys sorted, so the files don't churn. */
+export function sortedJSON(v: unknown): string {
+  return JSON.stringify(
+    v,
+    (_k, val: unknown) =>
+      val !== null && typeof val === "object" && !Array.isArray(val)
+        ? Object.fromEntries(
+            Object.entries(val).sort(([a], [b]) =>
+              a < b ? -1 : a > b ? 1 : 0,
+            ),
+          )
+        : val,
+    2,
+  );
+}
 
 export const categoryOrder = [
   "featured",
@@ -502,7 +517,7 @@ export interface MapLayer {
       );
     if (info.location) {
       b.push(
-        `    location: {lat: ${formatFloatF(info.location.lat!)}, lon: ${formatFloatF(info.location.lon!)}},\n`,
+        `    location: {lat: ${info.location.lat}, lon: ${info.location.lon}},\n`,
       );
     }
     b.push("  },\n");
@@ -549,6 +564,6 @@ export function generateEnJSON(infos: MapInfoJSON[]): string {
         layers[l.id] = l.id;
   root.map_layers = layers;
 
-  writeFileSync(enPath, goJSON(root, "  ", false) + "\n");
+  writeFileSync(enPath, sortedJSON(root) + "\n");
   return enPath;
 }

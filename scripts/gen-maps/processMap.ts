@@ -12,8 +12,7 @@ import {
 } from "@openfront/engine-lib/mapgen/TerrainBytes";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseLayers } from "./codegen";
-import { goJSON, goQuote } from "./gofmt";
+import { parseLayers, sortedJSON } from "./codegen";
 import { cropToNRGBA, downscaleHalf } from "./layers";
 import { type Logger, PERF, REMOVAL } from "./logger";
 import { inputMapDir, outputMapDir } from "./paths";
@@ -128,7 +127,7 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
       pngData = readFileSync(srcPng);
     } catch (e) {
       throw new Error(
-        `map ${name}: layer ${goQuote(layerID)} PNG not found at ${srcPng}: ${(e as Error).message}`,
+        `map ${name}: layer ${JSON.stringify(layerID)} PNG not found at ${srcPng}: ${(e as Error).message}`,
       );
     }
     let img;
@@ -136,7 +135,7 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
       img = decodePNG(pngData);
     } catch (e) {
       throw new Error(
-        `map ${name}: layer ${goQuote(layerID)} PNG failed to decode: ${(e as Error).message}`,
+        `map ${name}: layer ${JSON.stringify(layerID)} PNG failed to decode: ${(e as Error).message}`,
       );
     }
     const matchesMap =
@@ -145,7 +144,7 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
       img.width === sourceImg.width && img.height === sourceImg.height;
     if (!matchesMap && !matchesSource) {
       throw new Error(
-        `map ${name}: layer ${goQuote(layerID)} PNG dimensions (${img.width}x${img.height}) do not match image.png (${sourceImg.width}x${sourceImg.height})`,
+        `map ${name}: layer ${JSON.stringify(layerID)} PNG dimensions (${img.width}x${img.height}) do not match image.png (${sourceImg.width}x${sourceImg.height})`,
       );
     }
     const { width, height } = result.map;
@@ -169,7 +168,7 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
   mkdirSync(mapDir, { recursive: true });
   for (const [file, data] of outputs) writeFileSync(join(mapDir, file), data);
   const outPath = join(mapDir, "manifest.json");
-  writeFileSync(outPath, goJSON(manifest, "  ", true));
+  writeFileSync(outPath, sortedJSON(manifest));
   return outPath;
 }
 
