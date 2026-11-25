@@ -230,13 +230,13 @@ export class InventoryModal extends BaseModal {
     this.previewingCosmetic = customEvent.detail;
   };
 
-  /** A new catalogue is in use (a store-experiment group changed, or a
-   * price_changed refusal reloaded it): show its prices, as the Store does,
-   * so a retry sends the price now and doesn't loop on the 409. */
   // Bumped on each COSMETICS_CHANGED, so a refresh that was out across one
   // knows its answer is older (refreshCatalog).
   private catalogChangeSeq = 0;
 
+  /** A new catalogue is in use (a store-experiment group changed, or a
+   * price_changed refusal reloaded it): show its prices, as the Store does,
+   * so a retry sends the price now and doesn't loop on the 409. */
   private onCosmeticsChanged = (e: Event): void => {
     const cosmetics = (e as CustomEvent<Cosmetics | null>).detail;
     if (!cosmetics || this.cosmetics === null) return;
