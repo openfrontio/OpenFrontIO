@@ -57,7 +57,6 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import {
   fetchCosmetics,
-  getCachedCosmetics,
   groupCosmeticVariants,
   invalidateCosmetics,
   purchaseCosmetic,
@@ -234,9 +233,14 @@ export class InventoryModal extends BaseModal {
   /** A new catalogue is in use (a store-experiment group changed, or a
    * price_changed refusal reloaded it): show its prices, as the Store does,
    * so a retry sends the price now and doesn't loop on the 409. */
+  // Bumped on each COSMETICS_CHANGED, so a refresh that was out across one
+  // knows its answer is older (refreshCatalog).
+  private catalogChangeSeq = 0;
+
   private onCosmeticsChanged = (e: Event): void => {
     const cosmetics = (e as CustomEvent<Cosmetics | null>).detail;
     if (!cosmetics || this.cosmetics === null) return;
+    this.catalogChangeSeq++;
     this.cosmetics = cosmetics;
     this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
@@ -1326,12 +1330,15 @@ export class InventoryModal extends BaseModal {
   /** Loads the catalogue again and shows it, without the loading state. A
    * failed fetch keeps the catalogue already shown. */
   private async refreshCatalog(): Promise<void> {
+    const seq = this.catalogChangeSeq;
     const fresh = await this.loadCatalog().catch(() => null);
     if (!fresh || !this.isModalOpen) return;
-    // A catalogue change (onCosmeticsChanged) can land while this fetch is
-    // out, and this older answer isn't cached: take the catalogue now in
-    // use, as the end screen does.
-    this.cosmetics = getCachedCosmetics() ?? fresh;
+    // A catalogue change (onCosmeticsChanged) landed while this fetch was
+    // out: its catalogue is newer than this answer, so keep it. Not the
+    // cache: a request dropped by another invalidation leaves it older
+    // than `fresh`.
+    if (seq !== this.catalogChangeSeq) return;
+    this.cosmetics = fresh;
     this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
     this.closeBuyIfGone();

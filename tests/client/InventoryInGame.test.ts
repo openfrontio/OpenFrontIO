@@ -25,7 +25,6 @@ import {
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
-  getCachedCosmetics,
   invalidateCosmetics,
   purchaseCosmetic,
   purchaseReloading,
@@ -55,7 +54,6 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(),
-  getCachedCosmetics: vi.fn(() => null),
   purchaseCosmetic: vi.fn(),
   purchaseReloading: vi.fn(() => false),
   invalidateCosmetics: vi.fn(),
@@ -264,7 +262,6 @@ describe("Inventory In game tab", () => {
     } as Awaited<ReturnType<typeof userAuth>>);
     vi.mocked(getUserMe).mockResolvedValue(makeUser(OWNED));
     vi.mocked(purchaseCosmetic).mockReset();
-    vi.mocked(getCachedCosmetics).mockReset().mockReturnValue(null);
     vi.mocked(purchaseReloading).mockReset().mockReturnValue(false);
     modal = document.createElement("inventory-modal") as InventoryModal;
     modal.setAttribute("inline", "");
@@ -1031,10 +1028,10 @@ describe("Inventory In game tab", () => {
       const refresh = (
         modal as unknown as { refreshCatalog(): Promise<void> }
       ).refreshCatalog();
-      // ...then the group's catalogue is cached and announced...
+      // ...then the group's catalogue is announced. (The real cache is left
+      // alone: it can lag behind what was announced.)
       const raised = makeCatalog();
       (raised.crowns!.sale_crown as { priceHard: number }).priceHard = 350;
-      vi.mocked(getCachedCosmetics).mockReturnValue(raised);
       document.dispatchEvent(
         new CustomEvent(COSMETICS_CHANGED, { detail: raised }),
       );
