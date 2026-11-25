@@ -849,6 +849,64 @@ describe("CardEditor", () => {
     expect(editor.saved.rows.tracker[0]).toBe("games_played");
   });
 
+  it("a queued save goes onto what the earlier PUT stored, even with its refresh lost", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // A reauth into the same account, and its profile read before the
+    // first PUT commits: still Pacific.
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    const saving = editor.save();
+    // The first PUT stores Storm; its refresh fails, so no profile shows it.
+    finishOld({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    // The tracker edit goes onto Storm, never undoing it.
+    expect(api.save.mock.calls[1][0].background).toBe("bg_storm");
+    expect(api.save.mock.calls[1][0].trackers[0]).toBe("games_played");
+  });
+
+  it("a save after an earlier PUT landed unseen goes onto what it stored", async () => {
+    session.id = "account-a";
+    let finishOld!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finishOld = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const first = editor.save();
+    editor.dropAccount();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    finishOld({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    await first;
+    // Settled before the next Save: nothing queued, but it still knows.
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    expect(await editor.save()).toBe(true);
+    expect(api.save.mock.calls[1][0].background).toBe("bg_storm");
+  });
+
   it("pending saves are kept per account: A waits only for A's earlier PUT", async () => {
     const stored = (trackers: string[]) => ({
       ok: true,
