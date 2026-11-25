@@ -6,6 +6,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
+  SnapshotError,
   zInt,
   zNum,
   zPlayerRef,
@@ -37,6 +38,12 @@ import type {
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { NukeExecution } from "./NukeExecution";
 
+// Nothing changes these after construction, so a snapshot must hold them as
+// they are: they size the overlap grid restore builds.
+const RANGE = 1500;
+const MINIMUM_SPREAD = 55;
+const WARHEAD_COUNT = 350;
+
 export class MirvExecution implements Execution {
   private active = true;
 
@@ -44,10 +51,10 @@ export class MirvExecution implements Execution {
 
   private nuke: Unit | null = null;
 
-  private range = 1500;
+  private range = RANGE;
   private rangeSquared = this.range * this.range;
-  private minimumSpread = 55;
-  private warheadCount = 350;
+  private minimumSpread = MINIMUM_SPREAD;
+  private warheadCount = WARHEAD_COUNT;
 
   private static readonly MATH_SCALE = 100;
   private static readonly longFlightMult = 14;
@@ -437,6 +444,16 @@ export class MirvExecution implements Execution {
     return this.player;
   }
 
+  /** The MIRV this launch will spawn on its first tick, until it does. */
+  public pendingBomb(): {
+    owner: Player;
+    tile: TileRef;
+    type: UnitType.MIRV;
+  } | null {
+    if (!this.active || this.nuke !== null) return null;
+    return { owner: this.player, tile: this.dst, type: UnitType.MIRV };
+  }
+
   isActive(): boolean {
     return this.active;
   }
@@ -559,6 +576,19 @@ export class MirvExecution implements Execution {
   }
 
   restoreSnapshot(s: MirvState, r: SnapshotReader): void {
+    if (
+      s.range !== RANGE ||
+      s.rangeSquared !== RANGE * RANGE ||
+      s.minimumSpread !== MINIMUM_SPREAD ||
+      s.warheadCount !== WARHEAD_COUNT ||
+      s.stagedTargets.length > WARHEAD_COUNT ||
+      s.pathIndex < 0 ||
+      s.pathIndex > s.fullPath.length ||
+      (s.init !== null &&
+        (s.init.baseX !== r.game.x(s.dst) || s.init.baseY !== r.game.y(s.dst)))
+    ) {
+      throw new SnapshotError("invalid MIRV state");
+    }
     this.active = s.active;
     this.player = r.player(s.player);
     this.dst = s.dst;

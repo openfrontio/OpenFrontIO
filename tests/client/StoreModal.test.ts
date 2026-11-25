@@ -1439,6 +1439,50 @@ describe("StoreModal cosmetic browser", () => {
     expect(card(modal, flag.key)?.state).toBe("focused");
   });
 
+  it("hides the Card sub-tab when only held-back taunts and titles are sold", async () => {
+    const item = { product: null, rarity: "rare" };
+    const heldBackOnly = {
+      patterns: {},
+      flags: {},
+      cardTitles: {
+        veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
+      },
+      taunts: {
+        salute: {
+          ...item,
+          name: "salute",
+          tauntKind: "icon",
+          preset: "salute",
+          priceSoft: 800,
+        },
+      },
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue(
+      heldBackOnly as unknown as Cosmetics,
+    );
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(modal.querySelector("[data-store-subtab='card']")).toBeNull();
+
+    store?.remove();
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      ...heldBackOnly,
+      cardBackgrounds: {
+        bg_frontline: {
+          ...item,
+          name: "bg_frontline",
+          url: "/bg.webp",
+          priceHard: 240,
+        },
+      },
+    } as unknown as Cosmetics);
+    const withBackground = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(
+        withBackground.querySelector("[data-store-subtab='card']"),
+      ).not.toBeNull(),
+    );
+  });
+
   it("styles cosmetic sub-tabs like the modal's own tab bar", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     const subTab = [
@@ -2584,5 +2628,42 @@ describe("store analytics", () => {
     await vi.waitFor(() =>
       expect(FakeIO.instances.some((io) => io.observed.has(el))).toBe(true),
     );
+  });
+});
+
+// A Store link to a card item opens the Card sub-tab and hands the item to
+// its grid, which selects it; once shown, the Store stops asking.
+describe("StoreModal: a link to a card item", () => {
+  beforeEach(() => {
+    resolvedCatalog = [red, blue, green, flag, wake, atom, hydro, hydroAlt];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+  });
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+  });
+
+  it("passes the item to the card grid, and stops asking once it's shown", async () => {
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "cosmetics", item: "cardBackground:bg_storm_front" });
+    await vi.waitFor(() =>
+      expect(store!.querySelector("card-store-grid")).toBeTruthy(),
+    );
+    const grid = store.querySelector("card-store-grid") as unknown as {
+      requestedItem: string | null;
+    } & HTMLElement;
+    expect(grid.requestedItem).toBe("cardBackground:bg_storm_front");
+    grid.dispatchEvent(
+      new CustomEvent("requested-item-shown", { bubbles: true }),
+    );
+    expect(
+      (store as unknown as { requestedItem: string | null }).requestedItem,
+    ).toBeNull();
   });
 });

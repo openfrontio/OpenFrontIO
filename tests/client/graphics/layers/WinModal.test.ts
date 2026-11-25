@@ -54,6 +54,8 @@ vi.mock("../../../../src/client/Utils", () => ({
   }),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
+  renderDuration: (s: number) => `${s}s`,
+  formatPercentage: (v: number) => `${v * 100}%`,
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 
@@ -169,6 +171,9 @@ describe("WinModal Play Again", () => {
         isReplay: () => false,
       }),
       myPlayer: () => null,
+      inSpawnPhase: () => false,
+      elapsedGameSeconds: () => 600,
+      playerViews: () => [],
     }) as unknown as GameView;
 
   async function shownWith(rankedType?: RankedType): Promise<WinModal> {
@@ -294,18 +299,6 @@ describe("WinModal pattern promotion", () => {
       delete window.openfrontDesktop;
     }
   });
-
-  it("includes action styles that align [data-share-ring] with .win-action on hover", async () => {
-    modal = document.createElement("win-modal") as WinModal;
-    document.body.appendChild(modal);
-    await modal.updateComplete;
-    const style = modal.querySelector("style");
-    expect(style).not.toBeNull();
-    const css = style?.textContent ?? "";
-    expect(css).toContain(".win-action:hover ~ [data-share-ring]");
-    expect(css).toContain("top: -6px");
-    expect(css).toContain("bottom: -2px");
-  });
 });
 
 describe("WinModal FFA rating panel", () => {
@@ -425,6 +418,8 @@ describe("WinModal FFA rating panel", () => {
       myPlayer: () => ({
         isAlive: () => true,
         hasSpawned: () => true,
+        numTilesOwned: () => 100,
+        team: () => null,
         clientID: () => "c1",
       }),
       players: () =>
@@ -434,6 +429,10 @@ describe("WinModal FFA rating panel", () => {
         })),
       inSpawnPhase: () => false,
       ticks: () => 6000,
+      elapsedGameSeconds: () => 600,
+      numLandTiles: () => 1000,
+      numTilesWithFallout: () => 0,
+      playerViews: () => [],
       playerByClientID: () => winner,
       updatesSinceLastTick: () => ({
         [GameUpdateType.Win]: [
@@ -538,9 +537,7 @@ describe("WinModal share button", () => {
     expect(shareButton).not.toBeNull();
     expect(shareButton?.title).toBe("Share");
     expect(shareButton?.getAttribute("aria-label")).toBe("Share");
-    expect(shareButton?.classList.contains("win-action")).toBe(true);
-    expect(shareButton?.classList.contains("win-action-main")).toBe(true);
-    expect(shareButton?.classList.contains("win-action-icon")).toBe(true);
+    expect(shareButton?.dataset.winTone).toBe("quiet");
   });
 
   it("appears on both the win and the death/loss modal", async () => {

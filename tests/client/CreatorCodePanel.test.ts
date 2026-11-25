@@ -290,6 +290,14 @@ describe("CreatorCodePanel", () => {
       expect(events).toEqual([{ creator: freshCreator }]);
     });
 
+    it("unsupport is a red text link, change sits beside the input", async () => {
+      const el = await mount(creator());
+      expect(
+        findOButton(el, "creator_code.unsupport")!.getAttribute("variant"),
+      ).toBe("dangerLink");
+      expect(el.querySelector("[data-creator-code-row] o-button")).toBeTruthy();
+    });
+
     it("arms then fires unsupport on two clicks (confirm copy warns about the next-bind lock), and refreshes in place (no reload)", async () => {
       clearCreatorCode.mockResolvedValue({ ok: true });
       getUserMe.mockResolvedValue(userMeWith(null));

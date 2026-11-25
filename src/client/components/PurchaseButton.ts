@@ -1,8 +1,13 @@
 import { Product } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
+import type {
+  InsufficientCurrency,
+  PurchasePreflight,
+  PurchaseResult,
+} from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
+import { type PricedItem, saleEndsAt, shownPrice } from "../ShownPrice";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import "./ConfirmDialog";
@@ -247,11 +252,23 @@ export function renderPrice(
       >
       <s
         data-sale-tag
-        class="text-[11px] font-semibold text-white/55 decoration-aquarius decoration-2"
+        class="text-xs font-semibold text-white/55 decoration-aquarius decoration-2"
         ><span class="sr-only">${translateText("store.sale_was")} </span
         >${listPrice!.toLocaleString()}</s
       > </span
     >${balance}`;
+}
+
+/** Items with a purchase in flight, by busyKey: a button for the same item
+ * made again (a dialog closed and reopened mid-purchase) stays busy. */
+const busyItems = new Set<string>();
+
+const BUSY_CHANGED_EVENT = "purchase-button-busy-changed";
+
+function setItemBusy(key: string, busy: boolean) {
+  if (busy) busyItems.add(key);
+  else busyItems.delete(key);
+  window.dispatchEvent(new CustomEvent(BUSY_CHANGED_EVENT));
 }
 
 @customElement("purchase-button")
@@ -278,6 +295,12 @@ export class PurchaseButton extends LitElement {
   @property({ type: Number })
   listPriceSoft: number | null = null;
 
+  /** The sale behind the list prices, from the catalogue. With it, the
+   * button charges the list price once the sale ends and re-renders at that
+   * moment, like the Store and Inventory (see shownPrice). */
+  @property({ type: Object })
+  promotion: PricedItem["promotion"] | null = null;
+
   @property({ type: String })
   rarity: string = "common";
 
@@ -293,6 +316,17 @@ export class PurchaseButton extends LitElement {
   /** Display name of the item, used in the currency confirmation dialog. */
   @property({ type: String })
   itemName: string = "";
+
+  /**
+   * The end screen's check on tap: one fresh read of the player's balance
+   * that charges nothing. Affordable: the confirm box, saying what is left
+   * after the buy. Not: the shortfall box. Unset (the Store): the confirm
+   * box as before. Either way the paying handler only runs from the confirm
+   * box.
+   */
+  @property({ attribute: false })
+  preflight: ((method: "hard" | "soft") => Promise<PurchasePreflight>) | null =
+    null;
 
   /**
    * Keep an empty line where this payment method's button would go. Set by
@@ -328,14 +362,38 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** Currency purchase snapshot awaiting confirmation, if any. */
+  /** Currency purchase awaiting confirmation, if any. The item's prices
+   * are taken when it opens: a grid rendered by position can hand this
+   * element another item meanwhile. The amount is worked out from them when
+   * the dialog renders, so a sale ending while it is open shows (and
+   * charges) the price at that moment. */
   @state() private confirmingPurchase: {
     method: "hard" | "soft";
-    amount: number;
     itemName: string;
+    item: PricedItem;
     handler: () => Promise<PurchaseResult>;
+    // The item's busy key, so confirming holds and releases that item's
+    // buttons even after this element is handed another item.
+    busyKey: string;
+    // From the preflight's fresh read, for "you'll have N left".
+    balance?: number;
   } | null = null;
-  @state() private busy = false;
+  @state() private ownBusy = false;
+  /** The currency last tapped, so the shortfall box can give focus back to
+   * that button. */
+  private lastMethod: "hard" | "soft" = "hard";
+
+  /** Names the item, so every button for it shares one busy state while a
+   * purchase is in flight. Empty: this button's own state only. */
+  @property({ type: String }) busyKey = "";
+
+  private get busy(): boolean {
+    return this.ownBusy || (this.busyKey !== "" && busyItems.has(this.busyKey));
+  }
+
+  private onBusyChanged = () => this.requestUpdate();
+
+  private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
 
   createRenderRoot() {
     return this;
@@ -353,6 +411,65 @@ export class PurchaseButton extends LitElement {
     return this.priceSoft !== null && this.onPurchaseSoft !== undefined;
   }
 
+  /** The props as a catalogue item, for shownPrice. */
+  private get pricedItem(): PricedItem {
+    return {
+      priceHard: this.priceHard ?? undefined,
+      priceSoft: this.priceSoft ?? undefined,
+      listPriceHard: this.listPriceHard ?? undefined,
+      listPriceSoft: this.listPriceSoft ?? undefined,
+      promotion: this.promotion ?? undefined,
+    };
+  }
+
+  /** The price this button shows and charges in a currency, now. */
+  shown(currency: "hard" | "soft") {
+    return shownPrice(this.pricedItem, currency);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener(BUSY_CHANGED_EVENT, this.onBusyChanged);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener(BUSY_CHANGED_EVENT, this.onBusyChanged);
+    this.clearSaleEndTimer();
+  }
+
+  protected updated(changed: Map<PropertyKey, unknown>) {
+    super.updated(changed);
+    if (changed.has("promotion") || changed.has("confirmingPurchase")) {
+      this.scheduleSaleEnd();
+    }
+  }
+
+  /** Re-render when the sale ends, so the price switches to the list price
+   * at the same moment everywhere it's shown. */
+  private scheduleSaleEnd() {
+    this.clearSaleEndTimer();
+    // The shown item's sale, and an open dialog's item's (it may be another
+    // item by now): the first one still to come.
+    const now = Date.now();
+    const ends = [this.pricedItem, this.confirmingPurchase?.item]
+      .map((item) => (item === undefined ? null : saleEndsAt(item)))
+      .filter((at): at is number => at !== null && at > now);
+    if (ends.length === 0) return;
+    const wait = Math.min(...ends) - now;
+    if (wait > 2 ** 31 - 1) return;
+    this.saleEndTimer = setTimeout(() => {
+      this.saleEndTimer = null;
+      this.scheduleSaleEnd();
+      this.requestUpdate();
+    }, wait + 1);
+  }
+
+  private clearSaleEndTimer() {
+    if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
+    this.saleEndTimer = null;
+  }
+
   private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
     this.executePurchase(handler);
@@ -363,17 +480,81 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    this.confirmingPurchase = {
-      method,
-      amount: (method === "hard" ? this.priceHard : this.priceSoft) ?? 0,
-      itemName: this.itemName,
-      handler,
-    };
+    this.lastMethod = method;
+    // Taken at the tap, before the balance read: a grid rendered by position
+    // can hand this element another item while it is out.
+    const itemName = this.itemName;
+    const item = this.pricedItem;
+    const busyKey = this.busyKey;
+    const preflight = this.preflight;
+    if (preflight === null) {
+      this.confirmingPurchase = { method, itemName, item, handler, busyKey };
+      return;
+    }
+    // Busy while the balance is read, so a second tap can't start another.
+    this.ownBusy = true;
+    void preflight(method)
+      .then((check) => {
+        if (check.ok) {
+          this.confirmingPurchase = {
+            method,
+            itemName,
+            item,
+            handler,
+            busyKey,
+            balance: check.balance,
+          };
+        } else if (check.info) {
+          this.insufficient = check.info;
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Purchase check failed", error);
+      })
+      .finally(() => {
+        this.ownBusy = false;
+      });
   }
 
-  private executePurchase(handler?: () => Promise<PurchaseResult>) {
-    if (!handler || this.busy) return;
-    this.busy = true;
+  /** The confirm box's question, with the balance after when known. The
+   * amount comes from the item captured with the dialog, never this
+   * element's live props. */
+  private confirmMessage(pending: {
+    method: "hard" | "soft";
+    itemName: string;
+    item: PricedItem;
+    balance?: number;
+  }): string {
+    const { method, itemName, item, balance } = pending;
+    const amount = shownPrice(item, method)?.price ?? 0;
+    const currency = translateText(
+      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+    );
+    return balance === undefined
+      ? translateText("store.confirm_purchase_body", {
+          item: itemName,
+          amount,
+          currency,
+        })
+      : translateText("store.confirm_purchase_body_left", {
+          item: itemName,
+          amount,
+          currency,
+          left: balance - amount,
+        });
+  }
+
+  /** Runs a purchase, holding `key` (the item's busy key; this button's own
+   * by default) busy while it is in flight. */
+  private executePurchase(
+    handler?: () => Promise<PurchaseResult>,
+    key: string = this.busyKey,
+  ) {
+    if (!handler || this.ownBusy || (key !== "" && busyItems.has(key))) {
+      return;
+    }
+    this.ownBusy = true;
+    if (key !== "") setItemBusy(key, true);
     void Promise.resolve()
       .then(() => handler())
       .then((result) => {
@@ -383,7 +564,10 @@ export class PurchaseButton extends LitElement {
         console.error("Purchase callback failed", error);
         void showInGameAlert(translateText("store.purchase_failed"));
       })
-      .finally(() => (this.busy = false));
+      .finally(() => {
+        this.ownBusy = false;
+        if (key !== "") setItemBusy(key, false);
+      });
   }
 
   showInsufficient(result: InsufficientCurrency) {
@@ -427,7 +611,8 @@ export class PurchaseButton extends LitElement {
   }
 
   private renderHardButton() {
-    const hardOnSale = isOnSale(this.priceHard!, this.listPriceHard);
+    const hard = this.shown("hard")!;
+    const hardOnSale = isOnSale(hard.price, hard.listPrice);
     return html`
       <button
         class="purchase-sparkle-btn-hard relative overflow-hidden w-full min-h-11 px-2 py-1.5 ${
@@ -448,15 +633,16 @@ export class PurchaseButton extends LitElement {
             style="margin-top:3px"
           ></plutonium-icon>`,
           20,
-          this.priceHard!,
-          this.listPriceHard,
+          hard.price,
+          hard.listPrice,
         )}
       </button>
     `;
   }
 
   private renderSoftButton() {
-    const softOnSale = isOnSale(this.priceSoft!, this.listPriceSoft);
+    const soft = this.shown("soft")!;
+    const softOnSale = isOnSale(soft.price, soft.listPrice);
     return html`
       <button
         class="purchase-sparkle-btn-soft relative overflow-hidden w-full min-h-11 px-2 py-1.5 ${
@@ -474,8 +660,8 @@ export class PurchaseButton extends LitElement {
         ${renderPrice(
           html`<cap-icon .size=${22} style="margin-top:3px"></cap-icon>`,
           22,
-          this.priceSoft!,
-          this.listPriceSoft,
+          soft.price,
+          soft.listPrice,
         )}
       </button>
     `;
@@ -560,20 +746,14 @@ export class PurchaseButton extends LitElement {
         this.confirmingPurchase
           ? html`<confirm-dialog
               .heading=${translateText("store.confirm_purchase_title")}
-              .message=${translateText("store.confirm_purchase_body", {
-                item: this.confirmingPurchase.itemName,
-                amount: this.confirmingPurchase.amount,
-                currency: translateText(
-                  this.confirmingPurchase.method === "hard"
-                    ? "cosmetics.hard"
-                    : "cosmetics.soft",
-                ),
-              })}
+              .message=${this.confirmMessage(this.confirmingPurchase)}
               variant="warning"
               @confirm=${() => {
                 const pending = this.confirmingPurchase;
                 this.confirmingPurchase = null;
-                this.executePurchase(pending?.handler);
+                if (pending) {
+                  this.executePurchase(pending.handler, pending.busyKey);
+                }
               }}
               @cancel=${() => (this.confirmingPurchase = null)}
             ></confirm-dialog>`
@@ -581,7 +761,16 @@ export class PurchaseButton extends LitElement {
       }
       <insufficient-currency-dialog
         .info=${this.insufficient}
+        .returnFocus=${this.querySelector<HTMLElement>(
+          this.lastMethod === "hard"
+            ? ".purchase-sparkle-btn-hard"
+            : ".purchase-sparkle-btn-soft",
+        )}
         @close=${() => (this.insufficient = null)}
+        @buy-caps=${() => {
+          this.insufficient = null;
+          this.requestCurrencyPurchase("soft");
+        }}
       ></insufficient-currency-dialog>
     `;
   }

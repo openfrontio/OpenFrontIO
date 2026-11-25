@@ -15,6 +15,7 @@ vi.mock("../../src/client/Api", () => ({
 vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: vi.fn(async () => {}),
   invalidateCosmetics: vi.fn(),
+  resumePendingPurchase: vi.fn(async () => false),
 }));
 
 vi.mock("../../src/client/InGameModal", () => ({
@@ -183,6 +184,79 @@ describe("inline-checkout wallet row", () => {
     // confirmPayment resolved the wallet sheet; failing it too would be a lie.
     expect(paymentFailed).not.toHaveBeenCalled();
     expect(el.querySelector("button")).toBeTruthy();
+  });
+
+  // A Plutonium top-up for an item remembered from the end screen reloads
+  // straight away onto the purchase landing, marked resume: after the
+  // reload the landing runs the resume (which opens the Store on the item,
+  // waits for the Plutonium, can be cancelled, and never opens mid-game).
+  // Nothing waits before the reload.
+  const remember = () =>
+    sessionStorage.setItem(
+      "openfront-pending-purchase",
+      JSON.stringify({
+        player: "p1",
+        key: "cardBackground:bg_x",
+        at: Date.now(),
+      }),
+    );
+
+  it("a top-up for a remembered item reloads at once onto the resume landing", async () => {
+    remember();
+    const { resumePendingPurchase } =
+      await import("../../src/client/Cosmetics");
+    vi.mocked(resumePendingPurchase).mockClear();
+    const order: string[] = [];
+    // replaceState, not a hash assignment: no hashchange, so no landing
+    // runs before the reload.
+    const replace = vi
+      .spyOn(history, "replaceState")
+      .mockImplementation((_s, _t, url) => {
+        order.push(`replace:${String(url)}`);
+      });
+    reloadMock.mockImplementation(() => order.push("reload"));
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(order).toEqual([
+      expect.stringMatching(
+        /^replace:.*#purchase-completed\?status=true&type=currency_pack&resume=1$/,
+      ),
+      "reload",
+    ]);
+    replace.mockRestore();
+    // No waiting before the reload: the resume runs after it.
+    expect(resumePendingPurchase).not.toHaveBeenCalled();
+    sessionStorage.clear();
+  });
+
+  it("nothing remembered: reloads as before, URL untouched", async () => {
+    sessionStorage.clear();
+    const replace = vi.spyOn(history, "replaceState");
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(replace).not.toHaveBeenCalled();
+    replace.mockRestore();
+  });
+
+  it("a subscription checkout never resumes an end-screen item", async () => {
+    remember();
+    const replace = vi.spyOn(history, "replaceState");
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    const el = await renderComponent();
+    el.request = { kind: "subscription_tier", tierName: "gold" } as never;
+    await el.updateComplete;
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(replace).not.toHaveBeenCalled();
+    replace.mockRestore();
+    sessionStorage.clear();
   });
 
   it("shows wallet errors without opening the modal", async () => {
@@ -375,6 +449,30 @@ describe("inline-checkout buyer email", () => {
     await renderComponent();
     expect(google.session.createExpressCheckoutElement).toHaveBeenCalledWith({
       emailRequired: false,
+    });
+
+    // So does an Apple login, whose address is often Apple's private relay.
+    document.body.innerHTML = "";
+    const apple = fakeSession();
+    createMock.mockResolvedValue(apple.session);
+    userMeMock.mockResolvedValue({
+      user: { apple: { email: "abc@privaterelay.appleid.com" } },
+    });
+    await renderComponent();
+    expect(apple.session.createExpressCheckoutElement).toHaveBeenCalledWith({
+      emailRequired: false,
+    });
+
+    // But Apple may share no email at all: that account has none to use.
+    document.body.innerHTML = "";
+    const appleNoEmail = fakeSession();
+    createMock.mockResolvedValue(appleNoEmail.session);
+    userMeMock.mockResolvedValue({ user: { apple: {} } });
+    await renderComponent();
+    expect(
+      appleNoEmail.session.createExpressCheckoutElement,
+    ).toHaveBeenCalledWith({
+      emailRequired: true,
     });
   });
 

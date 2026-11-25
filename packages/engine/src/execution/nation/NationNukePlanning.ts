@@ -1,31 +1,58 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { Structures, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { Game, Player, Unit } from "../../game/Game";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
+import { MirvExecution } from "../MIRVExecution";
+import { NukeExecution } from "../NukeExecution";
 
 export type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
 
 /** Cap on silo levels reachable via the SAM salvo's upgrade fallback. */
 const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
 
-/** Whether our inner blast would overlap the inner blast of any player's nuke in flight. */
+export interface IncomingNuke {
+  owner: Player;
+  tile: TileRef;
+  type: UnitType;
+}
+
+/** Every player's nukes in flight, and those launched this tick or last whose bombs don't exist yet. */
+export function incomingNukes(game: Game): IncomingNuke[] {
+  const nukes: IncomingNuke[] = [];
+  for (const unit of game.units([
+    UnitType.AtomBomb,
+    UnitType.HydrogenBomb,
+    UnitType.MIRV,
+    UnitType.MIRVWarhead,
+  ])) {
+    const tile = unit.targetTile();
+    if (tile !== undefined) {
+      nukes.push({ owner: unit.owner(), tile, type: unit.type() });
+    }
+  }
+  for (const exec of game.executions()) {
+    const pending =
+      exec instanceof NukeExecution || exec instanceof MirvExecution
+        ? exec.pendingBomb()
+        : null;
+    if (pending !== null) nukes.push(pending);
+  }
+  return nukes;
+}
+
+/** Whether our inner blast would overlap the inner blast of an incoming bomb (MIRVs don't count until they split). */
 export function isNukeAlreadyLandingNear(
   game: Game,
+  incoming: IncomingNuke[],
   tile: TileRef,
   nukeType: NukeType,
 ): boolean {
   const config = game.config();
   const ourInnerRadius = config.nukeMagnitudes(nukeType).inner;
-  const nukesInFlight = game.units(
-    UnitType.AtomBomb,
-    UnitType.HydrogenBomb,
-    UnitType.MIRVWarhead,
-  );
-  for (const nuke of nukesInFlight) {
-    const targetTile = nuke.targetTile();
-    if (targetTile === undefined) continue;
-    const sumRadius = ourInnerRadius + config.nukeMagnitudes(nuke.type()).inner;
-    if (game.euclideanDistSquared(tile, targetTile) <= sumRadius * sumRadius) {
+  for (const nuke of incoming) {
+    if (nuke.type === UnitType.MIRV) continue;
+    const sumRadius = ourInnerRadius + config.nukeMagnitudes(nuke.type).inner;
+    if (game.euclideanDistSquared(tile, nuke.tile) <= sumRadius * sumRadius) {
       return true;
     }
   }
@@ -66,21 +93,65 @@ export function enemyLandBlastCoverage(
   return enemyLand / total;
 }
 
-/** Whether any tile in the blast, widened by margin, belongs to player, a teammate or an ally (even AFK ones). */
-export function blastHitsFriendlyLand(
+/** Map tiles on the circle of the given radius around center. */
+export function circleTiles(
+  game: Game,
+  center: TileRef,
+  radius: number,
+): TileRef[] {
+  const cx = game.x(center);
+  const cy = game.y(center);
+  const tiles: TileRef[] = [];
+  const add = (x: number, y: number) => {
+    if (game.isValidCoord(x, y)) tiles.push(game.ref(x, y));
+  };
+  // Stepping along both axes leaves no gaps where the circle is steep
+  for (let d = -radius; d <= radius; d++) {
+    const e = Math.floor(Math.sqrt(radius * radius - d * d));
+    add(cx + d, cy + e);
+    add(cx + d, cy - e);
+    add(cx + e, cy + d);
+    add(cx - e, cy + d);
+  }
+  return tiles;
+}
+
+/** Whether player's nukes keep off owner's land: its own, and allies' (even AFK ones), as hitting them breaks the alliance. */
+export function sparesLandOf(player: Player, owner: Player): boolean {
+  return owner === player || player.isAlliedWith(owner);
+}
+
+/**
+ * Whether the blast hits our or an ally's land (widened by margin), or a teammate's structure, finished or not.
+ * Like a human, a nation may hit teammates' land without structures.
+ */
+export function blastHitsFriendly(
   game: Game,
   player: Player,
   center: TileRef,
   nukeType: NukeType,
   margin = 0,
 ): boolean {
-  const friendlyIds = new Set(
+  const radius = game.config().nukeMagnitudes(nukeType).outer;
+  if (
+    game.anyUnitNearby(
+      center,
+      radius,
+      Structures.types,
+      (unit) => unit.owner().isPlayer() && player.isOnSameTeam(unit.owner()),
+      undefined,
+      true,
+    )
+  ) {
+    return true;
+  }
+  const sparedIds = new Set(
     game
       .players()
-      .filter((p) => player.isFriendly(p, true))
+      .filter((p) => sparesLandOf(player, p))
       .map((p) => p.smallID()),
   );
-  const outer = game.config().nukeMagnitudes(nukeType).outer + margin;
+  const outer = radius + margin;
   const cx = game.x(center);
   const cy = game.y(center);
   for (let dy = -outer; dy <= outer; dy++) {
@@ -88,7 +159,7 @@ export function blastHitsFriendlyLand(
       if (dx * dx + dy * dy > outer * outer) continue;
       if (!game.isValidCoord(cx + dx, cy + dy)) continue;
       const ownerId = game.ownerID(game.ref(cx + dx, cy + dy));
-      if (friendlyIds.has(ownerId)) return true;
+      if (sparedIds.has(ownerId)) return true;
     }
   }
   return false;
@@ -192,13 +263,15 @@ export interface FailedSamSalvo {
  * An atom bomb salvo from player that destroys one of target's SAMs, trying
  * the easiest (lowest level) first. A SAM of level N can intercept N nukes
  * before going on cooldown, so it takes N+1 bombs (accounting for all
- * covering SAMs). Without one, `failed` is the first SAM our silos lacked
- * the capacity for; a SAM we only lack the gold for leaves it null.
+ * covering SAMs). A SAM some bomb is already landing at is left to it.
+ * Without one, `failed` is the first SAM our silos lacked the capacity for;
+ * a SAM we only lack the gold for leaves it null.
  */
 export function planSamSalvo(
   game: Game,
   player: Player,
   target: Player,
+  incoming: IncomingNuke[],
 ): { salvo: SamSalvo | null; failed: FailedSamSalvo | null } {
   const atomCost = game.unitInfo(UnitType.AtomBomb).cost(game, player);
   const enemySams = target.units(UnitType.SAMLauncher);
@@ -221,8 +294,10 @@ export function planSamSalvo(
 
   for (const targetSam of sortedSams) {
     const targetTile = targetSam.tile();
-    // Hitting an ally's land would break the alliance
-    if (blastHitsFriendlyLand(game, player, targetTile, UnitType.AtomBomb)) {
+    if (
+      blastHitsFriendly(game, player, targetTile, UnitType.AtomBomb) ||
+      isNukeAlreadyLandingNear(game, incoming, targetTile, UnitType.AtomBomb)
+    ) {
       continue;
     }
 

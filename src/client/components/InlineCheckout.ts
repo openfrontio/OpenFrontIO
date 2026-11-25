@@ -17,6 +17,7 @@ import {
   type InlineConfirmResult,
 } from "../StripeInline";
 import { translateText } from "../Utils";
+import { hasPendingPurchase } from "./inventory/PendingEquip";
 
 /**
  * The webhook grants the entitlement, so the balance read immediately after a
@@ -192,9 +193,11 @@ export class InlineCheckout extends LitElement {
    */
   private async needsEmail(): Promise<boolean> {
     const me = await getUserMe();
-    // A Google login carries its own email (user.google.email, never the
-    // top-level field) and already makes the account recoverable — asking
-    // again would collect a second, different address on every purchase.
+    // A Google or Apple login carries its own email (user.google.email,
+    // user.apple.email, never the top-level field) and already makes the
+    // account recoverable — asking again would collect a second, different
+    // address on every purchase. Unlike Google, Apple may share no email at
+    // all, so only an Apple identity that has one counts.
     //
     // `me === false` is NOT "guest": getUserMe collapses signed-out and any
     // transient /users/@me failure into the same false (memoized for the
@@ -206,7 +209,9 @@ export class InlineCheckout extends LitElement {
     // this function exists to prevent (and the API refuses that attach
     // anyway), while a guest purchase without receipt_email merely skips
     // the recovery attach for that one purchase.
-    return me !== false && !me.user.email && !me.user.google;
+    return (
+      me !== false && !me.user.email && !me.user.google && !me.user.apple?.email
+    );
   }
 
   private async initWallet(): Promise<void> {
@@ -384,6 +389,22 @@ export class InlineCheckout extends LitElement {
       // head start.
       await showInGameAlert(translateText(this.successMessageKey));
       invalidateUserMe();
+      // A Plutonium top-up for an item from the end screen ("Get
+      // Plutonium"): reload straight onto the purchase landing, marked
+      // resume, which then opens the Store on that item (waiting for the
+      // Plutonium if it hasn't landed). replaceState, so no hashchange runs
+      // the landing before the reload. Never after a subscription.
+      if (
+        (this.request?.kind === "currency_pack" ||
+          this.request?.kind === "custom_currency") &&
+        hasPendingPurchase()
+      ) {
+        history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}#purchase-completed?status=true&type=currency_pack&resume=1`,
+        );
+      }
       window.location.reload();
       return;
     }

@@ -16,7 +16,14 @@ import {
 } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
+import { CardCatalogueRequest } from "../../components/card/CardCatalogueRequest";
+import {
+  loadedCardBackgroundUrl,
+  stillBackdropLayers,
+} from "../../components/card/StillCardBackdrop";
 import { Controller } from "../../Controller";
+import { fetchCosmetics, getCachedCosmetics } from "../../Cosmetics";
 import {
   ContextMenuEvent,
   DoBoatAttackEvent,
@@ -49,6 +56,7 @@ import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
+import { visiblePlayerCard } from "./VisiblePlayerCard";
 const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
@@ -666,9 +674,19 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     }
 
     const keybinds = this.userSettings.keybinds(Platform.isMac);
+    const backdrop = this.cardBackdropFor(player);
 
     return html`
-      <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
+      <div
+        class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5${
+          backdrop === undefined
+            ? ""
+            : " sm:[background-image:var(--card-backdrop)] bg-cover bg-center"
+        }"
+        style=${ifDefined(
+          backdrop === undefined ? undefined : `--card-backdrop: ${backdrop}`,
+        )}
+      >
         ${
           myPlayer && this.showShortcutButtons()
             ? html`<div class="flex flex-col gap-1 self-center shrink-0">
@@ -805,6 +823,43 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         }
       </div>
     `;
+  }
+
+  // A card owner's background as CSS layers (shade over the art) for the info
+  // row, or undefined. Shown only from 640px (the sm: class above), where the
+  // overlay is a fixed-width panel and the row crops the centre band of the
+  // 2800×400 art; a phone's full-width strip shows today's plain panel. Still
+  // only: no effect layers here, beside a running game.
+  private cardBackdropFor(player: PlayerView): string | undefined {
+    const visible = visiblePlayerCard(
+      this.game,
+      player,
+      this.userSettings.anonymousNames(),
+    );
+    if (visible?.card.background === undefined) return undefined;
+    const cosmetics = getCachedCosmetics();
+    if (cosmetics === null) {
+      // Not loaded yet: shown from the next render once it is.
+      this.requestCosmetics();
+      return undefined;
+    }
+    // Only once the image has loaded; a broken one leaves today's row.
+    const url = loadedCardBackgroundUrl(
+      visible.card.background,
+      cosmetics,
+      this.onArtLoaded,
+    );
+    return url === null ? undefined : stillBackdropLayers(url);
+  }
+
+  private readonly onArtLoaded = () => this.requestUpdate();
+  // A failed fetch is tried again by a later render.
+  private readonly catalogueRequest = new CardCatalogueRequest(
+    () => fetchCosmetics(),
+    () => this.requestUpdate(),
+  );
+  private requestCosmetics(): void {
+    this.catalogueRequest.request();
   }
 
   // Right side: what I can do to the player, each with its keybind. Request
@@ -974,7 +1029,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${
+          class="hud-panel min-[1200px]:rounded-lg sm:rounded-b-lg text-white text-lg lg:text-base w-full ${
             this.showShortcutButtons() ? "sm:w-[598px]" : "sm:w-[500px]"
           } lg:max-w-full overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}

@@ -38,6 +38,19 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
+import { currentPublicId, sessionUncertain, userAuth } from "./Auth";
+import {
+  cardItemName,
+  type CardItem,
+  CARD_ITEM_GROUP,
+  type CardItemType,
+  isCardItemType,
+} from "./components/card/CardItems";
+import {
+  clearPendingPurchase,
+  hasPendingPurchase,
+  peekPendingPurchase,
+} from "./components/inventory/PendingEquip";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
@@ -48,9 +61,12 @@ import {
   startPlayPurchase,
   startPurchase,
 } from "./Payments";
+import { currentPrice } from "./SalePrice";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
-import { translateText } from "./Utils";
+import { showToast, translateText } from "./Utils";
+
+export { currentPrice } from "./SalePrice";
 
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
@@ -92,10 +108,35 @@ export interface InsufficientCurrency {
   item: string;
   /** Whether the currency can be topped up (hard currency only). */
   canTopUp: boolean;
+  /** End screen only (purchaseCosmeticInPlace). A top-up leaves the game, so
+   * the box warns first and remembers the item (`itemKey`, for `player`). */
+  leavesGame?: boolean;
+  itemKey?: string;
+  player?: string;
+  /** End screen only: the caps price, when Plutonium is short and the
+   * player has enough caps for it. */
+  capsPrice?: number;
 }
 
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
 export type PurchaseResult = InsufficientCurrency | void;
+
+let purchaseReloadStarted = false;
+
+/**
+ * True once a purchase has started reloading the page. `purchaseCosmetic`
+ * calls `location.reload()` and then returns, so the caller runs again
+ * before the page unloads: this is how it tells that apart from a purchase
+ * that ended without a reload (failed, cancelled, or not enough currency).
+ */
+export function purchaseReloading(): boolean {
+  return purchaseReloadStarted;
+}
+
+function reloadAfterPurchase(): void {
+  purchaseReloadStarted = true;
+  window.location.reload();
+}
 
 export interface CosmeticPurchaseReturnActions {
   strip(): void;
@@ -145,6 +186,20 @@ export interface PurchaseReturnActions extends CosmeticPurchaseReturnActions {
  * `subscription_tier`. `provider`, `orderId`, `pack` and `tier` also ride
  * along; none of them changes what is shown.
  */
+/**
+ * A Plutonium top-up landed back on the site. With an end-screen item
+ * remembered ("Get Plutonium"), the Store opens on it once the success
+ * message is closed; otherwise the message shows as before.
+ */
+function topUpLanded(actions: PurchaseReturnActions, message: string): void {
+  if (!hasPendingPurchase()) {
+    actions.alertAndStrip(message);
+    return;
+  }
+  actions.strip();
+  void actions.alert(message).then(() => resumePendingPurchase());
+}
+
 export function handlePurchaseReturn(
   params: URLSearchParams,
   actions: PurchaseReturnActions,
@@ -168,16 +223,22 @@ export function handlePurchaseReturn(
 
   const type = params.get("type");
   if (type === "currency_pack") {
-    actions.alertAndStrip(
-      translateText("store.currency_pack_purchase_success"),
-    );
+    // The in-page card form reloads onto this landing marked resume, after
+    // showing its own message: straight to the resume.
+    if (params.get("resume") === "1") {
+      actions.strip();
+      void resumePendingPurchase();
+      return;
+    }
+    topUpLanded(actions, translateText("store.currency_pack_purchase_success"));
     return;
   }
 
   if (type === "custom_currency") {
     // Plutonium is credited asynchronously by the rail's webhook; the balance
     // refreshes from /users/@me on the next load.
-    actions.alertAndStrip(
+    topUpLanded(
+      actions,
       translateText("store.custom_currency_purchase_success"),
     );
     return;
@@ -215,6 +276,123 @@ export function handlePurchaseReturn(
 }
 
 /**
+ * After a Plutonium top-up that started from the end screen ("Get
+ * Plutonium"), open the Store on the item the player was buying, ready to
+ * buy. True when it did. The record (PendingEquip.ts) is this player's and
+ * fresh, or it is dropped; it is dropped too once the item is owned.
+ */
+export async function resumePendingPurchase({
+  waitForProfile = true,
+}: { waitForProfile?: boolean } = {}): Promise<boolean> {
+  const me = await getUserMe();
+  if (me !== false) return await resumePendingPurchaseFor(me);
+  if (!waitForProfile) return false;
+  // On a fresh landing this runs before the page has signed in, so there is
+  // no profile yet: try once more on the app's first profile broadcast.
+  return new Promise<boolean>((resolve) => {
+    const onUserMe = (e: Event) => {
+      done();
+      const fresh = (e as CustomEvent<UserMeResponse | false>).detail;
+      resolve(fresh ? resumePendingPurchaseFor(fresh) : false);
+    };
+    const timer = setTimeout(() => {
+      done();
+      resolve(false);
+    }, RESUME_WAIT_MS);
+    const done = () => {
+      clearTimeout(timer);
+      document.removeEventListener("userMeResponse", onUserMe);
+    };
+    document.addEventListener("userMeResponse", onUserMe);
+  });
+}
+
+// How long a fresh landing waits for the player's profile before giving up
+// (signed out, or the API unreachable).
+const RESUME_WAIT_MS = 15_000;
+
+async function resumePendingPurchaseFor(me: UserMeResponse): Promise<boolean> {
+  const player = me.player.publicId;
+  if (!player) return false;
+  const key = peekPendingPurchase(player);
+  if (key === null) return false;
+  if ((me.player.flares ?? []).includes(key)) {
+    clearPendingPurchase();
+    return false;
+  }
+  // One resume at a time; it stops if the player goes elsewhere (another
+  // modal: any hash change) or into a game (setGameInProgress), and then
+  // never opens the Store. The record stays for the next visit.
+  cancelPendingResume();
+  const abort = new AbortController();
+  resumeAbort = abort;
+  // Only a real move elsewhere: a hashchange queued from just before this
+  // resume started (the hash as it is now) doesn't count.
+  const startHash = window.location.hash;
+  const onHashChange = () => {
+    if (window.location.hash !== startHash) abort.abort();
+  };
+  window.addEventListener("hashchange", onHashChange);
+  try {
+    // The Plutonium can lag the redirect (the rail's webhook credits it):
+    // say so, and re-check for a while before opening the item to buy.
+    const price = await hardPriceOf(key);
+    let hard = me.player.currency?.hard ?? 0;
+    if (price !== null && hard < price && !abort.signal.aborted) {
+      showToast(translateText("store.plutonium_on_its_way"), "green");
+      const until = Date.now() + PLUTONIUM_WAIT_MS;
+      while (hard < price && Date.now() < until && !abort.signal.aborted) {
+        await new Promise((r) => setTimeout(r, PLUTONIUM_RECHECK_MS));
+        if (abort.signal.aborted) break;
+        const fresh = await broadcastFreshUserMe();
+        if (fresh !== false) hard = fresh.player.currency?.hard ?? 0;
+      }
+    }
+    if (abort.signal.aborted || gameInProgress) return false;
+  } finally {
+    window.removeEventListener("hashchange", onHashChange);
+    if (resumeAbort === abort) resumeAbort = null;
+  }
+  window.location.hash = `modal=store&tab=cosmetics&item=${encodeURIComponent(key)}`;
+  return true;
+}
+
+let resumeAbort: AbortController | null = null;
+let gameInProgress = false;
+
+/** Stops a resume that is waiting for a top-up's Plutonium. */
+export function cancelPendingResume(): void {
+  resumeAbort?.abort();
+  resumeAbort = null;
+}
+
+/**
+ * Whether a game is running (ClientGameRunner start/stop). A resume never
+ * opens the Store during one, and starting one cancels a waiting resume.
+ */
+export function setGameInProgress(running: boolean): void {
+  gameInProgress = running;
+  if (running) cancelPendingResume();
+}
+
+// How long a resume waits for a top-up's Plutonium to land, and how often it
+// re-reads the balance meanwhile.
+const PLUTONIUM_WAIT_MS = 30_000;
+const PLUTONIUM_RECHECK_MS = 3_000;
+
+// A card item's Plutonium price from its key ("<type>:<name>"), or null.
+async function hardPriceOf(key: string): Promise<number | null> {
+  const [type, name] = key.split(":");
+  if (!isCardItemType(type) || !name) return null;
+  const group = CARD_ITEM_GROUP[type];
+  const cosmetics = await fetchCosmetics();
+  const item = (
+    cosmetics?.[group] as Record<string, Pattern | Flag> | undefined
+  )?.[name];
+  return item === undefined ? null : (currentPrice(item, "hard") ?? null);
+}
+
+/**
  * Re-read the profile and tell the app about it.
  *
  * `invalidateUserMe()` alone only drops the cache; nothing refetches and
@@ -226,12 +404,18 @@ export function handlePurchaseReturn(
  * any error, not only an auth failure, and broadcasting it would flip the
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
+ *
+ * `beforeBroadcast` sees the fresh profile first (not called for `false`),
+ * for a caller whose own state must change before everyone else's does.
  */
 let freshUserMeRequestId = 0;
-export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
+export async function broadcastFreshUserMe(
+  beforeBroadcast?: (fresh: UserMeResponse) => void,
+): Promise<UserMeResponse | false> {
   const requestId = ++freshUserMeRequestId;
   invalidateUserMe();
   const fresh = await getUserMe();
+  if (fresh !== false) beforeBroadcast?.(fresh);
   // A newer refresh owns the broadcast, even if it is still pending or failed.
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   document.dispatchEvent(
@@ -394,6 +578,294 @@ async function promptManageBilling(message: string): Promise<void> {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+/** What a currency purchase is short of, for the insufficient-funds box. */
+function currencyShortfall(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+  price: number,
+  available: number,
+): InsufficientCurrency {
+  const c = resolved.cosmetic!;
+  const currencyName = translateText(
+    method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+  );
+  let itemName: string;
+  if (resolved.type === "flag") {
+    itemName = translateCosmetic("flags", c.name);
+  } else if (isCardItemType(resolved.type)) {
+    itemName = cardItemName(resolved.type, c as CardItem);
+  } else if (resolved.type === "crown") {
+    itemName = translateCosmetic("crowns", c.name);
+  } else {
+    itemName = translateCosmetic("territory_patterns.pattern", c.name);
+  }
+  // Every palette of a pattern shares one name, so say which colour is short.
+  if (resolved.colorPalette !== null) {
+    itemName = translateText("inventory.selected_cosmetic_variant", {
+      name: itemName,
+      variant: translateCosmetic(
+        "territory_patterns.color_palette",
+        resolved.colorPalette.name,
+      ),
+    });
+  }
+  return {
+    currency: currencyName,
+    // Clamped: the server can refuse on a balance the client still reads as
+    // sufficient, and a zero or negative shortfall reads as "you have
+    // enough", which is the one thing we know is untrue.
+    shortfall: Math.max(1, price - available),
+    item: itemName,
+    // Only plutonium can be topped up; caps are dismiss-only.
+    canTopUp: method === "hard",
+  };
+}
+
+/** What the end screen's shortfall box needs: the Store's shortfall, plus
+ * the caps price when Plutonium is short and caps are enough, and what to
+ * remember across "Get Plutonium". */
+function inPlaceShortfall(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+  price: number,
+  me: UserMeResponse,
+  available: number,
+): InsufficientCurrency {
+  const capsPrice = currentPrice(resolved.cosmetic as Pattern | Flag, "soft");
+  const soft = me.player.currency?.soft ?? 0;
+  return {
+    ...currencyShortfall(resolved, method, price, available),
+    leavesGame: true,
+    itemKey: resolved.key,
+    player: me.player.publicId,
+    capsPrice:
+      method === "hard" &&
+      capsPrice !== undefined &&
+      capsPrice > 0 &&
+      soft >= capsPrice
+        ? capsPrice
+        : undefined,
+  };
+}
+
+/** What the end screen's check on tap answers (<purchase-button preflight>):
+ * affordable, with the balance read; or not, with the shortfall to show
+ * (none when the check couldn't run or explained itself). */
+export type PurchasePreflight =
+  | { ok: true; balance: number }
+  | {
+      ok: false;
+      info?: InsufficientCurrency;
+      // The profile couldn't be read: no session (none, or a 401 cleared
+      // it), or a session but no answer (the network).
+      reason?: "signed_out" | "unreachable";
+    };
+
+/**
+ * The end screen's check when a buy button is tapped, before any confirm box:
+ * one fresh read of the profile (the cache dropped first, so an older copy
+ * can't decide; broadcast, so the rest of the screen follows). Charges
+ * nothing. The purchase itself only runs from the confirm box this leads to.
+ */
+export async function checkInPlacePurchase(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+): Promise<PurchasePreflight> {
+  const c = resolved.cosmetic;
+  if (!c || resolved.type === "subscription" || resolved.type === "pack") {
+    return { ok: false };
+  }
+  const price = currentPrice(c as Pattern | Flag, method) ?? 0;
+  const me = await broadcastFreshUserMe();
+  if (me === false) {
+    // A 401 on the read clears the session, so no session here means
+    // signed out; a session that got no profile means the network. So does
+    // a refresh that got no answer (sessionUncertain): the cookie may be
+    // fine, and signing in would leave the game.
+    // userAuth(false) on purpose, unlike purchaseCosmeticInPlace's
+    // userAuth(): broadcastFreshUserMe just read the profile through
+    // getAuthHeader, which refreshed the token, and recorded how that
+    // refresh went. Don't "align" it into a second refresh.
+    const session = await userAuth(false);
+    return {
+      ok: false,
+      reason:
+        session === false && !sessionUncertain() ? "signed_out" : "unreachable",
+    };
+  }
+  const wallet = me.player.currency;
+  const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return { ok: false };
+  }
+  if (balance < price) {
+    return {
+      ok: false,
+      info: inPlaceShortfall(resolved, method, price, me, balance),
+    };
+  }
+  return { ok: true, balance };
+}
+
+/** How an end-screen purchase ended (purchaseCosmeticInPlace). */
+export type InPlacePurchase =
+  // Bought, or the server says it was already owned: owned now either way.
+  // The fresh profile has been broadcast (false when the re-read failed).
+  // `notice`: charged other than the price shown; the Store's message.
+  | { kind: "owned"; fresh: UserMeResponse | false; notice?: string }
+  // Not enough of the currency: nothing charged.
+  | { kind: "insufficient"; info: InsufficientCurrency }
+  // Refused for a reason the API names, so nothing charged.
+  | { kind: "failed" }
+  // `failed` from the API (a network drop, a timeout, a 5xx or an unnamed
+  // refusal) and not owned on the re-read: whether it charged can't be said.
+  | { kind: "unconfirmed" }
+  // No account: nothing to buy with.
+  | { kind: "signed_out" }
+  // A session, but its profile couldn't be read: nothing sent.
+  | { kind: "unreachable" }
+  // Explained already with its own message (a wallet in debt).
+  | { kind: "handled" };
+
+/**
+ * A currency purchase from the end screen. Unlike purchaseCosmetic it never
+ * reloads the page, which would end the player's game: on success (or
+ * `already_owned`) it re-reads /users/@me and broadcasts it, so ownership and
+ * every balance on screen update in place, and it says nothing itself. The
+ * caller shows the outcome where the purchase was made. A shortfall carries
+ * what the end screen offers besides a top-up: the caps price when the
+ * player can afford it, and what to remember across "Get Plutonium".
+ *
+ * `onOwned` runs as soon as it is known to be owned, before the fresh
+ * profile is broadcast: the end screen marks it bought here first, so no
+ * render sees it owned but not bought here (which would drop it and rebuild
+ * the block).
+ *
+ * `signedInAs`, when given, is the account (currentPublicId) that opened the
+ * confirm: the purchase is only sent as that account. A sign-in in another
+ * tab replaces the refresh cookie, so a JWT refresh here could otherwise
+ * buy as the other account. A different account (or none) answers
+ * `signed_out`, with nothing sent.
+ */
+export async function purchaseCosmeticInPlace(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+  placement?: StorePlacement,
+  onOwned?: () => void,
+  signedInAs?: string | null,
+): Promise<InPlacePurchase> {
+  const c = resolved.cosmetic;
+  if (!c || resolved.type === "subscription" || resolved.type === "pack") {
+    return { kind: "failed" };
+  }
+  const priced = c as Pattern | Flag;
+  const price = currentPrice(priced, method) ?? 0;
+  const userMe = await getUserMe();
+  if (userMe === false) {
+    // getUserMe answers (and caches) false for a failed read too: only the
+    // session says signed out, and not a refresh that got no answer
+    // (sessionUncertain). Either way nothing was sent. With refresh: a
+    // cached false sent no request that would have renewed the token, and
+    // userAuth(false) calls one near expiry signed out despite a good
+    // refresh cookie.
+    const session = await userAuth();
+    return {
+      kind:
+        session === false && !sessionUncertain() ? "signed_out" : "unreachable",
+    };
+  }
+  const bound = signedInAs !== undefined;
+  if (bound && (signedInAs === null || userMe.player.publicId !== signedInAs)) {
+    return { kind: "signed_out" };
+  }
+  const wallet = userMe.player.currency;
+  const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return { kind: "handled" };
+  }
+  const shortfall = (available: number): InPlacePurchase => ({
+    kind: "insufficient",
+    info: inPlaceShortfall(resolved, method, price, userMe, available),
+  });
+  if (balance < price) return shortfall(balance);
+
+  const owned = (fresh: UserMeResponse | false, notice?: string) => {
+    if (userMe.player.publicId) {
+      const pending = peekPendingPurchase(userMe.player.publicId);
+      if (pending === resolved.key) clearPendingPurchase();
+    }
+    return { kind: "owned" as const, fresh, notice };
+  };
+  // `failed` isn't a refusal: purchaseWithCurrency also answers it for a
+  // network drop, a timeout or a 5xx, and the server's transaction can still
+  // commit after that. Re-read: owned now means it went through. Otherwise
+  // say it couldn't be confirmed, never "you weren't charged"; a retry is
+  // safe, as a committed buy answers already_owned.
+  const ownsIt = (fresh: UserMeResponse) =>
+    (fresh.player.flares ?? []).includes(resolved.key);
+  const settleFailure = async (): Promise<InPlacePurchase> => {
+    const fresh = await broadcastFreshUserMe((f) => {
+      if (ownsIt(f)) onOwned?.();
+    });
+    if (fresh !== false && ownsIt(fresh)) {
+      return owned(fresh);
+    }
+    return { kind: "unconfirmed" };
+  };
+
+  // Checked again by purchaseWithCurrency once it holds the token it will
+  // send: reading it can refresh the JWT, and the refresh can pick up
+  // another tab's sign-in (CardSaveQueue does the same for a card save).
+  const stillSignedInAs = () => !bound || currentPublicId() === signedInAs;
+
+  let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;
+  try {
+    result = await purchaseWithCurrency(
+      resolved.type as "pattern" | "flag" | "crown" | "effect" | CardItemType,
+      c.name,
+      method,
+      resolved.colorPalette?.name,
+      placement,
+      stillSignedInAs,
+    );
+  } catch (error) {
+    console.error("End-screen purchase failed", error);
+    return settleFailure();
+  }
+  // Another account by the time the token was read: nothing was sent.
+  if (!result.ok && result.code === "cancelled") return { kind: "signed_out" };
+  if (!result.ok && result.code === "insufficient_balance") {
+    const fresh = await broadcastFreshUserMe();
+    if (fresh === false) return { kind: "failed" };
+    const available =
+      method === "hard"
+        ? (fresh.player.currency?.hard ?? 0)
+        : (fresh.player.currency?.soft ?? 0);
+    return available < price ? shortfall(available) : { kind: "failed" };
+  }
+  if (!result.ok && result.code !== "already_owned") {
+    if (result.code === "debt") {
+      await broadcastFreshUserMe();
+      await showInGameAlert(
+        translateText("store.pack_debt", { debt: result.debt }),
+      );
+      return { kind: "handled" };
+    }
+    return settleFailure();
+  }
+  // Charged something other than the price shown (a sale started or ended
+  // since the catalogue loaded): say what was taken, as the Store does, and
+  // drop the catalogue that showed the wrong price.
+  const notice =
+    result.ok && result.amount !== undefined && result.amount !== price
+      ? purchaseSuccessMessage(c.name, price, result.amount, method)
+      : undefined;
+  onOwned?.();
+  return owned(await broadcastFreshUserMe(), notice);
+}
+
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
@@ -544,7 +1016,7 @@ export async function purchaseCosmetic(
       await showInGameAlert(
         translateText("store.change_tier_success", { tier: targetName }),
       );
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     }
   }
@@ -593,6 +1065,11 @@ export async function purchaseCosmetic(
           : "store.subscription_purchase_success",
       );
       if (message !== null) await showInGameAlert(message);
+      // A top-up for an item from the end screen: open the Store on it.
+      if (isPack && outcome.outcome === "completed") {
+        // In page: the profile is as known as it will be.
+        await resumePendingPurchase({ waitForProfile: false });
+      }
       return;
     }
 
@@ -636,39 +1113,8 @@ export async function purchaseCosmetic(
   }
   // Built for the pre-check below and reused when the server refuses for the
   // same reason, so both routes describe the same item the same way.
-  const insufficient = (available: number): InsufficientCurrency => {
-    const currencyName = translateText(
-      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
-    );
-    let itemName: string;
-    if (resolved.type === "flag") {
-      itemName = translateCosmetic("flags", c.name);
-    } else if (resolved.type === "crown") {
-      itemName = translateCosmetic("crowns", c.name);
-    } else {
-      itemName = translateCosmetic("territory_patterns.pattern", c.name);
-    }
-    // Every palette of a pattern shares one name, so say which colour is short.
-    if (resolved.colorPalette !== null) {
-      itemName = translateText("inventory.selected_cosmetic_variant", {
-        name: itemName,
-        variant: translateCosmetic(
-          "territory_patterns.color_palette",
-          resolved.colorPalette.name,
-        ),
-      });
-    }
-    return {
-      currency: currencyName,
-      // Clamped: the server can refuse on a balance the client still reads as
-      // sufficient, and a zero or negative shortfall reads as "you have
-      // enough", which is the one thing we know is untrue.
-      shortfall: Math.max(1, price - available),
-      item: itemName,
-      // Only plutonium can be topped up; caps are dismiss-only.
-      canTopUp: method === "hard",
-    };
-  };
+  const insufficient = (available: number): InsufficientCurrency =>
+    currencyShortfall(resolved, method, price, available);
   if (balance < price) {
     return insufficient(balance);
   }
@@ -678,7 +1124,8 @@ export async function purchaseCosmetic(
     | "skin"
     | "flag"
     | "crown"
-    | "effect";
+    | "effect"
+    | CardItemType;
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -734,20 +1181,32 @@ export async function purchaseCosmetic(
         // ownership state is stale, so refetch. Mirrors the pack path. No
         // broadcastFreshUserMe() here — the reload below tears the page down,
         // so re-dispatching the profile first would be dead work.
+        // Owned now: a top-up remembered for it is done with.
+        if (
+          userMe.player.publicId &&
+          peekPendingPurchase(userMe.player.publicId) === resolved.key
+        ) {
+          clearPendingPurchase();
+        }
         await showInGameAlert(translateText("store.already_owned"));
         invalidateUserMe();
-        window.location.reload();
+        reloadAfterPurchase();
         return;
       default:
         await showInGameAlert(translateText("store.purchase_failed"));
         return;
     }
   }
+  // The item a top-up was for (resumePendingPurchase) is bought.
+  if (userMe.player.publicId) {
+    const pending = peekPendingPurchase(userMe.player.publicId);
+    if (pending === resolved.key) clearPendingPurchase();
+  }
   await showInGameAlert(
     purchaseSuccessMessage(c.name, price, result.amount, method),
   );
   invalidateUserMe();
-  window.location.reload();
+  reloadAfterPurchase();
 }
 
 /**
@@ -825,7 +1284,7 @@ async function purchasePack(
       ),
     );
     invalidateUserMe();
-    window.location.reload();
+    reloadAfterPurchase();
     return;
   }
   switch (result.code) {
@@ -868,7 +1327,7 @@ async function purchasePack(
         }),
       );
       invalidateUserMe();
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     case "unavailable":
       await showInGameAlert(translateText("store.pack_unavailable"));
@@ -909,39 +1368,6 @@ function simpleHash(str: string): string {
     hash = hash & hash;
   }
   return hash.toString(36);
-}
-
-/**
- * An item's price in one currency as the store shows and the server charges
- * it now. While the item's own sale runs that is the catalog price (the sale
- * price); once the sale's endsAt has passed it is the list price, even if the
- * catalog in hand predates the end. The store's buttons and the purchase
- * balance check both read this, so they never disagree.
- */
-export function currentPrice(
-  item: {
-    priceHard?: number;
-    priceSoft?: number;
-    listPriceHard?: number;
-    listPriceSoft?: number;
-    promotion?: { endsAt: string };
-  },
-  currency: "hard" | "soft",
-): number | undefined {
-  const price = currency === "hard" ? item.priceHard : item.priceSoft;
-  const listPrice =
-    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
-  return saleHasEnded(item) ? (listPrice ?? price) : price;
-}
-
-/** Whether the item's own sale has ended (its endsAt has passed). */
-export function saleHasEnded(item: {
-  promotion?: { endsAt: string };
-}): boolean {
-  return (
-    item.promotion !== undefined &&
-    new Date(item.promotion.endsAt).getTime() <= Date.now()
-  );
 }
 
 /**
@@ -1015,6 +1441,16 @@ export function refreshStaleCosmetics(now: number = Date.now()): boolean {
   }
   invalidateCosmetics();
   return true;
+}
+
+/**
+ * Whether the cached catalog is missing or older than COSMETICS_STALE_MS, so
+ * the next open refetches it. Unlike refreshStaleCosmetics, drops nothing.
+ */
+export function cosmeticsCacheIsStale(now: number = Date.now()): boolean {
+  return (
+    __cosmeticsCache === null || now - __cosmeticsFetchedAt > COSMETICS_STALE_MS
+  );
 }
 
 export type TierListingRail = "steam" | "web";
@@ -1332,7 +1768,8 @@ export type ResolvedCosmetic = {
     | "effect"
     | "pack"
     | "cosmeticPack"
-    | "subscription";
+    | "subscription"
+    | CardItemType;
   cosmetic:
     | Pattern
     | Skin
@@ -1342,6 +1779,7 @@ export type ResolvedCosmetic = {
     | Pack
     | CosmeticPack
     | Subscription
+    | CardItem
     | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";

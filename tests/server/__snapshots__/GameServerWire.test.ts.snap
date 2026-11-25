@@ -1785,6 +1785,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
     "boostedBy": undefined,
     "clients": [
       {
+        "cardBackground": undefined,
         "clanTag": "HST",
         "clientID": "host0000",
         "friends": [
@@ -1797,6 +1798,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "verified": undefined,
       },
       {
+        "cardBackground": undefined,
         "clanTag": null,
         "clientID": "p2000000",
         "friends": undefined,
@@ -1807,6 +1809,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "verified": true,
       },
       {
+        "cardBackground": undefined,
         "clanTag": null,
         "clientID": "cast0000",
         "friends": undefined,
@@ -1817,6 +1820,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "verified": undefined,
       },
       {
+        "cardBackground": undefined,
         "clanTag": "TRD",
         "clientID": "p3000000",
         "friends": undefined,

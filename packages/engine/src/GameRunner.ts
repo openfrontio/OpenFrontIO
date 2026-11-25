@@ -47,6 +47,7 @@ import { Executor } from "./execution/ExecutionManager";
 import { PlayerExecution } from "./execution/PlayerExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
+import { WarshipExecution } from "./execution/WarshipExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import { Game, Player } from "./game/Game";
 import { createGame } from "./game/GameImpl";
@@ -403,9 +404,9 @@ export class GameRunner {
       throw new Error("the game is already finalized");
     }
     // In the order a new game adds them: init()'s, then each spawn's, then
-    // each structure's as it's built. Every nation gets its AI, whatever
-    // the config's nations setting: they are the author's. One with no land
-    // is dead and stops on its first tick.
+    // each structure's and warship's as it's built. Every nation gets its
+    // AI, whatever the config's nations setting: they are the author's. One
+    // with no land is dead and stops on its first tick.
     this.game.addExecution(...this.execManager.nationExecutions());
     this.addRunningGameExecutions();
     for (const nation of this.game.nations()) {
@@ -416,13 +417,27 @@ export class GameRunner {
       for (const tile of player.tiles()) {
         if (spawnTile === undefined || tile < spawnTile) spawnTile = tile;
       }
-      if (spawnTile === undefined) continue;
+      // One with no land is dead, and the dead have no allies or units
+      // (see PlayerExecution's removeOnDeath); its only units are warships,
+      // as a structure stands on its nation's land.
+      if (spawnTile === undefined) {
+        player.removeAllAlliances();
+        for (const warship of player.units(UnitType.Warship)) {
+          warship.delete(false);
+        }
+        continue;
+      }
       player.setSpawnTile(spawnTile);
       this.game.stats().recordSpawnTile(player, spawnTile);
       this.game.addExecution(new PlayerExecution(player));
     }
     for (const structure of this.game.units(Structures.types)) {
       this.game.addExecution(structureExecution(structure));
+    }
+    // And every warship the one it gets when built, patrolling around its
+    // tile.
+    for (const warship of this.game.units(UnitType.Warship)) {
+      this.game.addExecution(new WarshipExecution(warship));
     }
     this.game.endSpawnPhase();
   }
