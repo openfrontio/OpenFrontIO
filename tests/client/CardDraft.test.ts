@@ -852,6 +852,81 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(0);
   });
 
+  // Owns every item the tests below pick.
+  const ALL_OWNED = [
+    "cardBackground:bg_pacific",
+    "cardBackground:bg_storm",
+    ...["wins", "nukes_launched", "best_elo", "games_played"].map(
+      (s) => `cardTracker:${s}`,
+    ),
+  ];
+
+  it("a move made after closing mid-save survives the save failing", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    // Only the background changes, then the Inventory closes mid-save.
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.settle();
+    // Reopened: Best Elo moves to the first row.
+    editor.move("tracker", 2, 0);
+    finish({ ok: false, error: "failed" });
+    await saving;
+    expect(editor.draft.rows.tracker).toEqual([
+      "best_elo",
+      "wins",
+      "nukes_launched",
+    ]);
+  });
+
+  it("a tracker removal saved while the background changed isn't two new edits", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    // Nukes comes off the middle row, and that's saved...
+    editor.pick({ kind: "tracker", index: 1 }, null);
+    const saving = editor.save();
+    // ...while only the background changes.
+    editor.pick({ kind: "background" }, "bg_storm");
+    // The server closes the gap up.
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.draft.rows.tracker).toEqual(["wins", "best_elo", null]);
+    // Only the background is left to save.
+    expect(editor.changeCount()).toBe(1);
+  });
+
+  it("a fresh profile of the same card keeps the edits and takes what changed elsewhere", async () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    // Only a tracker is edited...
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    // ...when a purchase's refresh brings a background saved on another
+    // device.
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    expect(editor.saved.background).toBe("bg_storm");
+    // The untouched background follows the fresh card; the edit stays.
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker).toEqual([
+      "wins",
+      "nukes_launched",
+      "games_played",
+    ]);
+    expect(editor.changeCount()).toBe(1);
+  });
+
   it("Discard while a save is in flight: the draft follows what it stores", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));

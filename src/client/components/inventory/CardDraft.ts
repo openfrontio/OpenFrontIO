@@ -89,6 +89,13 @@ export function draftFromCard(
   };
 }
 
+function sameRows(
+  a: readonly (string | null)[],
+  b: readonly (string | null)[],
+): boolean {
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
+
 function cloneDraft(draft: CardDraft): CardDraft {
   return {
     background: draft.background,
@@ -170,8 +177,10 @@ export function swapPreview(
  * has it, and one picked into a row in place of another replaces that one
  * there. An item added into an empty row takes `base`'s first empty row,
  * else the row of an item `before` didn't have (one the failed save had
- * taken off, which the player never saw). Moves aren't replayed: `base`
- * keeps its own order.
+ * taken off, which the player never saw). Where `base` has the very rows
+ * `before` had (the failed save didn't touch them), `after`'s rows are
+ * taken as they are, moves included. Otherwise moves aren't replayed:
+ * `base` keeps its own order.
  */
 export function replayByItem(
   base: CardDraft,
@@ -185,6 +194,10 @@ export function replayByItem(
   for (const kind of CARD_SLOT_KIND_LIST) {
     const was = before.rows[kind];
     const now = after.rows[kind];
+    if (sameRows(base.rows[kind], was)) {
+      out.rows[kind] = [...now];
+      continue;
+    }
     const rows = out.rows[kind];
     const gone = (x: string | null): x is string =>
       x !== null && !now.includes(x);
@@ -403,13 +416,27 @@ export class CardEditor {
     this.seededFrom = userMe;
     const card = userMe?.player.card ?? null;
     const hadChanges = this.changeCount() > 0;
+    const before = this.saved;
     this.saved = draftFromCard(card);
     this.held = { title: card?.title ?? null, taunt: card?.taunt ?? null };
     this.values = new Map(
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
     this.flares = userMe?.player.flares ?? [];
-    if (!hadChanges) this.draft = cloneDraft(this.saved);
+    if (!hadChanges) {
+      this.draft = cloneDraft(this.saved);
+    } else if (
+      sameAccount &&
+      this.sending === null &&
+      this.droppedTo === null
+    ) {
+      // The same card again, changed elsewhere (saved on another device):
+      // the edits made on the old one go onto it, and what wasn't edited
+      // follows it, so Save never puts back what the player didn't touch.
+      // Not while a save is in flight: store() reconciles with what it
+      // stored, and this profile may be that save's own refresh.
+      this.draft = replayByItem(this.saved, before, this.draft);
+    }
     this.emit();
   }
 
@@ -647,6 +674,19 @@ export class CardEditor {
     this.droppedTo = null;
     if (cardChanges(sent, this.draft).length === 0) {
       this.draft = cloneDraft(storedDraft);
+    } else {
+      // Edited while it saved: each part left as it was sent follows the
+      // stored card (a gap the server closed up isn't two new edits).
+      const draft = cloneDraft(this.draft);
+      if (draft.background === sent.background) {
+        draft.background = storedDraft.background;
+      }
+      for (const kind of CARD_SLOT_KIND_LIST) {
+        if (sameRows(draft.rows[kind], sent.rows[kind])) {
+          draft.rows[kind] = [...storedDraft.rows[kind]];
+        }
+      }
+      this.draft = draft;
     }
     this.saved = storedDraft;
     // An edit made while it saved isn't saved: no "Saved" over it, and
