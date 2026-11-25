@@ -17,6 +17,7 @@
     "src/scripts",
     "scripts/replay",
     "scripts/split-packages",
+    "scripts/gen-maps",
     "vite.config.ts",
     "vite.cosmetic-preview.config.ts",
     "scripts/buildCosmeticPreview.ts",
