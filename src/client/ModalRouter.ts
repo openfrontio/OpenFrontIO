@@ -154,7 +154,14 @@ class ModalRouter {
     const leaving = this.currentName !== name && entry.pageId !== undefined;
     const guarded = leaving ? this.guardedCurrent() : null;
     if (guarded !== null) {
-      void this.askThen(guarded, () => this.routeTo(name, entry, args));
+      // The route asked about is this hash: approved, it opens with it,
+      // even if the URL moved on while the prompt was up (a route made
+      // meanwhile is left to this one's answer).
+      const target = window.location.hash;
+      void this.askThen(guarded, () => {
+        this.replaceHash(target);
+        this.routeTo(name, entry, args);
+      });
     } else {
       this.routeTo(name, entry, args);
     }
@@ -294,8 +301,13 @@ class ModalRouter {
     const guarded = this.guardedCurrent();
     if (guarded !== null) {
       const name = this.currentName;
+      // The URL this close was asked about (Back's): approved, it's the URL
+      // again, even if a route typed meanwhile moved it on.
+      const target = window.location.hash;
       void this.askThen(guarded, () => {
-        if (this.currentName === name) this.closeNow();
+        if (this.currentName !== name) return;
+        this.replaceHash(target);
+        this.closeNow();
       });
       return true;
     }

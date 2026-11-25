@@ -306,6 +306,55 @@ describe("Inventory: unsaved card changes guard", () => {
       });
     }
 
+    it("another route while the Store route's prompt is up: Discard still opens the Store, with its own hash", async () => {
+      await openWithChange();
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      // The player navigates again before answering (Back, say).
+      history.replaceState(null, "", "/");
+      modalRouter.closeCurrent();
+      await settle(modal);
+      await click("[data-card-guard-discard]");
+      await vi.waitFor(() => expect(storeOpens).toHaveLength(1));
+      expect(window.location.hash).toBe("#modal=store&tab=packs");
+      expect(
+        (modalRouter as unknown as { currentName: string | null }).currentName,
+      ).toBe("store");
+    });
+
+    it("a route typed while Back's prompt is up, then Discard: the Inventory closes and the URL is Back's", async () => {
+      await openWithChange();
+      history.replaceState(null, "", "/");
+      modalRouter.closeCurrent();
+      await settle(modal);
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      await click("[data-card-guard-discard]");
+      expect(modal.isOpen()).toBe(false);
+      expect(window.location.hash).toBe("");
+      expect(storeOpens).toHaveLength(0);
+    });
+
+    it("another route while the prompt is up, then Keep editing: the Inventory stays, and its hash comes back", async () => {
+      await openWithChange();
+      const hash = window.location.hash;
+      history.replaceState(null, "", "/#modal=store&tab=packs");
+      modalRouter.routeFromHash();
+      await settle(modal);
+      history.replaceState(null, "", "/");
+      modalRouter.closeCurrent();
+      await settle(modal);
+      await click("[data-card-guard-keep]");
+      expect(modal.isOpen()).toBe(true);
+      expect(window.location.hash).toBe(hash);
+      expect(storeOpens).toHaveLength(0);
+      expect(
+        (modalRouter as unknown as { currentName: string | null }).currentName,
+      ).toBe("inventory");
+    });
+
     it("Back routed twice, then Discard: closes once, and the URL stays clear", async () => {
       await openWithChange();
       history.replaceState(null, "", "/");
