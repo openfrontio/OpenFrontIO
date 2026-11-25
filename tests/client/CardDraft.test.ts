@@ -189,6 +189,26 @@ describe("card draft", () => {
     ).toEqual(["d", "b", "e"]);
   });
 
+  it("a tracker added into an emptied row keeps its place among the others", () => {
+    // [A, -, C] (B taken off), then D picked into the gap; the kept card
+    // closed it up: [A, C, -]. D goes between A and C, as the player put it.
+    expect(
+      replayByItem(
+        rows("a", "c", null),
+        rows("a", null, "c"),
+        rows("a", "d", "c"),
+      ).rows.tracker,
+    ).toEqual(["a", "d", "c"]);
+    // Picked after the others: it still goes last.
+    expect(
+      replayByItem(
+        rows("a", "c", null),
+        rows("c", "a", null),
+        rows("c", "a", "d"),
+      ).rows.tracker,
+    ).toEqual(["a", "c", "d"]);
+  });
+
   it("the body keeps held-back title and taunt and drops empty rows", () => {
     const d = pickInto(
       draftFromCard(CARD),
@@ -334,6 +354,24 @@ describe("CardEditor", () => {
     // Not "Saved": that edit isn't, and Save card takes it.
     expect(editor.saveState).toBe("idle");
     expect(editor.canSave()).toBe(true);
+  });
+
+  it("a tracker picked into the gap a save leaves keeps its row when the server closes it up", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 1 }, null);
+    const saving = editor.save();
+    editor.pick({ kind: "tracker", index: 1 }, "games_played");
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.draft.rows.tracker).toEqual([
+      "wins",
+      "games_played",
+      "best_elo",
+    ]);
   });
 
   it("closing the Inventory drops unsaved changes", () => {

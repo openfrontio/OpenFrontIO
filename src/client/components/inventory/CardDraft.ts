@@ -255,7 +255,8 @@ export function swapPreview(
  * out differently (the one the server kept when a save failed), by what
  * they name rather than by row: a removed item goes from wherever `base`
  * has it, and one picked into a row in place of another replaces that one
- * there. An item added into an empty row takes `base`'s first empty row,
+ * there. An item added into an empty row takes one of `base`'s empty rows,
+ * placed among the items there as the player placed it (see placeAmong),
  * else the row of an item `before` didn't have (one the failed save had
  * taken off, which the player never saw). Where `base` has the very rows
  * `before` had (the failed save didn't touch them), `after`'s rows are
@@ -302,19 +303,50 @@ export function replayByItem(
     });
     for (const y of adds) {
       if (rows.includes(y)) continue;
-      let at = rows.indexOf(null);
+      if (rows.includes(null)) {
+        placeAmong(rows, y, now);
+        continue;
+      }
       // Never a tracker the player has now: that includes every one this
       // replay wrote (each comes from `after`), so nothing it placed is
       // overwritten.
-      if (at === -1) {
-        at = rows.findIndex(
-          (x) => x !== null && !was.includes(x) && !now.includes(x),
-        );
-      }
+      const at = rows.findIndex(
+        (x) => x !== null && !was.includes(x) && !now.includes(x),
+      );
       if (at !== -1) rows[at] = y;
     }
   }
   return out;
+}
+
+/**
+ * Puts `y` into `rows`, which has an empty row, right after the last item
+ * `rows` holds of those `now` has before it (first when none): the rows
+ * between it and the nearest empty one shift over. So a tracker picked into
+ * a gap the server since closed up keeps its place among the others, and
+ * one picked last still goes last.
+ */
+function placeAmong(
+  rows: (string | null)[],
+  y: string,
+  now: readonly (string | null)[],
+): void {
+  const at =
+    Math.max(
+      -1,
+      ...now
+        .slice(0, now.indexOf(y))
+        .map((x) => (x === null ? -1 : rows.indexOf(x))),
+    ) + 1;
+  const after = rows.indexOf(null, at);
+  if (after !== -1) {
+    rows.splice(after, 1);
+    rows.splice(at, 0, y);
+    return;
+  }
+  // No empty row from there on: one before it closes up instead.
+  rows.splice(rows.lastIndexOf(null), 1);
+  rows.splice(at - 1, 0, y);
 }
 
 /** Moves a row (↑/↓ or a drag): the rows between shift over. */
