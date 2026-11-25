@@ -718,6 +718,65 @@ describe("CardEditor", () => {
     expect(api.save).not.toHaveBeenCalled();
   });
 
+  it("a discarded account's save in flight neither holds up nor decides the next account's Save", async () => {
+    session.id = "account-a";
+    // A's PUT never settles.
+    api.save.mockReturnValueOnce(new Promise(() => {}));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    void editor.save();
+    // Signed out of A and into B.
+    editor.dropAccount();
+    session.id = "account-b";
+    editor.seed(me(CARD, B_FLARES, "account-b"));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    api.save.mockResolvedValueOnce({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["games_played", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await editor.save()).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(api.save.mock.calls[1][0].trackers).toEqual([
+      "games_played",
+      "nukes_launched",
+      "best_elo",
+    ]);
+  });
+
+  it("a save that succeeds after the session moved to another account isn't taken", async () => {
+    // Sent as A, then an ordinary token refresh installs B (no session
+    // event) before the answer lands.
+    session.id = "account-a";
+    api.save.mockImplementationOnce(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        expect(stillWanted()).toBe(true);
+        session.id = "account-b";
+        return {
+          ok: true,
+          loadout: {
+            background: "bg_storm",
+            title: null,
+            taunt: null,
+            trackers: ["wins", "nukes_launched", "best_elo"],
+          },
+        };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
+    // A's card isn't taken as saved while B is signed in, and no "Saved".
+    expect(editor.saved.background).toBe("bg_pacific");
+    expect(editor.saveState).toBe("idle");
+  });
+
   it("a session that moves to another account while saving isn't sent", async () => {
     session.id = "account-a";
     api.save.mockImplementation(

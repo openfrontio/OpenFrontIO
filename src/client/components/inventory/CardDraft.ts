@@ -445,6 +445,10 @@ export class CardEditor {
   /** Another account's card from here: nothing of the last one's stays. */
   private resetAccount(): void {
     this.account++;
+    // The last account's save in flight is no longer this editor's to wait
+    // on: the next account's Save sends at once, and the old one's answer
+    // (store() sees the account changed) decides nothing.
+    this.inFlight = null;
     this.clearSavedTimer();
     this.seededFrom = null;
     this.draft = cloneDraft(this.saved);
@@ -610,6 +614,18 @@ export class CardEditor {
       const signedInAs = this.sessionAccount();
       const otherAccount = signedInAs !== null && signedInAs !== owner;
       this.saveState = droppedTo !== null || otherAccount ? "idle" : "failed";
+      this.emit();
+      return false;
+    }
+    // Stored, but the session is another account's by now (an ordinary
+    // token refresh installed it after the PUT went, with no session
+    // event): that card isn't this editor's to take as saved. The next
+    // profile seeds it. Unknown for now (a refresh that failed) isn't
+    // another account.
+    const signedInAs = this.sessionAccount();
+    if (signedInAs !== null && signedInAs !== owner) {
+      this.droppedTo = null;
+      this.saveState = "idle";
       this.emit();
       return false;
     }
