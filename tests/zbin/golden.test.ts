@@ -9,6 +9,7 @@
 // A failure here means the wire format changed. Since zbin has no version byte
 // and peers are expected to run the same build, that is fine to do
 // deliberately — update the vector — but it must never happen by accident.
+import { ClientInfoSchema } from "@openfront/shared/WireSchemas";
 import { zb } from "@openfront/zbin";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -121,5 +122,36 @@ describe("golden wire vectors", () => {
 
     const R = zb.object({ m: z.record(z.string(), zb.uint()) });
     expect(hex(R.serialize({ m: { a: 1 } }))).toBe("01016101");
+  });
+  // The lobby roster entry. Its presence header is TWO bytes: clanTag's null
+  // bit, friends, verified (presence + value), spectator (presence + value),
+  // teamIndex and levelBadge fill the first byte; cardBackground's presence
+  // bit is bit 0 of the second. Fields follow in declaration order.
+  it("a roster entry's header is two bytes, cardBackground last", () => {
+    const S = zb.object(ClientInfoSchema.shape);
+    // clanTag null -> bit0 (nullBit); levelBadge present -> bit7.
+    // cardBackground absent -> second byte 00.
+    expect(
+      hex(
+        S.serialize({
+          clientID: "ab",
+          username: "Al",
+          clanTag: null,
+          levelBadge: 5,
+        }),
+      ),
+    ).toBe("8100" + "026162" + "02416c" + "05");
+    // cardBackground present -> second byte 01, its string after levelBadge.
+    expect(
+      hex(
+        S.serialize({
+          clientID: "ab",
+          username: "Al",
+          clanTag: null,
+          levelBadge: 5,
+          cardBackground: "bg",
+        }),
+      ),
+    ).toBe("8101" + "026162" + "02416c" + "05" + "026267");
   });
 });

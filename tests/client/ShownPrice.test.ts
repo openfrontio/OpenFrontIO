@@ -262,6 +262,43 @@ describe("<purchase-button> reads prices through shownPrice", () => {
     expect(confirm.message).not.toContain("999");
   });
 
+  it("confirming after the button is reused holds and releases the confirmed item's busy key", async () => {
+    let finish!: () => void;
+    const button = await mount(new Date(Date.now() + 60_000).toISOString());
+    button.busyKey = "crown:a";
+    button.onPurchaseHard = () =>
+      new Promise<undefined>((resolve) => {
+        finish = () => resolve(undefined);
+      });
+    await button.updateComplete;
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    // A grid rendered by position hands this element item B.
+    button.busyKey = "crown:b";
+    await button.updateComplete;
+
+    const siblingA = await mount(new Date(Date.now() + 60_000).toISOString());
+    siblingA.busyKey = "crown:a";
+    const siblingB = await mount(new Date(Date.now() + 60_000).toISOString());
+    siblingB.busyKey = "crown:b";
+    await Promise.all([siblingA.updateComplete, siblingB.updateComplete]);
+    const hard = (b: PurchaseButton) =>
+      b.querySelector<HTMLButtonElement>(".purchase-sparkle-btn-hard")!;
+
+    button
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+    await Promise.all([siblingA.updateComplete, siblingB.updateComplete]);
+    expect(hard(siblingA).disabled).toBe(true);
+    expect(hard(siblingB).disabled).toBe(false);
+
+    finish();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.all([siblingA.updateComplete, siblingB.updateComplete]);
+    expect(hard(siblingA).disabled).toBe(false);
+    expect(hard(siblingB).disabled).toBe(false);
+  });
+
   it("keeps a reopened button busy while the same item's purchase runs", async () => {
     let finish!: () => void;
     const first = await mount(new Date(Date.now() + 60_000).toISOString());

@@ -36,6 +36,7 @@ const clientForksTests = [
   "tests/client/ClientGameRunnerMessages.test.ts",
   "tests/client/CosmeticPackPurchase.test.ts",
   "tests/client/CosmeticPurchaseDebt.test.ts",
+  "tests/client/CosmeticPurchaseInPlace.test.ts",
   "tests/client/CreatorCodePanel.test.ts",
   "tests/client/HashedEmail.test.ts",
   "tests/client/InlineCheckout.test.ts",

@@ -109,6 +109,8 @@ describe("PlayerPanel - level badge", () => {
     (panel as any).g = {
       gameID: () => "game-1",
       myClientID: () => "me",
+      // No cards: the identity row as before the player card.
+      playerCardOf: () => ({ card: undefined, flag: undefined }),
     };
     (panel as any).renderTraitorBadge = () => "";
     (panel as any).renderRelationPillIfNation = () => "";
@@ -193,6 +195,8 @@ describe("PlayerPanel - your own badge without the lobby roster", () => {
     (panel as any).g = {
       gameID: () => gameID,
       myClientID: () => "me",
+      // No cards: the identity row as before the player card.
+      playerCardOf: () => ({ card: undefined, flag: undefined }),
       config: () => ({
         gameConfig: () => ({ gameType: GameType.Public }),
       }),

@@ -2630,3 +2630,40 @@ describe("store analytics", () => {
     );
   });
 });
+
+// A Store link to a card item opens the Card sub-tab and hands the item to
+// its grid, which selects it; once shown, the Store stops asking.
+describe("StoreModal: a link to a card item", () => {
+  beforeEach(() => {
+    resolvedCatalog = [red, blue, green, flag, wake, atom, hydro, hydroAlt];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+  });
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+  });
+
+  it("passes the item to the card grid, and stops asking once it's shown", async () => {
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "cosmetics", item: "cardBackground:bg_storm_front" });
+    await vi.waitFor(() =>
+      expect(store!.querySelector("card-store-grid")).toBeTruthy(),
+    );
+    const grid = store.querySelector("card-store-grid") as unknown as {
+      requestedItem: string | null;
+    } & HTMLElement;
+    expect(grid.requestedItem).toBe("cardBackground:bg_storm_front");
+    grid.dispatchEvent(
+      new CustomEvent("requested-item-shown", { bubbles: true }),
+    );
+    expect(
+      (store as unknown as { requestedItem: string | null }).requestedItem,
+    ).toBeNull();
+  });
+});
