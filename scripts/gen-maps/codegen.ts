@@ -124,6 +124,57 @@ function obj(v: unknown, field: string): Raw {
   return v as Raw;
 }
 
+function rawLayers(o: Raw): MapLayer[] {
+  return arr(o, "layers").map((l) => {
+    const lo = obj(l, "layers");
+    return {
+      id: str(lo, "id"),
+      placement: str(lo, "placement"),
+      nukeable: bool(lo, "nukeable"),
+    };
+  });
+}
+
+function checkLayers(mapName: string, layers: MapLayer[]): void {
+  const fail = (msg: string) => new Error(`map ${mapName}: info.json ${msg}`);
+  const layerIDs = new Set<string>();
+  layers.forEach((layer, i) => {
+    if (layer.id === "") throw fail(`layers[${i}] "id" must not be empty`);
+    if (layer.id === "image")
+      throw fail(`layers[${i}] "id" must not be "image"`);
+    if (!/^[A-Za-z0-9-]+$/.test(layer.id)) {
+      throw fail(
+        `layers[${i}] "id" (${q(layer.id)}) must be alphanumeric (hyphens allowed)`,
+      );
+    }
+    if (layerIDs.has(layer.id))
+      throw fail(`layers[${i}] duplicate layer id ${q(layer.id)}`);
+    layerIDs.add(layer.id);
+    if (layer.placement !== "land" && layer.placement !== "water") {
+      throw fail(
+        `layers[${i}] "placement" (${q(layer.placement)}) must be "land" or "water"`,
+      );
+    }
+  });
+}
+
+/**
+ * info.json's "layers", parsed and checked as loadMapInfos does. processMap
+ * calls this because loadMapInfos skips test maps.
+ */
+export function parseLayers(mapName: string, info: Raw): MapLayer[] {
+  let layers: MapLayer[];
+  try {
+    layers = rawLayers(info);
+  } catch (e) {
+    throw new Error(
+      `failed to parse info.json for ${mapName}: ${(e as Error).message}`,
+    );
+  }
+  checkLayers(mapName, layers);
+  return layers;
+}
+
 function parseInfo(raw: unknown): { info: MapInfoJSON; rawTribes: unknown[] } {
   const o = obj(raw, "");
   const loc =
@@ -151,14 +202,7 @@ function parseInfo(raw: unknown): { info: MapInfoJSON; rawTribes: unknown[] } {
       themes: strArr(o, "themes"),
       customTribes: [],
       nationNames: arr(o, "nations").map((n) => str(obj(n, "nations"), "name")),
-      layers: arr(o, "layers").map((l) => {
-        const lo = obj(l, "layers");
-        return {
-          id: str(lo, "id"),
-          placement: str(lo, "placement"),
-          nukeable: bool(lo, "nukeable"),
-        };
-      }),
+      layers: rawLayers(o),
       author: str(o, "author"),
       description: str(o, "description"),
       location: loc
@@ -319,25 +363,7 @@ export function loadMapInfos(maps: MapEntry[]): MapInfoJSON[] {
         throw fail(`lists category ${q(category)} more than once`);
       seen.add(category);
     }
-    const layerIDs = new Set<string>();
-    info.layers.forEach((layer, i) => {
-      if (layer.id === "") throw fail(`layers[${i}] "id" must not be empty`);
-      if (layer.id === "image")
-        throw fail(`layers[${i}] "id" must not be "image"`);
-      if (!/^[A-Za-z0-9-]+$/.test(layer.id)) {
-        throw fail(
-          `layers[${i}] "id" (${q(layer.id)}) must be alphanumeric (hyphens allowed)`,
-        );
-      }
-      if (layerIDs.has(layer.id))
-        throw fail(`layers[${i}] duplicate layer id ${q(layer.id)}`);
-      layerIDs.add(layer.id);
-      if (layer.placement !== "land" && layer.placement !== "water") {
-        throw fail(
-          `layers[${i}] "placement" (${q(layer.placement)}) must be "land" or "water"`,
-        );
-      }
-    });
+    checkLayers(m.name, info.layers);
     infos.push(info);
   }
   return infos;

@@ -12,6 +12,7 @@ import {
 } from "@openfront/engine-lib/mapgen/TerrainBytes";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseLayers } from "./codegen";
 import { goJSON, goQuote } from "./gofmt";
 import { cropToNRGBA, downscaleHalf } from "./layers";
 import { type Logger, PERF, REMOVAL } from "./logger";
@@ -101,72 +102,46 @@ export function processMap(log: Logger, name: string, isTest: boolean): string {
     encodeWebP(thumb.rgba, thumb.width, thumb.height, thumbnailWebPQuality),
   ]);
 
-  if (Array.isArray(manifest.layers)) {
-    for (const [i, layer] of manifest.layers.entries()) {
-      // Test maps skip loadMapInfos' layer checks, so check here: a layer
-      // with no id has no file to encode and would break the manifest.
-      if (
-        layer === null ||
-        typeof layer !== "object" ||
-        Array.isArray(layer) ||
-        typeof layer.id !== "string" ||
-        layer.id === ""
-      ) {
-        throw new Error(`map ${name}: layer ${i} has no string id`);
-      }
-      const layerID: string = layer.id;
-      const placement =
-        typeof layer.placement === "string" ? layer.placement : "";
-      if (placement !== "land" && placement !== "water") {
-        throw new Error(
-          `map ${name}: layer ${goQuote(layerID)} has invalid placement ${goQuote(placement)} (must be "land" or "water")`,
-        );
-      }
-      const srcPng = join(inDir, layerID + ".png");
-      let pngData: Buffer;
-      try {
-        pngData = readFileSync(srcPng);
-      } catch (e) {
-        throw new Error(
-          `map ${name}: layer ${goQuote(layerID)} PNG not found at ${srcPng}: ${(e as Error).message}`,
-        );
-      }
-      let img;
-      try {
-        img = decodePNG(pngData);
-      } catch (e) {
-        throw new Error(
-          `map ${name}: layer ${goQuote(layerID)} PNG failed to decode: ${(e as Error).message}`,
-        );
-      }
-      const matchesMap =
-        img.width === result.map.width && img.height === result.map.height;
-      const matchesSource =
-        img.width === sourceImg.width && img.height === sourceImg.height;
-      if (!matchesMap && !matchesSource) {
-        throw new Error(
-          `map ${name}: layer ${goQuote(layerID)} PNG dimensions (${img.width}x${img.height}) do not match image.png (${sourceImg.width}x${sourceImg.height})`,
-        );
-      }
-      const { width, height } = result.map;
-      const full = cropToNRGBA(img, width, height);
-      img = null;
-      outputs.push([
-        layerID + ".webp",
-        encodeWebP(full, width, height, layerWebPQuality),
-      ]);
-      const hw = result.map4x.width;
-      const hh = result.map4x.height;
-      outputs.push([
-        layerID + ".4x.webp",
-        encodeWebP(
-          downscaleHalf(full, width, hw, hh),
-          hw,
-          hh,
-          layerWebPQuality,
-        ),
-      ]);
+  for (const { id: layerID } of parseLayers(name, manifest)) {
+    const srcPng = join(inDir, layerID + ".png");
+    let pngData: Buffer;
+    try {
+      pngData = readFileSync(srcPng);
+    } catch (e) {
+      throw new Error(
+        `map ${name}: layer ${goQuote(layerID)} PNG not found at ${srcPng}: ${(e as Error).message}`,
+      );
     }
+    let img;
+    try {
+      img = decodePNG(pngData);
+    } catch (e) {
+      throw new Error(
+        `map ${name}: layer ${goQuote(layerID)} PNG failed to decode: ${(e as Error).message}`,
+      );
+    }
+    const matchesMap =
+      img.width === result.map.width && img.height === result.map.height;
+    const matchesSource =
+      img.width === sourceImg.width && img.height === sourceImg.height;
+    if (!matchesMap && !matchesSource) {
+      throw new Error(
+        `map ${name}: layer ${goQuote(layerID)} PNG dimensions (${img.width}x${img.height}) do not match image.png (${sourceImg.width}x${sourceImg.height})`,
+      );
+    }
+    const { width, height } = result.map;
+    const full = cropToNRGBA(img, width, height);
+    img = null;
+    outputs.push([
+      layerID + ".webp",
+      encodeWebP(full, width, height, layerWebPQuality),
+    ]);
+    const hw = result.map4x.width;
+    const hh = result.map4x.height;
+    outputs.push([
+      layerID + ".4x.webp",
+      encodeWebP(downscaleHalf(full, width, hw, hh), hw, hh, layerWebPQuality),
+    ]);
   }
 
   for (const key of ["$schema", "author", "description", "location"])
