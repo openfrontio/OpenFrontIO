@@ -89,6 +89,59 @@ export function draftFromCard(
   };
 }
 
+/**
+ * Puts back the order the player gave the items in `after` (moved since
+ * `before`) on `out`, a card rebased onto a fresh one. Only the rows that
+ * hold those items are reordered; the fresh card's other items stay where
+ * they are. Nothing changes when the player moved nothing.
+ */
+export function replayMoves(
+  out: CardDraft,
+  before: CardDraft,
+  after: CardDraft,
+): CardDraft {
+  const next = cloneDraft(out);
+  for (const kind of CARD_SLOT_KIND_LIST) {
+    const order = after.rows[kind].filter((x): x is string => x !== null);
+    const was = before.rows[kind].filter(
+      (x): x is string => x !== null && order.includes(x),
+    );
+    const kept = order.filter((x) => was.includes(x));
+    if (sameRows(kept, was)) continue;
+    const rows = next.rows[kind];
+    const at = rows
+      .map((x, i) => (x !== null && order.includes(x) ? i : -1))
+      .filter((i) => i !== -1);
+    const items = at
+      .map((i) => rows[i] as string)
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    at.forEach((i, j) => (rows[i] = items[j]));
+  }
+  return next;
+}
+
+/** Whether `card` has every part `sent` changed from `replaced` (rows
+ * compared without their gaps, which the server closes up). */
+function showsSave(
+  card: CardDraft,
+  replaced: CardDraft,
+  sent: CardDraft,
+): boolean {
+  if (
+    sent.background !== replaced.background &&
+    card.background !== sent.background
+  ) {
+    return false;
+  }
+  const items = (rows: readonly (string | null)[]) =>
+    rows.filter((x): x is string => x !== null);
+  return CARD_SLOT_KIND_LIST.every(
+    (kind) =>
+      sameRows(items(sent.rows[kind]), items(replaced.rows[kind])) ||
+      sameRows(items(card.rows[kind]), items(sent.rows[kind])),
+  );
+}
+
 function sameRows(
   a: readonly (string | null)[],
   b: readonly (string | null)[],
@@ -443,7 +496,11 @@ export class CardEditor {
       // follows it, so Save never puts back what the player didn't touch.
       // Not while a save is in flight: store() reconciles with what it
       // stored, and this profile may be that save's own refresh.
-      this.draft = replayByItem(this.saved, before, this.draft);
+      this.draft = replayMoves(
+        replayByItem(this.saved, before, this.draft),
+        before,
+        this.draft,
+      );
     }
     this.emit();
   }
@@ -648,6 +705,11 @@ export class CardEditor {
     const epoch = sessionEpoch;
     const account = this.account;
     const owner = this.seededFrom?.player.publicId ?? null;
+    // The profile the editor held as the save started, and the card it
+    // replaced: a profile seeded while it ran is kept over the PUT's answer
+    // only if it already shows this save.
+    const seededAtStart = this.seededFrom;
+    const replaced = cloneDraft(this.saved);
     // The session's subject as the save starts: the account it's for, even
     // when another account's publicId isn't known yet.
     const ownerSub = currentSessionSub();
@@ -711,10 +773,23 @@ export class CardEditor {
     const stored = Array.isArray(result.loadout?.trackers)
       ? result.loadout
       : body;
-    const storedDraft = draftFromCard({
-      background: stored.background ?? null,
-      trackers: stored.trackers.map((stat) => ({ stat })),
-    });
+    // A profile of this account that arrived while it saved and already
+    // shows what this save changed was read after the PUT (the refresh the
+    // save broadcasts, or a later one): it may be newer than the PUT's
+    // answer (another session saved since), so that card stays the saved
+    // one. seed() already took it as `saved`. One that doesn't show it was
+    // read before the PUT committed (a purchase's refresh): the PUT's
+    // answer wins.
+    const newerProfile =
+      this.seededFrom !== seededAtStart &&
+      this.seededFrom !== null &&
+      showsSave(this.saved, replaced, sent);
+    const storedDraft = newerProfile
+      ? cloneDraft(this.saved)
+      : draftFromCard({
+          background: stored.background ?? null,
+          trackers: stored.trackers.map((stat) => ({ stat })),
+        });
     // Nothing edited while it saved (or since a drop, which reset the draft
     // to what it sent): the draft becomes the stored card. An edit made
     // meanwhile is kept as it is: it was made on what was sent, which the

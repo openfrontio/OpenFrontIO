@@ -997,6 +997,105 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(1);
   });
 
+  it("a fresh profile of the same card keeps a local tracker move", () => {
+    const editor = new CardEditor();
+    editor.seed(
+      me(
+        {
+          background: "bg_pacific",
+          trackers: [
+            { stat: "wins", value: 1 },
+            { stat: "nukes_launched", value: 2 },
+          ],
+        },
+        ALL_OWNED,
+      ),
+    );
+    // Nukes moves to the first row.
+    editor.move("tracker", 1, 0);
+    // A refresh brings Best Elo, saved elsewhere into the empty row.
+    editor.seed(
+      me(
+        {
+          background: "bg_pacific",
+          trackers: [
+            { stat: "wins", value: 1 },
+            { stat: "nukes_launched", value: 2 },
+            { stat: "best_elo", value: 3 },
+          ],
+        },
+        ALL_OWNED,
+      ),
+    );
+    expect(editor.draft.rows.tracker).toEqual([
+      "nukes_launched",
+      "wins",
+      "best_elo",
+    ]);
+    expect(editor.changeCount()).toBeGreaterThan(0);
+  });
+
+  it("a newer profile that lands during a save stays the saved card", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // The refresh the save broadcasts is already newer: another session
+    // changed the trackers after this PUT committed.
+    const newer = me(
+      {
+        background: "bg_storm",
+        trackers: [
+          { stat: "games_played", value: 9 },
+          { stat: "nukes_launched", value: 4880 },
+          { stat: "best_elo", value: 1612 },
+        ],
+      },
+      ALL_OWNED,
+    );
+    editor.seed(newer);
+    // Then the PUT's own answer: the card as this save stored it.
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.rows.tracker[0]).toBe("games_played");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("an older profile that lands during a save doesn't undo it", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // A purchase's refresh read before this PUT committed: the old card.
+    editor.seed(me(CARD, [...ALL_OWNED, "cardBackground:bg_neon"]));
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.changeCount()).toBe(0);
+  });
+
   it("Discard while a save is in flight: the draft follows what it stores", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
