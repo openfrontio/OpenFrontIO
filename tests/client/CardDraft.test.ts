@@ -27,6 +27,7 @@ import {
   moveRow,
   pickInto,
   replayByItem,
+  replayMoves,
   SAVED_SHOWN_MS,
   swapPreview,
 } from "../../src/client/components/inventory/CardDraft";
@@ -103,6 +104,23 @@ describe("card draft", () => {
     // never an undefined row in the draft.
     expect(moveRow(d, "tracker", 3, 0)).toBe(d);
     expect(moveRow(d, "tracker", -1, 0)).toBe(d);
+  });
+
+  it("replaying moves keeps the fresh order except where the player swapped a pair", () => {
+    const card = (trackers: string[]) =>
+      draftFromCard({ trackers: trackers.map((stat) => ({ stat })) });
+    const before = card(["wins", "nukes_launched", "best_elo"]);
+    const after = card(["nukes_launched", "wins", "best_elo"]);
+    // No move here: the fresh card as it is.
+    expect(
+      replayMoves(card(["best_elo", "wins"]), before, before).rows.tracker,
+    ).toEqual(["best_elo", "wins", null]);
+    // Elsewhere Best Elo moved between them: both orders can't hold, and
+    // the player's (Nukes before Wins) wins.
+    expect(
+      replayMoves(card(["wins", "best_elo", "nukes_launched"]), before, after)
+        .rows.tracker,
+    ).toEqual(["best_elo", "nukes_launched", "wins"]);
   });
 
   it("lists each changed slot", () => {
@@ -309,8 +327,10 @@ describe("CardEditor", () => {
     finish({ ok: true, loadout: {} });
     await saving;
     expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
-    expect(editor.draft.rows.tracker).toEqual(["wins", null, "games_played"]);
-    expect(editor.changeCount()).toBeGreaterThan(0);
+    // The edit (Best Elo replaced with Games played) goes onto the stored
+    // card, whose gap the server closed up: one change, where Best Elo is.
+    expect(editor.draft.rows.tracker).toEqual(["wins", "games_played", null]);
+    expect(editor.changeCount()).toBe(1);
     // Not "Saved": that edit isn't, and Save card takes it.
     expect(editor.saveState).toBe("idle");
     expect(editor.canSave()).toBe(true);
@@ -1170,6 +1190,82 @@ describe("CardEditor", () => {
     expect(editor.saved.background).toBe("bg_storm");
     expect(editor.draft.background).toBe("bg_storm");
     expect(editor.changeCount()).toBe(0);
+  });
+
+  it("a fresh profile keeps its own tracker moves next to a local one", () => {
+    // CodeRabbit's example: saved [Wins, Nukes, Best Elo], Nukes moved
+    // before Wins here, and a refresh that moved Best Elo to the front.
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.move("tracker", 1, 0);
+    editor.seed(
+      me(
+        {
+          ...CARD,
+          trackers: [
+            { stat: "best_elo", value: 1612 },
+            { stat: "wins", value: 312 },
+            { stat: "nukes_launched", value: 4880 },
+          ],
+        },
+        ALL_OWNED,
+      ),
+    );
+    // Both moves: Best Elo where the refresh put it, Nukes before Wins.
+    expect(editor.draft.rows.tracker).toEqual([
+      "best_elo",
+      "nukes_launched",
+      "wins",
+    ]);
+  });
+
+  it("an edit made during a save goes onto a newer card, keeping what it changed", async () => {
+    // CodeRabbit's example: Nukes replaced with Conquests while the save
+    // runs, and the post-PUT profile has Wins replaced with Games.
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const owned = [...ALL_OWNED, "cardTracker:conquests"];
+    const editor = new CardEditor();
+    editor.seed(me(CARD, owned));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.pick({ kind: "tracker", index: 1 }, "conquests");
+    editor.seed(
+      me(
+        {
+          ...CARD,
+          background: "bg_storm",
+          trackers: [
+            { stat: "games_played", value: 9 },
+            { stat: "nukes_launched", value: 4880 },
+            { stat: "best_elo", value: 1612 },
+          ],
+        },
+        owned,
+      ),
+    );
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.rows.tracker).toEqual([
+      "games_played",
+      "nukes_launched",
+      "best_elo",
+    ]);
+    // Games stays; only the Conquests edit is pending.
+    expect(editor.draft.rows.tracker).toEqual([
+      "games_played",
+      "conquests",
+      "best_elo",
+    ]);
+    expect(editor.changeCount()).toBe(1);
   });
 
   it("Discard while a save is in flight: the draft follows what it stores", async () => {

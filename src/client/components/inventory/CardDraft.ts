@@ -90,10 +90,13 @@ export function draftFromCard(
 }
 
 /**
- * Puts back the order the player gave the items in `after` (moved since
- * `before`) on `out`, a card rebased onto a fresh one. Only the rows that
- * hold those items are reordered; the fresh card's other items stay where
- * they are. Nothing changes when the player moved nothing.
+ * Replays the player's moves (`before` to `after`) onto `out`, a card
+ * rebased onto a fresh one. Only the pairs of items the player put in the
+ * other order are reordered: every other pair keeps `out`'s order, so a
+ * move made elsewhere stays too. Where the two disagree (a pair the player
+ * didn't touch that only fits one way round), the player's move wins.
+ * Items `out` holds that either side lacks stay in their rows, and nothing
+ * changes when the player moved nothing.
  */
 export function replayMoves(
   out: CardDraft,
@@ -102,22 +105,46 @@ export function replayMoves(
 ): CardDraft {
   const next = cloneDraft(out);
   for (const kind of CARD_SLOT_KIND_LIST) {
-    const order = after.rows[kind].filter((x): x is string => x !== null);
-    const was = before.rows[kind].filter(
-      (x): x is string => x !== null && order.includes(x),
-    );
-    const kept = order.filter((x) => was.includes(x));
-    if (sameRows(kept, was)) continue;
+    const was = before.rows[kind];
+    const now = after.rows[kind];
     const rows = next.rows[kind];
+    // The rows holding an item the player could have moved.
     const at = rows
-      .map((x, i) => (x !== null && order.includes(x) ? i : -1))
+      .map((x, i) =>
+        x !== null && was.includes(x) && now.includes(x) ? i : -1,
+      )
       .filter((i) => i !== -1);
-    const items = at
-      .map((i) => rows[i] as string)
-      .sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    at.forEach((i, j) => (rows[i] = items[j]));
+    const items = at.map((i) => rows[i] as string);
+    // `first` goes before `second`: the player swapped them round.
+    const swapped = (first: string, second: string) =>
+      now.indexOf(first) < now.indexOf(second) &&
+      was.indexOf(first) > was.indexOf(second);
+    // Each next row takes the first item (in `out`'s order) that no item
+    // still left must go before: the player's order where they changed it,
+    // `out`'s everywhere else.
+    const left = [...items];
+    const ordered: string[] = [];
+    while (left.length > 0) {
+      const ready = left.find((x) => !left.some((y) => swapped(y, x)))!;
+      ordered.push(ready);
+      left.splice(left.indexOf(ready), 1);
+    }
+    at.forEach((i, j) => (rows[i] = ordered[j]));
   }
   return next;
+}
+
+/**
+ * The player's edits (`before` to `after`) on a newer card `base`: picks by
+ * what they name (replayByItem), then the order they gave (replayMoves).
+ * What the player didn't touch follows `base`.
+ */
+function rebase(
+  base: CardDraft,
+  before: CardDraft,
+  after: CardDraft,
+): CardDraft {
+  return replayMoves(replayByItem(base, before, after), before, after);
 }
 
 /** Whether `card` has every part `sent` changed from `replaced` (rows
@@ -513,11 +540,7 @@ export class CardEditor {
       // follows it, so Save never puts back what the player didn't touch.
       // Not while a save is in flight: store() reconciles with what it
       // stored, and this profile may be that save's own refresh.
-      this.draft = replayMoves(
-        replayByItem(this.saved, before, this.draft),
-        before,
-        this.draft,
-      );
+      this.draft = rebase(this.saved, before, this.draft);
     }
     this.emit();
   }
@@ -812,26 +835,15 @@ export class CardEditor {
         });
     // Nothing edited while it saved (or since a drop, which reset the draft
     // to what it sent): the draft becomes the stored card. An edit made
-    // meanwhile is kept as it is: it was made on what was sent, which the
-    // stored card only differs from by closed-up gaps, so it names the
-    // same trackers.
+    // meanwhile goes onto the stored card, which may be a newer one: only
+    // what was changed since `sent` (a slot's pick, or the order) is
+    // replayed, so a part changed elsewhere stays changed, and a gap the
+    // server closed up isn't two new edits.
     this.droppedTo = null;
-    if (cardChanges(sent, this.draft).length === 0) {
-      this.draft = cloneDraft(storedDraft);
-    } else {
-      // Edited while it saved: each part left as it was sent follows the
-      // stored card (a gap the server closed up isn't two new edits).
-      const draft = cloneDraft(this.draft);
-      if (draft.background === sent.background) {
-        draft.background = storedDraft.background;
-      }
-      for (const kind of CARD_SLOT_KIND_LIST) {
-        if (sameRows(draft.rows[kind], sent.rows[kind])) {
-          draft.rows[kind] = [...storedDraft.rows[kind]];
-        }
-      }
-      this.draft = draft;
-    }
+    this.draft =
+      cardChanges(sent, this.draft).length === 0
+        ? cloneDraft(storedDraft)
+        : rebase(storedDraft, sent, this.draft);
     this.saved = storedDraft;
     // An edit made while it saved isn't saved: no "Saved" over it, and
     // Save card takes it at once.
