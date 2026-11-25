@@ -193,6 +193,20 @@ interface LivePreview {
 }
 const live = new Set<LivePreview>();
 
+// Wrappers that have ever been on the page. connectedCallback runs on every
+// insert, so a host appended and removed between two restarts still counts:
+// checking isConnected only when place() runs would miss it.
+const everConnected = new WeakSet<Element>();
+const FRAME_TAG = "openfront-card-preview";
+class CardPreviewFrame extends HTMLElement {
+  connectedCallback(): void {
+    everConnected.add(this);
+  }
+}
+if (customElements.get(FRAME_TAG) === undefined) {
+  customElements.define(FRAME_TAG, CardPreviewFrame);
+}
+
 function mountCardBackgroundPreview(
   host: HTMLElement,
   background: CardBackgroundPreviewInput,
@@ -200,9 +214,7 @@ function mountCardBackgroundPreview(
 ): { handle: CardBackgroundPreviewHandle; result: CosmeticPreviewResult } {
   let destroyed = false;
   let mounted = false;
-  // Whether the card has been on the page: restart forgets it once it leaves.
-  let seenOnPage = false;
-  const wrapper = document.createElement("div");
+  const wrapper = document.createElement(FRAME_TAG);
   wrapper.dataset.cardPreview = "";
   let current: {
     background: CardBackgroundPreviewInput;
@@ -281,17 +293,14 @@ function mountCardBackgroundPreview(
       host.replaceChildren(wrapper);
       mounted = true;
     }
-    if (wrapper.isConnected) seenOnPage = true;
     return checked.ok ? { ok: true } : { ok: false, error: checked.error };
   };
 
   const preview: LivePreview = {
+    // Restart forgets a card once it has been on the page and left it.
     place: () => {
-      if (wrapper.isConnected) {
-        seenOnPage = true;
-        return "on";
-      }
-      return seenOnPage ? "gone" : "notYet";
+      if (wrapper.isConnected) return "on";
+      return everConnected.has(wrapper) ? "gone" : "notYet";
     },
     // A card stopped for slow frames stays still until mounted again.
     remount: () => {

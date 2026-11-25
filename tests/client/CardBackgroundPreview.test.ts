@@ -328,6 +328,25 @@ describe("mountCardBackgroundPreview", () => {
     expect(card(later)).not.toBe(before);
   });
 
+  test("restart forgets a preview put on the page and taken off between restarts", () => {
+    // Mounted off the page, then shown and dropped without destroy(), with
+    // no restart while it was on the page.
+    const brief = document.createElement("div");
+    mountCardBackgroundPreview(
+      brief,
+      { url: BLOB, animation: ANIMATION },
+      { size: "large", animated: true },
+    );
+    const before = card(brief);
+    document.body.append(brief);
+    brief.remove();
+    restartCardAnimation();
+    // Forgotten: put back, it is not remounted.
+    document.body.append(brief);
+    restartCardAnimation();
+    expect(card(brief)).toBe(before);
+  });
+
   test("a size is one of its own, not an inherited key", () => {
     for (const size of ["toString", "constructor", "__proto__"]) {
       const { result } = mountCardBackgroundPreview(
