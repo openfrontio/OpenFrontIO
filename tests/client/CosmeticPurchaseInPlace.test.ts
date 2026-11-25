@@ -526,6 +526,8 @@ describe("buying on the end screen", () => {
     expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
       ok: true,
       balance: 500,
+      // The account the balance is read from.
+      publicId: "p1",
     });
     // The cache is dropped first: an older copy can't decide.
     expect(order.slice(0, 2)).toEqual(["invalidate", "read"]);

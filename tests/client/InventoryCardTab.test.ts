@@ -617,6 +617,55 @@ describe("<inventory-card-tab> without the card", () => {
     expect(shop.buy.mock.calls[0][4]).toBe("p1");
   });
 
+  it("a balance read as another account than the session's is read again before the confirm", async () => {
+    shop.check
+      .mockResolvedValueOnce({ ok: true, balance: 5000, publicId: "p1" })
+      .mockResolvedValueOnce({ ok: true, balance: 100, publicId: "p2" });
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(NO_CARD, null));
+    const button = buyButton() as unknown as {
+      preflight: (m: "hard" | "soft") => Promise<unknown>;
+      onPurchaseHard: () => Promise<unknown>;
+    };
+    // A's profile answers after a switch to B: its balance isn't B's.
+    session.id = "p2";
+    expect(await button.preflight("hard")).toEqual({
+      ok: true,
+      balance: 100,
+      publicId: "p2",
+    });
+    await button.onPurchaseHard();
+    expect(shop.buy.mock.calls[0][4]).toBe("p2");
+  });
+
+  it("a balance that stays another account's opens no confirm, and nothing is bought", async () => {
+    alerts.show.mockClear();
+    shop.check.mockResolvedValue({ ok: true, balance: 5000, publicId: "p1" });
+    await render(userMe(NO_CARD, null));
+    const button = buyButton() as unknown as {
+      preflight: (m: "hard" | "soft") => Promise<{ ok: boolean }>;
+    };
+    session.id = "p2";
+    expect((await button.preflight("hard")).ok).toBe(false);
+    expect(alerts.show).toHaveBeenCalledWith(
+      "inventory_card.server_unreachable",
+    );
+  });
+
+  it("with the session's account unknown, the buy goes as the account whose balance was shown", async () => {
+    shop.check.mockResolvedValue({ ok: true, balance: 5000, publicId: "p1" });
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(NO_CARD, null));
+    const button = buyButton() as unknown as {
+      preflight: (m: "hard" | "soft") => Promise<unknown>;
+      onPurchaseHard: () => Promise<unknown>;
+    };
+    session.id = null;
+    await button.preflight("hard");
+    await button.onPurchaseHard();
+    expect(shop.buy.mock.calls[0][4]).toBe("p1");
+  });
+
   it("sends the price the confirm box showed, even if the catalogue changes while it is open", async () => {
     shop.check.mockResolvedValue({ ok: true, balance: 5000 });
     shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
