@@ -30,7 +30,11 @@ import "./components/PackContentsDialog";
 import { ProgressiveList } from "./components/ProgressiveList";
 import "./components/SaleCountdown";
 import { alignPurchaseRows } from "./components/PurchaseButton";
-import { runningSales, saleCoversEverything } from "./components/SaleBanner";
+import {
+  runningSales,
+  saleCoversEverything,
+  salesPlayerCanBuy,
+} from "./components/SaleBanner";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -54,6 +58,7 @@ import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { storePurchasables } from "./StoreSellable";
 import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
@@ -351,11 +356,11 @@ export class StoreModal extends BaseModal {
   } | null = null;
 
   private resolvePurchasables(): ResolvedCosmetic[] {
-    return resolveCosmetics(
+    return storePurchasables(
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
-    ).filter((resolved) => resolved.relationship === "purchasable");
+    );
   }
 
   private cosmeticsGroups(
@@ -1057,10 +1062,15 @@ export class StoreModal extends BaseModal {
     const sales = runningSales(this.cosmetics);
     this.scheduleSaleEnd(sales);
     this.scheduleNewEnd();
-    if (sales.length === 0) return "";
+    const shown = salesPlayerCanBuy(
+      sales,
+      this.cosmetics,
+      this.resolvedPurchasables(),
+    );
+    if (shown.length === 0) return "";
     return html`<sale-banner
       class="block px-3 pt-2"
-      .sales=${sales}
+      .sales=${shown}
       .cosmetics=${this.cosmetics}
       @open-sale=${() => this.openSaleTab()}
     ></sale-banner>`;
