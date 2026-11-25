@@ -2,9 +2,19 @@
 // apart from buildCosmeticPreview.ts so a test can compile a consumer against
 // them without running the Vite build.
 
-/** index.d.ts: the import-free public types (api.ts) and the runtime entry. */
+// api.ts's one import, as the published files name it.
+const CARD_CHECK_TYPES_IMPORT = /from "\.\/cardCheckTypes";/g;
+
+/**
+ * index.d.ts: the public types (api.ts) and the runtime entry. api.ts's card
+ * check types come from cardCheckTypes.d.ts, which is cardCheckTypes.ts as is.
+ */
 export function indexDts(api: string): string {
-  return `${api}
+  const imports = api.match(CARD_CHECK_TYPES_IMPORT)?.length ?? 0;
+  if (imports === 0) {
+    throw new Error('api.ts no longer imports "./cardCheckTypes"');
+  }
+  return `${api.replace(CARD_CHECK_TYPES_IMPORT, 'from "./cardCheckTypes.js";')}
 /** Configure where assets/ is served, then load the renderer. Call once. */
 export declare function loadCosmeticPreview(
   options: LoadCosmeticPreviewOptions,
@@ -17,9 +27,10 @@ export declare const PREVIEW_ASSET_PATHS: readonly string[];
 
 /**
  * checks.d.ts: the DOM-free entry (src/client/cosmetic-preview/checks.ts). Its
- * card types come from index.d.ts. Keep it in step with that file's exports.
+ * card types come from cardCheckTypes.d.ts, never index.d.ts, whose renderer
+ * types need the DOM lib. Keep it in step with checks.ts's exports.
  */
-export const CHECKS_DTS = `import type { CardBackgroundFiles, CardEffect, CardIssue } from "./index.js";
+export const CHECKS_DTS = `import type { CardBackgroundFiles, CardEffect, CardIssue } from "./cardCheckTypes.js";
 
 export declare const CARD_ART_WIDTH: 2800;
 export declare const CARD_ART_HEIGHT: 400;

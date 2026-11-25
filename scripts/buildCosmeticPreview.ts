@@ -73,6 +73,10 @@ function writeTypes(): void {
     path.join(root, "src", "client", "cosmetic-preview", "api.ts"),
     "utf8",
   );
+  fs.copyFileSync(
+    path.join(root, "src", "client", "cosmetic-preview", "cardCheckTypes.ts"),
+    path.join(outDir, "cardCheckTypes.d.ts"),
+  );
   fs.writeFileSync(path.join(outDir, "index.d.ts"), indexDts(api));
   fs.writeFileSync(path.join(outDir, "checks.d.ts"), CHECKS_DTS);
 }

@@ -27,6 +27,7 @@ function compile(
   consumer: string,
   againstSource = false,
   checksDts = CHECKS_DTS,
+  lib: string[] = ["ES2022", "DOM"],
 ): { ok: boolean; output: string } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cosmetic-preview-types-"));
   dirs.push(dir);
@@ -35,6 +36,10 @@ function compile(
   const api = fs.readFileSync(
     path.join(root, "src", "client", "cosmetic-preview", "api.ts"),
     "utf8",
+  );
+  fs.copyFileSync(
+    path.join(root, "src", "client", "cosmetic-preview", "cardCheckTypes.ts"),
+    path.join(pkg, "cardCheckTypes.d.ts"),
   );
   fs.writeFileSync(path.join(pkg, "index.d.ts"), indexDts(api));
   fs.writeFileSync(path.join(pkg, "checks.d.ts"), checksDts);
@@ -52,7 +57,7 @@ function compile(
   fs.writeFileSync(path.join(dir, "consumer.ts"), consumer);
   fs.writeFileSync(
     path.join(dir, "tsconfig.json"),
-    JSON.stringify(againstSource ? sourceTsconfig() : standaloneTsconfig()),
+    JSON.stringify(againstSource ? sourceTsconfig() : standaloneTsconfig(lib)),
   );
   try {
     const output = execFileSync(process.execPath, [tsc, "-p", dir], {
@@ -66,7 +71,7 @@ function compile(
 }
 
 /** A host's own settings: strict, with nothing from this repo. */
-function standaloneTsconfig(): object {
+function standaloneTsconfig(lib: string[]): object {
   return {
     compilerOptions: {
       strict: true,
@@ -74,7 +79,7 @@ function standaloneTsconfig(): object {
       target: "ES2022",
       module: "ESNext",
       moduleResolution: "bundler",
-      lib: ["ES2022", "DOM"],
+      lib,
       types: [],
       skipLibCheck: false,
     },
@@ -186,6 +191,37 @@ export { issues, issuesDefault, parsedDefault, ok, readonlyHosts };
     expect(result.output).toBe("");
     expect(result.ok).toBe(true);
   }, 60_000);
+
+  test("a server with no DOM lib compiles against the checks entry alone", () => {
+    // A Node or Worker host: lib ES2022 only, and the declarations checked.
+    const result = compile(
+      `
+import {
+  checkCardBackground,
+  parseCardAnimation,
+} from "@openfront/cosmetic-preview/checks";
+
+const files: Parameters<typeof checkCardBackground>[0] = {
+  base: {
+    image: { width: 1, height: 1, data: new Uint8ClampedArray(4) },
+    type: "image/webp",
+    bytes: 1,
+  },
+  layers: [],
+};
+const issues = checkCardBackground(files, null, {
+  allowedLayerHosts: ["https://cdn.example.com"],
+});
+const parsed = parseCardAnimation({ kind: "layers", layers: [] });
+export const out = [issues.length, parsed.ok];
+`,
+      false,
+      CHECKS_DTS,
+      ["ES2022"],
+    );
+    expect(result.output).toBe("");
+    expect(result.ok).toBe(true);
+  });
 
   test("the option is typed, not any", () => {
     const result = compile(`
