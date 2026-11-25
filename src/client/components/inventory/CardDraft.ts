@@ -764,9 +764,12 @@ export class CardEditor {
     this.saveState = "saving";
     this.emit();
     await prior.catch(() => undefined);
-    if (this.ownerNow(owner) === "gone" || !this.eligible()) {
-      return this.endQuietly(owner);
-    }
+    const now = this.ownerNow(owner);
+    if (now === "gone") return this.endQuietly(owner);
+    // The account unknown for now (a token refresh failed) isn't a reason
+    // to drop it: store() asks again before sending, refuses, and ends it
+    // failed, so the same account can retry once it's back.
+    if (now === "ours" && !this.eligible()) return this.endQuietly(owner);
     return this.store(owner);
   }
 
