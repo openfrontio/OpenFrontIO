@@ -17,7 +17,9 @@ import {
   renewalPushedOf,
   renewalPushedStringsReady,
   giftEndingStringsReady,
+  promotionsPromptDueThisLaunch,
   reportThanksDueThisLaunch,
+  resetPromotionsPromptForTest,
   reportThanksStringsReady,
   resetRenewalPushedForTest,
   resetReportThanksForTest,
@@ -1732,6 +1734,23 @@ describe("promotions prompt", () => {
         "t(promotions_prompt.hide)|t(promotions_prompt.keep)",
       "hide true",
     ]);
+  });
+
+  it("waits for the next launch once another interrupt had this one", async () => {
+    resetPromotionsPromptForTest();
+    expect(promotionsPromptDueThisLaunch(true)).toBe(true);
+    // Its own showing doesn't count against it.
+    await runBootInterrupt(
+      "promotions-prompt",
+      context,
+      promoPorts(false).ports,
+    );
+    expect(promotionsPromptDueThisLaunch(true)).toBe(true);
+    // Another dialog does: a later /users/@me re-read must not offer it.
+    await runBootInterrupt("rewards", context, quietPorts().ports);
+    expect(promotionsPromptDueThisLaunch(true)).toBe(false);
+    expect(promotionsPromptDueThisLaunch(false)).toBe(false);
+    resetPromotionsPromptForTest();
   });
 
   it("a no is still an answer: recorded, nothing changed", async () => {

@@ -70,6 +70,7 @@ vi.mock("../../src/client/BootInterrupts", () => ({
   claimPromptStringsReady: () => false,
   steamGrantStringsReady: () => false,
   reportThanksStringsReady: () => false,
+  promotionsPromptDueThisLaunch: () => false,
   reportThanksDueThisLaunch: () => false,
   giftEndingStringsReady: () => false,
   renewalPushedStringsReady: () => false,

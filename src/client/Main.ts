@@ -50,6 +50,7 @@ import {
   renewalPushedDueThisLaunch,
   renewalPushedOf,
   renewalPushedStringsReady,
+  promotionsPromptDueThisLaunch,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
   runBootInterrupt,
@@ -1070,9 +1071,8 @@ class Client {
             publicId,
           ),
           reportThanksStringsReady: reportThanksStringsReady(translateText),
-          promotionsPromptDue: promotionsPromptDue(
-            this.userSettings,
-            isSteamShell(),
+          promotionsPromptDue: promotionsPromptDueThisLaunch(
+            promotionsPromptDue(this.userSettings, isSteamShell()),
           ),
           promotionsPromptStringsReady:
             promotionsPromptStringsReady(translateText),

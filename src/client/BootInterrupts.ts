@@ -594,6 +594,23 @@ export function resetReportThanksForTest(): void {
   reportThanksShownThisLaunch.clear();
 }
 
+// The promotions prompt asks a question nothing rides on, so it waits for a
+// launch with nothing else to say. Without this, a launch whose first boot went
+// to another interrupt would offer it on the next /users/@me re-read (session
+// recovery, a portal sign-in): two dialogs in one launch, which the
+// one-per-boot rule exists to prevent. Per launch, not per account: the
+// setting it asks about is per device.
+let otherInterruptShownThisLaunch = false;
+
+/** promotionsPromptDue(...), held back once another interrupt had this launch. */
+export function promotionsPromptDueThisLaunch(due: boolean): boolean {
+  return due && !otherInterruptShownThisLaunch;
+}
+
+export function resetPromotionsPromptForTest(): void {
+  otherInterruptShownThisLaunch = false;
+}
+
 /**
  * The same precondition for the report thank-you: it is marked seen on the
  * server once shown, so a key echoed back would spend it unread.
@@ -774,6 +791,9 @@ export async function runBootInterrupt(
   // only while a dialog is actually open: every case reaches its dialog
   // synchronously, so there is no gap between this check and the flag.
   if (dialogOpen) return;
+  if (interrupt !== null && interrupt !== "promotions-prompt") {
+    otherInterruptShownThisLaunch = true;
+  }
   await runInterrupt(interrupt, context, {
     ...ports,
     confirm: (...args) => whileDialogOpen(() => ports.confirm(...args)),
