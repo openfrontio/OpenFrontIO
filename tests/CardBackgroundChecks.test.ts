@@ -562,6 +562,18 @@ describe("checkCardBackground", () => {
       ]);
     });
 
+    test("a hole in the layers is a layer_src error", () => {
+      // forEach() skips holes, so a check built on it would say nothing.
+      expect(checkLayerSources({ kind: "layers", layers: Array(1) })).toEqual([
+        {
+          code: "layer_src",
+          level: "error",
+          layer: 0,
+          params: { src: "undefined" },
+        },
+      ]);
+    });
+
     test("an image with no pixel data is the wrong size", () => {
       const noData = { width: W, height: H } as unknown as CardCheckImage;
       const issues = checkCardBackground(

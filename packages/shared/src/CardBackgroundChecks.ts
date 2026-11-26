@@ -223,7 +223,10 @@ export function checkLayerSources(
 ): CardIssue[] {
   if (!isObject(animation) || !Array.isArray(animation.layers)) return [];
   const issues: CardIssue[] = [];
-  animation.layers.forEach((layer: unknown, i: number) => {
+  // An index loop, not forEach(): forEach() skips holes, and a hole is a
+  // layer with no src.
+  for (let i = 0; i < animation.layers.length; i++) {
+    const layer: unknown = animation.layers[i];
     const src = isObject(layer) ? layer.src : undefined;
     if (!isCatalogueLayerSrc(src, options)) {
       issues.push({
@@ -233,7 +236,7 @@ export function checkLayerSources(
         params: { src: asText(src).slice(0, MAX_SRC_LENGTH) },
       });
     }
-  });
+  }
   return issues;
 }
 
