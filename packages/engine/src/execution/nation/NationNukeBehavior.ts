@@ -78,6 +78,14 @@ const FULL_BLAST_COVERAGE_VALUE = 50_000;
 /** A strike target has at least this share of our troops; weaker ones fall to plain attacks. */
 const STRIKE_MIN_TROOP_RATIO = 0.5;
 
+/** No nukes on an enemy whose army is under this share of the army of the friend it fights. */
+const MIN_THREAT_RATIO: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 0.2,
+  [Difficulty.Hard]: 0.35,
+  [Difficulty.Impossible]: 0.5,
+};
+
 /** Hard & Impossible strike only if the follow-up attack can send this share of the target's troops. */
 const STRIKE_MIN_STACK_RATIO = 0.5;
 
@@ -437,7 +445,10 @@ export class NationNukeBehavior {
 
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.attackBehavior.findIncomingAttackPlayer();
-    if (incomingAttackPlayer) {
+    if (
+      incomingAttackPlayer &&
+      !this.isHarmlessTo(incomingAttackPlayer, this.player)
+    ) {
       yield incomingAttackPlayer;
     }
 
@@ -494,6 +505,7 @@ export class NationNukeBehavior {
       for (const target of ally.targets()) {
         if (target === this.player) continue;
         if (this.player.isFriendly(target)) continue;
+        if (this.isHarmlessTo(target, ally)) continue;
         // Found a valid ally target to nuke
         yield target;
       }
@@ -509,6 +521,7 @@ export class NationNukeBehavior {
 
       const otherMaxTroops = this.game.config().maxTroops(other);
       if (myMaxTroops >= otherMaxTroops * 2) continue;
+      if (this.isHarmlessTo(other, this.player)) continue;
 
       yield other;
     }
@@ -557,11 +570,12 @@ export class NationNukeBehavior {
     }
   }
 
-  /** Whether the attack right after our nuke could send enough troops into target by land. */
+  /** Whether target isn't much weaker than us and the attack right after our nuke could send enough troops into it by land. */
   private canStrike(target: Player): boolean {
     return (
       target.type() !== PlayerType.Bot &&
       !this.player.isFriendly(target) &&
+      target.troops() >= this.player.troops() * STRIKE_MIN_TROOP_RATIO &&
       this.attackBehavior.strikeTroops(target) >=
         target.troops() * STRIKE_MIN_STACK_RATIO &&
       this.player.sharesBorderWith(target)
@@ -779,12 +793,25 @@ export class NationNukeBehavior {
 
     // Us too: findIncomingAttackPlayer only gives our biggest attacker
     const attackers = biggestFirst(
-      [this.player, ...teammates].flatMap((p) => p.incomingAttacks()),
+      [this.player, ...teammates].flatMap((p) =>
+        p.incomingAttacks().filter((a) => !this.isHarmlessTo(a.attacker(), p)),
+      ),
     ).map((a) => a.attacker());
     const targets = biggestFirst(
-      teammates.flatMap((p) => p.outgoingAttacks()),
+      teammates.flatMap((p) =>
+        p.outgoingAttacks().filter((a) => {
+          const target = a.target();
+          return target.isPlayer() && !this.isHarmlessTo(target, p);
+        }),
+      ),
     ).map((a) => a.target());
     return [...attackers, ...targets].filter(isEnemy);
+  }
+
+  /** Whether enemy's army is too small to be worth a nuke in its fight with friend. */
+  private isHarmlessTo(enemy: Player, friend: Player): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    return army(enemy) < army(friend) * MIN_THREAT_RATIO[difficulty];
   }
 
   /** In Teams, players of the strongest other team: our pick, then the rest, the most built-up first. */
@@ -1228,6 +1255,13 @@ function nukeLoad(type: UnitType): number {
     default:
       return 1;
   }
+}
+
+/** Troops at home plus those in the player's attacks, which a nuke on its land kills too. */
+function army(player: Player): number {
+  let troops = player.troops();
+  for (const attack of player.outgoingAttacks()) troops += attack.troops();
+  return troops;
 }
 
 function structureLevels(player: Player): number {

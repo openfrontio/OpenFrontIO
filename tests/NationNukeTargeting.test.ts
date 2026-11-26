@@ -11,6 +11,7 @@ import {
   NukeMagnitude,
 } from "@openfront/engine-lib/configuration/Config";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
@@ -520,6 +521,46 @@ describe("Nation nuke targets in team games", () => {
   );
 
   // The raider attacks our teammate; "other", its built-up teammate, is the strongest-team pick
+  async function setupRaid(mateTroops: number) {
+    const ids = ["nation", "mate", "raider", "other"];
+    const game = await setup(
+      "big_plains",
+      {
+        difficulty: Difficulty.Hard,
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+      },
+      ids.map(
+        (id, i) =>
+          new PlayerInfo(
+            id,
+            id === "nation" ? PlayerType.Nation : PlayerType.Human,
+            null,
+            id,
+            false,
+            null,
+            [],
+            i < 2 ? 0 : 1,
+          ),
+      ),
+    );
+    const [nation, mate, raider, other] = ids.map((id) => game.player(id));
+    conquerRect(game, nation, 0, 0, 20, 20);
+    conquerRect(game, mate, 0, 140, 60, 200);
+    conquerRect(game, raider, 60, 140, 80, 200);
+    conquerRect(game, other, 120, 0, 200, 120);
+    other.buildUnit(UnitType.City, game.ref(160, 60), {});
+    nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
+    nation.addGold(40_000_000n);
+    nation.setTroops(1_000_000);
+    mate.addTroops(mateTroops);
+    raider.addTroops(100_000);
+    game.addExecution(new AttackExecution(50_000, raider, mate.id()));
+    game.executeNextTick();
+    expect(mate.incomingAttacks()).toHaveLength(1);
+    return { game, nation, mate, other };
+  }
+
   it.each([
     [2, 0, "raider"],
     [3, 0, "other"],
@@ -527,42 +568,7 @@ describe("Nation nuke targets in team games", () => {
   ])(
     "Hard: with %i atom bombs flying at a teammate's raider and %i at its teammate, nukes the %s",
     async (raiderBombs, otherBombs, expected) => {
-      const ids = ["nation", "mate", "raider", "other"];
-      const game = await setup(
-        "big_plains",
-        {
-          difficulty: Difficulty.Hard,
-          gameMode: GameMode.Team,
-          playerTeams: 2,
-        },
-        ids.map(
-          (id, i) =>
-            new PlayerInfo(
-              id,
-              id === "nation" ? PlayerType.Nation : PlayerType.Human,
-              null,
-              id,
-              false,
-              null,
-              [],
-              i < 2 ? 0 : 1,
-            ),
-        ),
-      );
-      const [nation, mate, raider, other] = ids.map((id) => game.player(id));
-      conquerRect(game, nation, 0, 0, 20, 20);
-      conquerRect(game, mate, 0, 140, 60, 200);
-      conquerRect(game, raider, 60, 140, 80, 200);
-      conquerRect(game, other, 120, 0, 200, 120);
-      other.buildUnit(UnitType.City, game.ref(160, 60), {});
-      nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
-      nation.addGold(40_000_000n);
-      nation.setTroops(1_000_000);
-      mate.addTroops(100_000);
-      raider.addTroops(100_000);
-      game.addExecution(new AttackExecution(50_000, raider, mate.id()));
-      game.executeNextTick();
-      expect(mate.incomingAttacks()).toHaveLength(1);
+      const { game, nation, mate } = await setupRaid(100_000);
 
       const bomb = (target: TileRef) =>
         mate.buildUnit(UnitType.AtomBomb, game.ref(10, 150), {
@@ -575,6 +581,50 @@ describe("Nation nuke targets in team games", () => {
       const nukes = launchNukes(game, nation);
       expect(nukes).toHaveLength(1);
       expect(game.owner(nukes[0].targetTile()!)).toBe(game.player(expected));
+    },
+  );
+
+  it("Hard: leaves a raider with a tenth of a teammate's army to that teammate", async () => {
+    const { game, nation, other } = await setupRaid(1_000_000);
+
+    expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(other);
+  });
+});
+
+describe("Nation nukes for allies", () => {
+  // Stripes: nation | ally | enemy. The ally has marked the enemy as its target.
+  it.each([
+    [50_000, true],
+    [1_000_000, false],
+  ])(
+    "Hard: nukes the target of an ally with %i troops, against 50000: %s",
+    async (allyTroops, nukes) => {
+      const game = await setup("big_plains", { difficulty: Difficulty.Hard }, [
+        new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+        new PlayerInfo("ally", PlayerType.Human, null, "ally_id"),
+        new PlayerInfo("enemy", PlayerType.Human, null, "enemy_id"),
+      ]);
+      const [nation, ally, enemy] = ["nation_id", "ally_id", "enemy_id"].map(
+        (id) => game.player(id),
+      );
+      game.map().forEachTile((tile) => {
+        const x = game.x(tile);
+        (x < 67 ? nation : x < 134 ? ally : enemy).conquer(tile);
+      });
+      nation.setTroops(500_000);
+      ally.setTroops(allyTroops);
+      enemy.setTroops(50_000);
+      game.addExecution(new AllianceRequestExecution(nation, ally.id()));
+      game.executeNextTick();
+      game.addExecution(new AllianceRequestExecution(ally, nation.id()));
+      game.executeNextTick();
+      expect(nation.isAlliedWith(ally)).toBe(true);
+      nation.updateRelation(ally, 100);
+      ally.target(enemy);
+
+      expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(
+        nukes ? enemy : null,
+      );
     },
   );
 });
