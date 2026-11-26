@@ -60,8 +60,17 @@ const CRUSH_TARGET_TROOP_SHARE: Partial<Record<Difficulty, number>> = {
 /** Such an attack sends this many times the most troops such an enemy may have */
 const CRUSH_STACK = 2;
 
-/** Players already pressing a target that keep us from joining a crown or victim attack on it */
+/** Players already pressing a target that keep us from joining a crown, victim or rich-target attack on it */
 const MAX_PILE_ON_ATTACKERS = 2;
+
+/** Hydrogen bombs' worth of gold, and at least as much as ours, that makes a much smaller enemy worth conquering for it, keyed by difficulty */
+const RICH_TARGET_HYDROS: Partial<Record<Difficulty, number>> = {
+  [Difficulty.Hard]: 2,
+  [Difficulty.Impossible]: 1,
+};
+
+/** Most troops and land, as a share of ours, a rich enemy may have for us to go after it */
+const RICH_TARGET_SHARE = 0.5;
 
 type Box = { min: Cell; max: Cell } | null | undefined;
 
@@ -519,6 +528,11 @@ export class NationAttackBehavior extends AiAttackBehavior {
       return target !== null ? this.sendAttack(target) : false;
     };
 
+    const rich = (): boolean => {
+      const target = this.findRichTarget(borderingEnemies);
+      return target !== null ? this.sendAttack(target) : false;
+    };
+
     const hated = (): boolean => {
       for (const relation of this.player.allRelationsSorted()) {
         if (relation.relation !== Relation.Hostile) continue;
@@ -586,10 +600,10 @@ export class NationAttackBehavior extends AiAttackBehavior {
       case Difficulty.Hard:
         // Strong veryWeak and juicy strats after the distracting hated strat, to make the nations weaker than impossible
         // prettier-ignore
-        return [bots, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, crown, weakest, island, donate];
+        return [bots, assist, betray, nuked, traitor, afk, hated, veryWeak, rich, juicy, victim, crown, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [bots, veryWeak, betray, assist, victim, crown, traitor, juicy, afk, nuked, hated, weakest, island, donate];
+        return [bots, veryWeak, betray, assist, victim, crown, traitor, rich, juicy, afk, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -804,11 +818,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
     ) {
       return [];
     }
-    const boarded = new Set<Player | TerraNullius>();
-    for (const boat of this.player.units(UnitType.TransportShip)) {
-      const dst = boat.targetTile();
-      if (dst !== undefined) boarded.add(this.game.owner(dst));
-    }
+    const boarded = this.boatTargets();
     const range = this.maxBoatRoute();
     const ours = this.player.largestClusterBoundingBox;
     const candidates: { bot: Player; gap: number }[] = [];
@@ -825,6 +835,16 @@ export class NationAttackBehavior extends AiAttackBehavior {
     }
     candidates.sort((a, b) => a.gap - b.gap);
     return candidates.slice(0, 3).map((c) => c.bot);
+  }
+
+  // Whoever owns the tiles our boats sail to
+  private boatTargets(): Set<Player | TerraNullius> {
+    const targets = new Set<Player | TerraNullius>();
+    for (const boat of this.player.units(UnitType.TransportShip)) {
+      const dst = boat.targetTile();
+      if (dst !== undefined) targets.add(this.game.owner(dst));
+    }
+    return targets;
   }
 
   private hasLandFront(): boolean {
@@ -1007,6 +1027,51 @@ export class NationAttackBehavior extends AiAttackBehavior {
       (enemy) => enemy.troops() <= this.player.troops() * 0.75,
     );
     return findJuiciestTarget(this.game, candidates);
+  }
+
+  // The richest much smaller enemy in reach holding more gold than us and a few hydrogen bombs' worth (Hard & Impossible)
+  private findRichTarget(borderingEnemies: Player[]): Player | null {
+    const { difficulty } = this.game.config().gameConfig();
+    const hydros = RICH_TARGET_HYDROS[difficulty];
+    if (hydros === undefined) return null;
+    const hydroCost = this.game
+      .unitInfo(UnitType.HydrogenBomb)
+      .cost(this.game, this.player);
+    const ourGold = this.player.gold();
+    const minGold = hydroCost * BigInt(hydros);
+    const minTargetGold = ourGold > minGold ? ourGold : minGold;
+    const maxTroops = this.player.troops() * RICH_TARGET_SHARE;
+    const maxTiles = this.player.numTilesOwned() * RICH_TARGET_SHARE;
+    const range = this.maxBoatRoute();
+    const ours = this.player.largestClusterBoundingBox;
+    let boarded: Set<Player | TerraNullius> | null = null;
+    const candidates = this.game.players().filter((p) => {
+      if (
+        p === this.player ||
+        p.type() === PlayerType.Bot ||
+        this.player.isFriendly(p) ||
+        p.gold() < minTargetGold ||
+        p.troops() > maxTroops ||
+        p.numTilesOwned() > maxTiles ||
+        (this.isFFA() && this.isPiledOn(p))
+      ) {
+        return false;
+      }
+      if (this.bordersByLand(p)) return true;
+      if (
+        !borderingEnemies.includes(p) &&
+        boxGap(ours, p.largestClusterBoundingBox) > range
+      ) {
+        return false;
+      }
+      // One boat at a time: it lands as a beachhead or attack of its own
+      boarded ??= this.boatTargets();
+      return !boarded.has(p);
+    });
+    candidates.sort((a, b) =>
+      a.gold() < b.gold() ? 1 : a.gold() > b.gold() ? -1 : 0,
+    );
+    return candidates.find((p) => this.canReach(p)) ?? null;
   }
 
   private findNearestIslandEnemy(): Player | null {
