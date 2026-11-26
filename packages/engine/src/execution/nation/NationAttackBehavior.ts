@@ -60,6 +60,9 @@ const CRUSH_TARGET_TROOP_SHARE: Partial<Record<Difficulty, number>> = {
 /** Such an attack sends this many times the most troops such an enemy may have */
 const CRUSH_STACK = 2;
 
+/** Players already pressing a target that keep us from joining a crown or victim attack on it */
+const MAX_PILE_ON_ATTACKERS = 2;
+
 type Box = { min: Cell; max: Cell } | null | undefined;
 
 // Fewest tiles between two boxes (unknown boxes count as touching)
@@ -694,13 +697,14 @@ export class NationAttackBehavior extends AiAttackBehavior {
   // A bordering runaway leader. Hard & Impossible always consider it: the
   // too-weak check in calculateAttackTroops decides whether our stack, plus
   // the troops already attacking it, is worth it. Medium only joins attacks
-  // already under way.
+  // already under way. Nobody joins once two others press it.
   private findCrownTarget(borderingEnemies: Player[]): Player | null {
     const leader = findRunawayLeader(this.game);
     if (
       leader === null ||
       !borderingEnemies.includes(leader) ||
-      !this.player.sharesBorderWith(leader)
+      !this.player.sharesBorderWith(leader) ||
+      this.isPiledOn(leader)
     ) {
       return null;
     }
@@ -716,6 +720,23 @@ export class NationAttackBehavior extends AiAttackBehavior {
 
   private incomingTroops(target: Player): number {
     return target.incomingAttacks().reduce((sum, a) => sum + a.troops(), 0);
+  }
+
+  // Whether enough others already press target; those fighting back at its attacks don't count
+  private isPiledOn(target: Player): boolean {
+    const attackers = new Set<Player>();
+    for (const attack of target.incomingAttacks()) {
+      const attacker = attack.attacker();
+      if (
+        attacker === this.player ||
+        attacker.type() === PlayerType.Bot ||
+        target.outgoingAttacks().some((a) => a.target() === attacker)
+      ) {
+        continue;
+      }
+      attackers.add(attacker);
+    }
+    return attackers.size >= MAX_PILE_ON_ATTACKERS;
   }
 
   // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
@@ -943,7 +964,8 @@ export class NationAttackBehavior extends AiAttackBehavior {
     return false;
   }
 
-  // Find someone who isn't significantly stronger than us and is under big attack from others (50%+ of their troops incoming)
+  // Find someone who isn't significantly stronger than us and is under big attack from others (50%+ of their troops incoming),
+  // in FFA only while fewer than two others press it
   private findVictim(enemies: Player[]): Player | null {
     // enemies is already sorted by troops (ascending), so first match is weakest victim
     return (
@@ -956,7 +978,10 @@ export class NationAttackBehavior extends AiAttackBehavior {
           .incomingAttacks()
           .reduce((sum, attack) => sum + attack.troops(), 0);
 
-        return totalIncomingTroops > enemy.troops() * 0.5;
+        return (
+          totalIncomingTroops > enemy.troops() * 0.5 &&
+          !(this.isFFA() && this.isPiledOn(enemy))
+        );
       }) ?? null
     );
   }

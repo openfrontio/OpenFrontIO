@@ -19,11 +19,13 @@ import { setup } from "./util/Setup";
  * Full-height stripes, left to right: helper | leader | nation | runnerUp.
  * The nation borders the leader and the runner-up; the helper only borders
  * the leader. No unowned land, so nothing pre-empts the attack logic.
+ * The game clock reads `minutes` past the spawn phase.
  */
 async function setupStripes(
   difficulty: Difficulty,
   widths: [number, number, number, number] = [10, 140, 20, 30],
   gameMode: GameMode = GameMode.FFA,
+  minutes = 8,
 ) {
   const game = await setup(
     "big_plains",
@@ -49,6 +51,10 @@ async function setupStripes(
       if (game.map().isLand(tile)) players[stripe].conquer(tile);
     }
   }
+
+  vi.spyOn(game, "ticks").mockReturnValue(
+    game.config().numSpawnPhaseTurns() + minutes * 600,
+  );
 
   const emojiBehavior = new NationEmojiBehavior(
     new PseudoRandom(42),
@@ -90,13 +96,14 @@ async function setupStripes(
 }
 
 describe("findRunawayLeader", () => {
+  // The field is everyone but the leader: helper, nation and runner-up
   it.each([
     [Difficulty.Easy, false],
     [Difficulty.Medium, true],
     [Difficulty.Hard, true],
     [Difficulty.Impossible, true],
   ])(
-    "%s: spots a leader with 4.7x the runner-up's land: %s",
+    "%s: spots a leader with 7x the field's median land: %s",
     async (difficulty, expected) => {
       const { game, leader } = await setupStripes(difficulty);
       expect(findRunawayLeader(game) === leader).toBe(expected);
@@ -108,20 +115,50 @@ describe("findRunawayLeader", () => {
     [Difficulty.Hard, true],
     [Difficulty.Impossible, true],
   ])(
-    "%s: spots a leader with 2.5x the runner-up's land: %s",
+    "%s: spots a leader with 5x the field's median land: %s",
     async (difficulty, expected) => {
       const { game, leader } = await setupStripes(
         difficulty,
-        [10, 125, 15, 50],
+        [20, 100, 20, 60],
       );
       expect(findRunawayLeader(game) === leader).toBe(expected);
     },
   );
 
-  it("Impossible: 1.4x the runner-up's land is no runaway lead", async () => {
+  it.each([
+    [Difficulty.Hard, false],
+    [Difficulty.Impossible, true],
+  ])(
+    "%s: spots a leader with 3.4x the field's median land: %s",
+    async (difficulty, expected) => {
+      const { game, leader } = await setupStripes(difficulty, [25, 85, 25, 65]);
+      expect(findRunawayLeader(game) === leader).toBe(expected);
+    },
+  );
+
+  it("Impossible: 2.25x the field's median land is no runaway lead", async () => {
     const { game } = await setupStripes(
       Difficulty.Impossible,
-      [10, 100, 20, 70],
+      [30, 90, 40, 40],
+    );
+    expect(findRunawayLeader(game)).toBeNull();
+  });
+
+  it("Impossible: spots a leader racing one rival once it dwarfs everyone else", async () => {
+    // Only 1.4x the runner-up's land, but 6.7x the field's median
+    const { game, leader } = await setupStripes(
+      Difficulty.Impossible,
+      [15, 100, 15, 70],
+    );
+    expect(findRunawayLeader(game)).toBe(leader);
+  });
+
+  it("Impossible: nobody runs away in the first 8 minutes", async () => {
+    const { game } = await setupStripes(
+      Difficulty.Impossible,
+      undefined,
+      GameMode.FFA,
+      7,
     );
     expect(findRunawayLeader(game)).toBeNull();
   });
@@ -136,7 +173,7 @@ describe("findRunawayLeader", () => {
   });
 });
 
-describe("Alliances with a runaway leader", () => {
+describe("Alliances with the leader", () => {
   function requestFrom(game: Game, requestor: Player, recipient: Player) {
     const request = {
       requestor: () => requestor,
@@ -170,10 +207,68 @@ describe("Alliances with a runaway leader", () => {
     },
   );
 
-  it("Impossible: still accepts a stronger player that isn't running away", async () => {
+  // 2.25x the field's median: the land leader, but no runaway
+  const closeRace: [number, number, number, number] = [30, 90, 40, 40];
+
+  it.each([
+    [Difficulty.Medium, true],
+    [Difficulty.Hard, false],
+    [Difficulty.Impossible, false],
+  ])(
+    "%s: accepts a request from the much stronger land leader: %s",
+    async (difficulty, expected) => {
+      const { game, leader, nation, allianceBehavior } = await setupStripes(
+        difficulty,
+        closeRace,
+      );
+      leader.setTroops(1_000_000);
+      nation.setTroops(100_000);
+
+      const request = requestFrom(game, leader, nation);
+      allianceBehavior.handleAllianceRequests();
+
+      expect(vi.mocked(request.accept).mock.calls.length > 0).toBe(expected);
+    },
+  );
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: still allies with a land leader it is friends with",
+    async (difficulty) => {
+      const { game, leader, nation, allianceBehavior } = await setupStripes(
+        difficulty,
+        closeRace,
+      );
+      leader.setTroops(1_000_000);
+      nation.setTroops(100_000);
+      nation.updateRelation(leader, 60);
+
+      const request = requestFrom(game, leader, nation);
+      allianceBehavior.handleAllianceRequests();
+
+      expect(request.accept).toHaveBeenCalled();
+    },
+  );
+
+  it("Impossible: still accepts a much stronger player that doesn't lead", async () => {
+    const { game, runnerUp, nation, allianceBehavior } = await setupStripes(
+      Difficulty.Impossible,
+      closeRace,
+    );
+    runnerUp.setTroops(1_000_000);
+    nation.setTroops(100_000);
+
+    const request = requestFrom(game, runnerUp, nation);
+    allianceBehavior.handleAllianceRequests();
+
+    expect(request.accept).toHaveBeenCalled();
+  });
+
+  it("Impossible: in the first 8 minutes the land leader is just another player", async () => {
     const { game, leader, nation, allianceBehavior } = await setupStripes(
       Difficulty.Impossible,
-      [10, 100, 20, 70],
+      closeRace,
+      GameMode.FFA,
+      7,
     );
     leader.setTroops(1_000_000);
     nation.setTroops(100_000);
@@ -260,6 +355,36 @@ describe("Attacking a runaway leader - end-to-end via maybeAttack", () => {
       attackBehavior.maybeAttack();
 
       expect(attacksOn(spy, leader).length > 0).toBe(expected);
+    },
+  );
+
+  it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
+    "%s: won't join once two others press the runaway leader",
+    async (difficulty) => {
+      const { game, helper, leader, nation, runnerUp, attackBehavior } =
+        await setupStripes(difficulty);
+      // A second helper takes the bottom half of the helper's stripe
+      const helper2 = game.addPlayer(
+        new PlayerInfo("helper2", PlayerType.Human, null, "helper2_id"),
+      );
+      const height = game.map().height();
+      for (let x = 0; x < 10; x++) {
+        for (let y = height / 2; y < height; y++) {
+          helper2.conquer(game.ref(x, y));
+        }
+      }
+      setTroops(game, nation, runnerUp);
+      leader.setTroops(1_000_000);
+      helper.setTroops(300_000);
+      helper2.setTroops(300_000);
+      game.addExecution(new AttackExecution(200_000, helper, leader.id()));
+      game.addExecution(new AttackExecution(200_000, helper2, leader.id()));
+      game.executeNextTick();
+
+      const spy = vi.spyOn(game, "addExecution");
+      attackBehavior.maybeAttack();
+
+      expect(attacksOn(spy, leader)).toHaveLength(0);
     },
   );
 });
