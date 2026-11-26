@@ -355,13 +355,12 @@ be started from.
 
 PNG import is editor code and is small: decode the image, apply the
 generator's pixel rules (blue channel for elevation, black for impassable,
-transparent for water), and send the result as one terrain edit. The
+transparent for water; `imageTerrain` in `engine-lib/mapgen`), and start a
+new draft with that terrain, from the start screen as a stock map is. The
 generator's optional removal of tiny islands and lakes is a later tool, not
-part of import. The import is one undo step, which brings back the old
-terrain and whatever the new one cleared. The image is cropped from the
-top left to the limits below, as the generator crops it, and must then be
-the map's size: resizing can't be undone, so import doesn't resize, and an
-image with a side under 100 is refused.
+part of import. The image is cropped from the top left to the limits below,
+as the generator crops it, and the draft takes the cropped size; an image
+with a side under 100 is refused.
 
 Limits: width and height are multiples of 4, each from 100 to 5000, so a
 map is at most 25 million tiles. The engine, renderer and snapshot all

@@ -1,12 +1,16 @@
 /**
- * Heightmap import (docs/ScenarioEditor.md, "Terrain"): a PNG read with the
- * map generator's pixel rules (imageTerrain in engine-lib/mapgen) and
- * written over the map as one terrain edit.
+ * Heightmap import (docs/ScenarioEditor.md, "Terrain"): a new scenario
+ * whose terrain is a PNG read with the map generator's pixel rules
+ * (imageTerrain in engine-lib/mapgen).
  */
 
-import { MAX_TERRAIN_BATCH } from "@openfront/engine-api/EditorCommands";
-import type { DocumentEditor } from "./DocumentEditor";
-import { MAX_SIDE, MIN_SIDE } from "./ScenarioDocument";
+import { imageTerrain } from "@openfront/engine-lib/mapgen/GenerateMap";
+import {
+  MAX_SIDE,
+  MIN_SIDE,
+  newScenarioDocument,
+  type ScenarioDocument,
+} from "./ScenarioDocument";
 
 /**
  * The size an image imports at: each side cropped from the top left to a
@@ -19,6 +23,23 @@ export function heightmapSize(
   const side = (n: number) => Math.min(MAX_SIDE, n - (n % 4));
   const size = { width: side(width), height: side(height) };
   return size.width < MIN_SIDE || size.height < MIN_SIDE ? null : size;
+}
+
+/**
+ * A new scenario `width` x `height` whose terrain is `pix`, that many
+ * pixels of RGBA as heightmapPixels gives them.
+ */
+export function heightmapDocument(
+  name: string,
+  width: number,
+  height: number,
+  pix: Uint8Array,
+): ScenarioDocument {
+  const doc = newScenarioDocument(name, width, height);
+  doc.terrain.set(
+    imageTerrain({ kind: "nrgba8", width, height, pix }, width, height).terrain,
+  );
+  return doc;
 }
 
 /**
@@ -45,36 +66,4 @@ export function openHeightmap(file: Blob): Promise<ImageBitmap> {
     colorSpaceConversion: "none",
     premultiplyAlpha: "none",
   });
-}
-
-/**
- * Writes `terrain`, one authored byte per tile, over the whole map as one
- * undo step. Returns whether it changed anything.
- */
-export function importHeightmap(
-  editor: DocumentEditor,
-  terrain: Uint8Array,
-  // Tests split at a few tiles rather than a million.
-  batchSize: number = MAX_TERRAIN_BATCH,
-): boolean {
-  const current = editor.doc.terrain;
-  if (terrain.length !== current.length) {
-    throw new Error(`${terrain.length} tiles for a ${current.length}-tile map`);
-  }
-  const tiles: number[] = [];
-  for (let t = 0; t < terrain.length; t++) {
-    if (terrain[t] !== current[t]) tiles.push(t);
-  }
-  // Each edit under MAX_TERRAIN_BATCH: DocumentEditor keeps a Map of an
-  // edit's tiles, and a Map holds at most 2^24 entries.
-  for (let i = 0; i < tiles.length; i += batchSize) {
-    const batch = tiles.slice(i, i + batchSize);
-    editor.apply({
-      type: "set_terrain",
-      tiles: batch,
-      terrain: batch.map((t) => terrain[t]),
-    });
-  }
-  editor.commit();
-  return tiles.length > 0;
 }

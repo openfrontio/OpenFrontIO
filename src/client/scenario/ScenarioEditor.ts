@@ -27,7 +27,6 @@ import {
   type DoomsdayClockSpeed,
 } from "@openfront/engine-lib/game/DoomsdayClock";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
-import { imageTerrain } from "@openfront/engine-lib/mapgen/GenerateMap";
 import { EventBus } from "@openfront/shared/EventBus";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { html, LitElement, nothing } from "lit";
@@ -69,9 +68,9 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  heightmapDocument,
   heightmapPixels,
   heightmapSize,
-  importHeightmap,
   openHeightmap,
 } from "./HeightmapImport";
 import {
@@ -510,39 +509,18 @@ export class ScenarioEditor extends LitElement {
   }
 
   /**
-   * Imports a PNG as the map's terrain, one undo step. It must import at
-   * the map's size: a resize can't be undone, so import doesn't do one.
+   * Creates a draft whose terrain is a PNG, at the image's size cropped as
+   * the generator crops it.
    */
-  private async importHeightmapFile(input: HTMLInputElement): Promise<void> {
+  private async createFromHeightmap(input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
     // Picking the same file again imports it again.
     input.value = "";
-    if (file === undefined) return;
-    // Leaving the editor or resizing during the decode ends this session.
-    const session = this.session;
-    let bitmap: ImageBitmap;
+    if (file === undefined || this.status !== "start") return;
+    let doc: ScenarioDocument;
+    let bitmap: ImageBitmap | null = null;
     try {
       bitmap = await openHeightmap(file);
-    } catch (e) {
-      console.error("scenario editor: decoding the heightmap failed:", e);
-      void showInGameAlert(
-        translateText("scenario_editor.import_heightmap_failed"),
-      );
-      return;
-    }
-    try {
-      const editor = this.editor;
-      // As applyEdit: not while a test play's export reads the document.
-      if (
-        editor === null ||
-        session === null ||
-        this.session !== session ||
-        this.status !== "ready" ||
-        this.starting
-      ) {
-        return;
-      }
-      const { doc } = editor;
       const size = heightmapSize(bitmap.width, bitmap.height);
       if (size === null) {
         void showInGameAlert(
@@ -554,39 +532,26 @@ export class ScenarioEditor extends LitElement {
         );
         return;
       }
-      if (size.width !== doc.width || size.height !== doc.height) {
-        void showInGameAlert(
-          translateText("scenario_editor.import_heightmap_wrong_size", {
-            width: size.width,
-            height: size.height,
-            mapWidth: doc.width,
-            mapHeight: doc.height,
-          }),
-        );
-        return;
-      }
       const { width, height } = size;
-      const pix = heightmapPixels(bitmap, width, height);
-      this.endStroke();
-      this.settingsRemoved = null;
-      const { terrain } = imageTerrain(
-        { kind: "nrgba8", width, height, pix },
+      doc = heightmapDocument(
+        this.draftName(),
         width,
         height,
+        heightmapPixels(bitmap, width, height),
       );
-      if (importHeightmap(editor, terrain)) {
-        this.saveDraft();
-      }
-      this.requestUpdate();
     } catch (e) {
-      // e.g. a canvas over the browser's size limit.
-      console.error("scenario editor: importing the heightmap failed:", e);
+      // Not an image, or a canvas over the browser's size limit.
+      console.error("scenario editor: reading the heightmap failed:", e);
       void showInGameAlert(
         translateText("scenario_editor.import_heightmap_failed"),
       );
+      return;
     } finally {
-      bitmap.close();
+      bitmap?.close();
     }
+    // Left the start screen (a draft opened, the editor closed) meanwhile.
+    if (this.status !== "start" || this.abort.signal.aborted) return;
+    await this.create(async () => ({ doc }));
   }
 
   private undoOrRedo(redo: boolean): void {
@@ -1568,6 +1533,24 @@ export class ScenarioEditor extends LitElement {
               </p>`
         }
       </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <label class="${button} cursor-pointer">
+          ${translateText("scenario_editor.create_from_heightmap")}
+          <input
+            type="file"
+            accept="image/png"
+            class="hidden"
+            @change=${(e: Event) =>
+              void this.createFromHeightmap(e.target as HTMLInputElement)}
+          />
+        </label>
+        <p class="w-full text-sm text-zinc-400">
+          ${translateText("scenario_editor.heightmap_hint", {
+            min: MIN_SIDE,
+            max: MAX_SIDE.toLocaleString(),
+          })}
+        </p>
+      </div>
     `);
   }
 
@@ -1997,18 +1980,6 @@ export class ScenarioEditor extends LitElement {
                       </label>`
                     : nothing
                 }
-                <label class="${button} cursor-pointer text-center">
-                  ${translateText("scenario_editor.import_heightmap")}
-                  <input
-                    type="file"
-                    accept="image/png"
-                    class="hidden"
-                    @change=${(e: Event) =>
-                      void this.importHeightmapFile(
-                        e.target as HTMLInputElement,
-                      )}
-                  />
-                </label>
               `
             : nothing
         }
