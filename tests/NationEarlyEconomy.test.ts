@@ -162,6 +162,26 @@ describe("Nation economy at the start", () => {
     },
   );
 
+  // Without a coast, the first factory (125k) comes right after the first city
+  it.each([
+    [Difficulty.Medium, ffa, 300_000n, [UnitType.Factory]],
+    [Difficulty.Impossible, team, 300_000n, [UnitType.Factory]],
+    [Difficulty.Hard, ffa, 100_000n, []],
+    [Difficulty.Easy, ffa, 300_000n, []],
+  ])(
+    "%s %s, landlocked: with one city and %i gold builds %j",
+    (difficulty, gameMode, gold, expected) => {
+      const { nation, behavior, cities, built } = setupCoast(
+        { difficulty, gameMode },
+        { landlocked: true },
+      );
+      cities(1);
+      nation.addGold(gold);
+      behavior.handleStructures();
+      expect(built()).toEqual(expected);
+    },
+  );
+
   it("keeps the build order: with two cities the port comes before the third city", () => {
     const { nation, behavior, cities, built } = setupCoast({
       difficulty: Difficulty.Hard,

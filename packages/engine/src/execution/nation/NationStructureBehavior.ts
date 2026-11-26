@@ -726,6 +726,20 @@ export class NationStructureBehavior implements NukeFund {
       }
     }
 
+    // Without a coast a factory is our only income structure, so it comes right after the first city (not on Easy)
+    if (
+      difficulty !== Difficulty.Easy &&
+      !hasCoastalTiles &&
+      this.usesStructure(UnitType.Factory, hasCoastalTiles) &&
+      cityCount >= 1 &&
+      this.player.unitsOwned(UnitType.Factory) === 0
+    ) {
+      if (this.spendableGold() < this.getPerceivedCost(UnitType.Factory)) {
+        return false;
+      }
+      if (this.maybeSpawnStructure(UnitType.Factory)) return true;
+    }
+
     if (this.maybeBuildProactiveDefensePost()) {
       return true;
     }
