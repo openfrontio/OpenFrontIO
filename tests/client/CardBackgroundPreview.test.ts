@@ -14,6 +14,7 @@ import type { CardPreviewSize } from "../../src/client/cosmetic-preview/api";
 import {
   CARD_PREVIEW_SIZES,
   cardPreviewModule,
+  livePreviewCount,
 } from "../../src/client/cosmetic-preview/card";
 
 const {
@@ -345,6 +346,46 @@ describe("mountCardBackgroundPreview", () => {
     document.body.append(brief);
     restartCardAnimation();
     expect(card(brief)).toBe(before);
+  });
+
+  test("a preview never put in its host is not kept for restarts", () => {
+    const before = livePreviewCount();
+    const bad = mountCardBackgroundPreview(
+      host,
+      { url: BLOB },
+      { size: "nope" as CardPreviewSize, animated: true },
+    );
+    expect(bad.result.ok).toBe(false);
+    const badUrl = mountCardBackgroundPreview(
+      host,
+      { url: "http://example.com/a.png" },
+      { size: "large", animated: true },
+    );
+    expect(badUrl.result.ok).toBe(false);
+    expect(host.children.length).toBe(0);
+    expect(livePreviewCount()).toBe(before);
+    // A later valid update puts it in its host, and restart keeps it.
+    bad.handle.update({ url: BLOB }, { size: "large", animated: true });
+    expect(livePreviewCount()).toBe(before + 1);
+    const first = card(host);
+    restartCardAnimation();
+    expect(card(host)).not.toBe(first);
+    bad.handle.destroy();
+    badUrl.handle.destroy();
+    expect(livePreviewCount()).toBe(before);
+  });
+
+  test("the on-page mark sits on the element, not in module state", () => {
+    const brief = document.createElement("div");
+    mountCardBackgroundPreview(
+      brief,
+      { url: BLOB },
+      { size: "large", animated: true },
+    );
+    const frame = brief.firstElementChild as HTMLElement;
+    expect(frame.dataset.everConnected).toBeUndefined();
+    document.body.append(brief);
+    expect(frame.dataset.everConnected).toBe("");
   });
 
   test("a size is one of its own, not an inherited key", () => {

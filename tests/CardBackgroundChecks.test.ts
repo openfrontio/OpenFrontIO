@@ -579,6 +579,15 @@ describe("checkCardBackground", () => {
       ["no base", { layers: [] }],
       ["layers not a list", { base: files().base, layers: "x" }],
       ["a layer that isn't an object", { base: files().base, layers: [7] }],
+      // every() skips holes, so these would pass a shape check built on it.
+      ["a list with a hole", { base: files().base, layers: Array(1) }],
+      [
+        "a hole after a layer",
+        {
+          base: files().base,
+          layers: Object.assign([layer("pulse")], { length: 2 }),
+        },
+      ],
     ])("%s is files_invalid", (_name, input) => {
       expect(
         checkCardBackground(input as unknown as CardBackgroundFiles, undefined),

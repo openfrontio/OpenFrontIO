@@ -21,7 +21,8 @@
     "vite.config.ts",
     "vite.cosmetic-preview.config.ts",
     "scripts/buildCosmeticPreview.ts",
-    "scripts/cosmeticPreviewTypes.ts"
+    "scripts/cosmeticPreviewTypes.ts",
+    "scripts/cosmeticPreviewVersion.ts"
   ],
   "exclude": [
     "node_modules",

@@ -149,7 +149,12 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 function filesShapeOk(files: unknown): files is CardBackgroundFiles {
   if (!isObject(files) || !isObject(files.base)) return false;
   if (!Array.isArray(files.layers)) return false;
-  return files.layers.every(isObject);
+  // An index loop, not every(): every() skips holes, so [ , ] would pass and
+  // the checks would then read a layer that isn't there.
+  for (let i = 0; i < files.layers.length; i++) {
+    if (!isObject(files.layers[i])) return false;
+  }
+  return true;
 }
 
 // A layer's src in a catalogue entry: a PNG at a relative path, like

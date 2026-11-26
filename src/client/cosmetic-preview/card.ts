@@ -193,14 +193,21 @@ interface LivePreview {
 }
 const live = new Set<LivePreview>();
 
-// Wrappers that have ever been on the page. connectedCallback runs on every
-// insert, so a host appended and removed between two restarts still counts:
-// checking isConnected only when place() runs would miss it.
-const everConnected = new WeakSet<Element>();
+/** How many previews restart looks at. For tests. */
+export function livePreviewCount(): number {
+  return live.size;
+}
+
+// Wrappers mark themselves the first time they are on the page.
+// connectedCallback runs on every insert, so a host appended and removed
+// between two restarts still counts: checking isConnected only when place()
+// runs would miss it. The mark is on the element, not in this module: when
+// two bundled copies of the package share a page, the wrapper is an instance
+// of whichever copy registered the tag first.
 const FRAME_TAG = "openfront-card-preview";
 class CardPreviewFrame extends HTMLElement {
   connectedCallback(): void {
-    everConnected.add(this);
+    this.dataset.everConnected = "";
   }
 }
 if (customElements.get(FRAME_TAG) === undefined) {
@@ -292,6 +299,9 @@ function mountCardBackgroundPreview(
     if (!mounted) {
       host.replaceChildren(wrapper);
       mounted = true;
+      // Only now: a preview whose first size or url was refused has no
+      // wrapper in its host, and would stay "notYet" for every restart.
+      live.add(preview);
     }
     return checked.ok ? { ok: true } : { ok: false, error: checked.error };
   };
@@ -300,7 +310,7 @@ function mountCardBackgroundPreview(
     // Restart forgets a card once it has been on the page and left it.
     place: () => {
       if (wrapper.isConnected) return "on";
-      return everConnected.has(wrapper) ? "gone" : "notYet";
+      return wrapper.dataset.everConnected === undefined ? "notYet" : "gone";
     },
     // A card stopped for slow frames stays still until mounted again.
     remount: () => {
@@ -309,7 +319,6 @@ function mountCardBackgroundPreview(
       update(current.background, current.options);
     },
   };
-  live.add(preview);
 
   const handle: CardBackgroundPreviewHandle = {
     update,

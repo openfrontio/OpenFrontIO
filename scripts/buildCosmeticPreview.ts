@@ -14,6 +14,7 @@ import { fileURLToPath } from "url";
 import { build } from "vite";
 import { PREVIEW_ASSET_PATHS } from "../src/client/cosmetic-preview/assets";
 import { CHECKS_DTS, indexDts } from "./cosmeticPreviewTypes";
+import { previewPackageVersion } from "./cosmeticPreviewVersion";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "dist", "cosmetic-preview");
@@ -112,7 +113,7 @@ function writePackageJson(version: string, commit: string): void {
 async function main(): Promise<void> {
   const commit = git("rev-parse", "HEAD");
   const dirty = git("status", "--porcelain").length > 0;
-  const version = `${BASE_VERSION}-${commit.slice(0, 10)}${dirty ? ".dirty" : ""}`;
+  const version = previewPackageVersion(BASE_VERSION, commit, dirty);
 
   await build({
     configFile: path.join(root, "vite.cosmetic-preview.config.ts"),
