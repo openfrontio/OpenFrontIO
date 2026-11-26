@@ -19,6 +19,12 @@ export function hasHighStartingGold(game: Game, player: Player): boolean {
   return game.config().startingGold(player.info()) >= HIGH_STARTING_GOLD;
 }
 
+/** Whether the player's team starts apart from the other teams, in a spawn area of its own */
+export function startsInTeamSpawnArea(game: Game, player: Player): boolean {
+  const team = player.team();
+  return team !== null && game.teamSpawnArea(team) !== undefined;
+}
+
 /** Most minutes of income a nation saves up for; a target further off isn't worth holding back for, keyed by difficulty */
 const SAVE_UP_HORIZON_MINUTES: Record<Difficulty, number> = {
   [Difficulty.Easy]: Infinity,

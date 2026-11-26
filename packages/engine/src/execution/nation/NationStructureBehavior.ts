@@ -34,6 +34,7 @@ import {
   type NukeFund,
   randTerritoryTileArray,
   runawayLeaderToNuke,
+  startsInTeamSpawnArea,
 } from "./NationUtils";
 
 /**
@@ -710,7 +711,8 @@ export class NationStructureBehavior implements NukeFund {
       !richStart &&
       !this.builtCrowdedMapFirstStructure &&
       (this.isHighNationDensity() ||
-        (difficulty !== Difficulty.Easy && this.startsInTeamSpawnArea()))
+        (difficulty !== Difficulty.Easy &&
+          startsInTeamSpawnArea(this.game, this.player)))
     ) {
       const preferredFirst =
         hasCoastalTiles && !config.isUnitDisabled(UnitType.Port)
@@ -783,11 +785,6 @@ export class NationStructureBehavior implements NukeFund {
       );
     }
     return this.player.unitsOwned(UnitType.City);
-  }
-
-  private startsInTeamSpawnArea(): boolean {
-    const team = this.player.team();
-    return team !== null && this.game.teamSpawnArea(team) !== undefined;
   }
 
   private hasHighStartingGold(): boolean {

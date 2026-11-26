@@ -44,7 +44,11 @@ import {
   EMOJI_ASSIST_TARGET_ME,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import { findJuiciestTarget, findRunawayLeader } from "./NationUtils";
+import {
+  findJuiciestTarget,
+  findRunawayLeader,
+  startsInTeamSpawnArea,
+} from "./NationUtils";
 import type { NationWarshipBehavior } from "./NationWarshipBehavior";
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
@@ -1741,8 +1745,11 @@ export class NationAttackBehavior extends AiAttackBehavior {
       return false;
     }
 
-    // Don't donate in public games (To balance HvN)
-    if (this.game.config().gameConfig().gameType === GameType.Public) {
+    // Don't donate in public games (To balance HvN), except where teams start apart in their own spawn areas
+    if (
+      this.game.config().gameConfig().gameType === GameType.Public &&
+      !startsInTeamSpawnArea(this.game, this.player)
+    ) {
       return false;
     }
 
