@@ -65,6 +65,8 @@ let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
 let __cosmeticsFetchedAt = 0;
+// Counts fetches started, so only the latest publishes to the cache.
+let __cosmeticsGeneration = 0;
 
 /** How long a fetched catalog is trusted before the store refetches it. */
 export const COSMETICS_STALE_MS = 60_000;
@@ -1034,6 +1036,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
+  const generation = ++__cosmeticsGeneration;
   const request = (async () => {
     try {
       const response = await fetch(cosmeticsJsonUrl(), {
@@ -1048,11 +1051,15 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         console.error(`Invalid cosmetics: ${result.error.message}`);
         return null;
       }
-      const patternKeys = Object.keys(result.data.patterns).sort();
-      const hashInput = patternKeys.join(",");
-      __cosmeticsHash = simpleHash(hashInput);
-      __cosmeticsCache = result.data;
-      __cosmeticsFetchedAt = Date.now();
+      // An older fetch landing after a newer one started (an invalidate in
+      // between) must not replace the newer catalog or mark itself fresh.
+      if (generation === __cosmeticsGeneration) {
+        const patternKeys = Object.keys(result.data.patterns).sort();
+        const hashInput = patternKeys.join(",");
+        __cosmeticsHash = simpleHash(hashInput);
+        __cosmeticsCache = result.data;
+        __cosmeticsFetchedAt = Date.now();
+      }
       return result.data;
     } catch (error) {
       console.warn("Error getting cosmetics:", error);
