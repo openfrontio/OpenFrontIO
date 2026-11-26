@@ -78,7 +78,7 @@ const FULL_BLAST_COVERAGE_VALUE = 50_000;
 /** A strike target has at least this share of our troops; weaker ones fall to plain attacks. */
 const STRIKE_MIN_TROOP_RATIO = 0.5;
 
-/** No nukes on an enemy whose army is under this share of the army of the friend it fights. */
+/** In FFA, no nukes on an enemy whose army is under this share of the army of the friend it fights. */
 const MIN_THREAT_RATIO: Record<Difficulty, number> = {
   [Difficulty.Easy]: 0,
   [Difficulty.Medium]: 0.2,
@@ -793,25 +793,21 @@ export class NationNukeBehavior {
 
     // Us too: findIncomingAttackPlayer only gives our biggest attacker
     const attackers = biggestFirst(
-      [this.player, ...teammates].flatMap((p) =>
-        p.incomingAttacks().filter((a) => !this.isHarmlessTo(a.attacker(), p)),
-      ),
+      [this.player, ...teammates].flatMap((p) => p.incomingAttacks()),
     ).map((a) => a.attacker());
     const targets = biggestFirst(
-      teammates.flatMap((p) =>
-        p.outgoingAttacks().filter((a) => {
-          const target = a.target();
-          return target.isPlayer() && !this.isHarmlessTo(target, p);
-        }),
-      ),
+      teammates.flatMap((p) => p.outgoingAttacks()),
     ).map((a) => a.target());
     return [...attackers, ...targets].filter(isEnemy);
   }
 
-  /** Whether enemy's army is too small to be worth a nuke in its fight with friend. */
+  /** FFA: whether enemy's army is too small to be worth a nuke in its fight with friend. */
   private isHarmlessTo(enemy: Player, friend: Player): boolean {
-    const { difficulty } = this.game.config().gameConfig();
-    return army(enemy) < army(friend) * MIN_THREAT_RATIO[difficulty];
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    return (
+      gameMode !== GameMode.Team &&
+      army(enemy) < army(friend) * MIN_THREAT_RATIO[difficulty]
+    );
   }
 
   /** In Teams, players of the strongest other team: our pick, then the rest, the most built-up first. */

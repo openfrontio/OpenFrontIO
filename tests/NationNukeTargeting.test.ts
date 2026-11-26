@@ -558,7 +558,7 @@ describe("Nation nuke targets in team games", () => {
     game.addExecution(new AttackExecution(50_000, raider, mate.id()));
     game.executeNextTick();
     expect(mate.incomingAttacks()).toHaveLength(1);
-    return { game, nation, mate, other };
+    return { game, nation, mate, raider };
   }
 
   it.each([
@@ -584,10 +584,10 @@ describe("Nation nuke targets in team games", () => {
     },
   );
 
-  it("Hard: leaves a raider with a tenth of a teammate's army to that teammate", async () => {
-    const { game, nation, other } = await setupRaid(1_000_000);
+  it("Hard: backs up a teammate even against a raider with a tenth of its army", async () => {
+    const { game, nation, raider } = await setupRaid(1_000_000);
 
-    expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(other);
+    expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(raider);
   });
 });
 
