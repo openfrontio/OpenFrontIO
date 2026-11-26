@@ -167,19 +167,23 @@ export const hasOwnTranslation = (key: string): boolean =>
  * The raw message templates of every key under `prefix`, in the player's
  * language over English, keyed without the prefix and not formatted. For a
  * page that formats its own text from them: the clan map frame, which is
- * served by the API and gets its strings over postMessage.
+ * served by the API and gets its strings over postMessage. In debug mode each
+ * value is its full key, so the page shows keys the way translateText does.
  */
 export const translationTemplates = (
   prefix: string,
 ): Record<string, string> => {
   const langSelector = getCachedLangSelector();
+  const debug = langSelector?.currentLang === "debug";
   const out: Record<string, string> = {};
   for (const source of [
     langSelector?.defaultTranslations,
     langSelector?.translations,
   ]) {
     for (const key in source ?? {}) {
-      if (key.startsWith(prefix)) out[key.slice(prefix.length)] = source![key];
+      if (key.startsWith(prefix)) {
+        out[key.slice(prefix.length)] = debug ? key : source![key];
+      }
     }
   }
   return out;

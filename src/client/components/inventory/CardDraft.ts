@@ -22,7 +22,7 @@ import type { CardItem, CardItemType } from "../card/CardItems";
 /** The kinds of item an ordered slot row can hold. Phase 3 adds "badge". */
 export type CardSlotKind = "tracker";
 
-export interface CardSlotKindSpec {
+interface CardSlotKindSpec {
   /** The catalogue section its items come from. */
   section: keyof Cosmetics;
   /** The item type (its flare is `<type>:<name>`). */
@@ -403,7 +403,7 @@ export function loadoutBody(
 }
 
 /** The flare that owns an item in a slot. */
-export function flareFor(slot: CardSlotRef, name: string): string {
+function flareFor(slot: CardSlotRef, name: string): string {
   const type =
     slot.kind === "background"
       ? "cardBackground"
@@ -429,7 +429,7 @@ export function slotItem(
   return item ? { type: spec.type, item } : null;
 }
 
-export type CardSaveState = "idle" | "saving" | "saved" | "failed";
+type CardSaveState = "idle" | "saving" | "saved" | "failed";
 
 /**
  * Who a save is for, taken once as it starts. Every later question about

@@ -53,7 +53,7 @@ const SECTIONS: [keyof Cosmetics, CardItemType][] = CARD_ITEM_TYPES.map(
 // The value a tracker shows in its large preview.
 const SAMPLE_TRACKER_VALUE = 1904;
 
-export interface CardStoreTracker {
+interface CardStoreTracker {
   observe(el: Element, key: string, placement: StorePlacement): void;
   click(key: string, placement: StorePlacement): void;
   releaseDetached(): void;

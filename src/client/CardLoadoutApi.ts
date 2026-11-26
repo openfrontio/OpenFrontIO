@@ -12,7 +12,7 @@ export interface CardLoadoutBody {
   trackers: TrackerStat[];
 }
 
-export type SaveCardResult =
+type SaveCardResult =
   | { ok: true; loadout: CardLoadoutBody }
   // 403: the player doesn't own the card, or an item in `slot`.
   | { ok: false; error: "no_card" }

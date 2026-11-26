@@ -26,7 +26,7 @@ export interface PlayerCardView {
   trackers: { stat: TrackerStat; value: number }[];
 }
 
-export interface PlayerCardInput {
+interface PlayerCardInput {
   username: string;
   clanTag: string | null;
   flag?: string;
