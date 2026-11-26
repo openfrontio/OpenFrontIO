@@ -1,11 +1,7 @@
 {
-  "categories": [
-    "fictional"
-  ],
+  "categories": ["fictional"],
   "display_name": "Baikal (Nuke Wars)",
-  "forced_modifiers": [
-    "isWaterNukes:50"
-  ],
+  "forced_modifiers": ["isWaterNukes:50"],
   "id": "BaikalNukeWars",
   "map": {
     "height": 1564,
