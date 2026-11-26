@@ -66,12 +66,11 @@ import {
   type ResolvedCosmetic,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
-import { promotionsHidden } from "../../Promotions";
 import { COSMETICS_CHANGED } from "../../Experiments";
+import { gamePortal } from "../../GamePortal";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
-import { gamePortal } from "../../GamePortal";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import type { MatchmakingMode } from "../../Matchmaking";
@@ -86,6 +85,7 @@ import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
+import { promotionsHidden } from "../../Promotions";
 import {
   applyGameXp,
   firstGameXp,

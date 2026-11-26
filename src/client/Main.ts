@@ -187,11 +187,11 @@ import { tabAttention } from "./TabAttention";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
-import { UsernameInput } from "./UsernameInput";
 import {
   promotionsPromptDue,
   promotionsPromptStringsReady,
 } from "./Promotions";
+import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
 import "./components/BannedModal";
 import "./components/DesktopStatusBar";
