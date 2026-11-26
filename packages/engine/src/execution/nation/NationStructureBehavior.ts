@@ -31,7 +31,9 @@ import { NationStructurePlacement } from "./NationStructurePlacement";
 import {
   hasHighStartingGold,
   isSaveUpWithinReach,
+  type NukeFund,
   randTerritoryTileArray,
+  runawayLeaderToNuke,
 } from "./NationUtils";
 
 /**
@@ -96,6 +98,14 @@ const CITIES_BEFORE_SAVING: Record<Difficulty, number> = {
   [Difficulty.Medium]: 3,
   [Difficulty.Hard]: 4,
   [Difficulty.Impossible]: 5,
+};
+
+/** Share of income set aside for nukes at a runaway leader, up to a hydrogen bomb's price, keyed by difficulty */
+const RUNAWAY_NUKE_FUND_SHARE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 0.1,
+  [Difficulty.Hard]: 0.2,
+  [Difficulty.Impossible]: 0.3,
 };
 
 /** Scales the perceived cost increase of cities, ports and factories while saving up, keyed by difficulty */
@@ -264,7 +274,7 @@ const DEFENSE_POST_SAMPLE_ATTEMPTS = 150;
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
 
-export class NationStructureBehavior {
+export class NationStructureBehavior implements NukeFund {
   private placement: NationStructurePlacement;
   private lastStructureTick: number | null = null;
   private placementsCount = 0;
@@ -272,6 +282,9 @@ export class NationStructureBehavior {
   private _hasHighStartingGold: boolean | null = null;
   private _postSaveUpStartTick: number | null = null;
   private mirvWorthSavingMemo: { tick: number; worth: boolean } | null = null;
+  private _nukeFund: Gold = 0n;
+  // Gold earned as of the last fund update
+  private nukeFundEarned: Gold | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -292,6 +305,8 @@ export class NationStructureBehavior {
       builtCrowdedMapFirstStructure: this.builtCrowdedMapFirstStructure,
       hasHighStartingGold: this._hasHighStartingGold,
       postSaveUpStartTick: this._postSaveUpStartTick,
+      nukeFund: this._nukeFund,
+      nukeFundEarned: this.nukeFundEarned,
     });
   }
 
@@ -313,9 +328,13 @@ export class NationStructureBehavior {
     this.builtCrowdedMapFirstStructure = s.builtCrowdedMapFirstStructure;
     this._hasHighStartingGold = s.hasHighStartingGold;
     this._postSaveUpStartTick = s.postSaveUpStartTick;
+    this._nukeFund = s.nukeFund;
+    this.nukeFundEarned = s.nukeFundEarned;
   }
 
   handleStructures(): boolean {
+    this.updateNukeFund();
+
     // Defense posts are handled outside the normal pacing/counter system:
     // they don't increment placementsCount or lastStructureTick, and they
     // are never built as the very first structure.
@@ -1032,11 +1051,59 @@ export class NationStructureBehavior {
     return BigInt(Math.floor(Number(excess) * left));
   }
 
-  /** Gold beyond the nuke reserve and the starting gold not released yet. */
+  /** Gold beyond the nuke reserves and the starting gold not released yet. */
   private spendableGold(): Gold {
-    const reserve = this.nukeReserve();
+    let kept = this.nukeReserve();
     const unreleased = this.unreleasedStartingGold();
-    return this.player.gold() - (reserve > unreleased ? reserve : unreleased);
+    if (unreleased > kept) kept = unreleased;
+    const fund = this.nukeFund();
+    if (fund > kept) kept = fund;
+    return this.player.gold() - kept;
+  }
+
+  /** Gold set aside for nukes at the runaway leader. */
+  nukeFund(): Gold {
+    const gold = this.player.gold();
+    return this._nukeFund > gold ? gold : this._nukeFund;
+  }
+
+  spendNukeFund(cost: Gold): void {
+    this._nukeFund = cost >= this._nukeFund ? 0n : this._nukeFund - cost;
+  }
+
+  /** While there's a runaway leader to nuke, sets a share of the income since the last call aside for it. */
+  private updateNukeFund(): void {
+    const earned = this.player.goldEarned();
+    const income =
+      this.nukeFundEarned === null ? 0n : earned - this.nukeFundEarned;
+    this.nukeFundEarned = earned;
+    const cap = this.nukeFundCap();
+    if (cap === 0n) {
+      this._nukeFund = 0n;
+      return;
+    }
+    const share =
+      RUNAWAY_NUKE_FUND_SHARE[this.game.config().gameConfig().difficulty];
+    let fund = this._nukeFund + BigInt(Math.floor(Number(income) * share));
+    if (fund > cap) fund = cap;
+    const gold = this.player.gold();
+    this._nukeFund = fund > gold ? gold : fund;
+  }
+
+  /** A hydrogen bomb's price once our first cities and a missile silo stand and a runaway leader is far enough ahead to nuke; else 0. */
+  private nukeFundCap(): Gold {
+    const config = this.game.config();
+    const { difficulty } = config.gameConfig();
+    if (
+      RUNAWAY_NUKE_FUND_SHARE[difficulty] === 0 ||
+      config.isUnitDisabled(UnitType.HydrogenBomb) ||
+      this.player.unitCount(UnitType.MissileSilo) === 0 ||
+      this.cityCount() < CITIES_BEFORE_SAVING[difficulty] ||
+      runawayLeaderToNuke(this.game, this.player) === null
+    ) {
+      return 0n;
+    }
+    return this.cost(UnitType.HydrogenBomb);
   }
 
   private isMirvWorthSavingFor(): boolean {
@@ -1362,12 +1429,18 @@ export class NationStructureBehavior {
 
 export const NationStructureBehaviorSnapshot = snapshotType({
   name: "NationStructureBehavior",
-  version: 1,
+  version: 2,
   schema: z.object({
     lastStructureTick: zInt().nullable(),
     placementsCount: zInt(),
     builtCrowdedMapFirstStructure: z.boolean(),
     hasHighStartingGold: z.boolean().nullable(),
     postSaveUpStartTick: zInt().nullable(),
+    nukeFund: z.bigint(),
+    nukeFundEarned: z.bigint().nullable(),
   }),
+  migrations: {
+    // v1 nations set nothing aside for a runaway leader
+    1: (d) => ({ ...d, nukeFund: 0n, nukeFundEarned: null }),
+  },
 });

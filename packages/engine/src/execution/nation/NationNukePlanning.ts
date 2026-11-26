@@ -1,5 +1,9 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { Structures, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  Gold,
+  Structures,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { Game, Player, Unit } from "../../game/Game";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import { MirvExecution } from "../MIRVExecution";
@@ -265,13 +269,14 @@ export interface FailedSamSalvo {
  * before going on cooldown, so it takes N+1 bombs (accounting for all
  * covering SAMs). A SAM some bomb is already landing at is left to it.
  * Without one, `failed` is the first SAM our silos lacked the capacity for;
- * a SAM we only lack the gold for leaves it null.
+ * a SAM we only lack the gold (of `budget`) for leaves it null.
  */
 export function planSamSalvo(
   game: Game,
   player: Player,
   target: Player,
   incoming: IncomingNuke[],
+  budget: Gold,
 ): { salvo: SamSalvo | null; failed: FailedSamSalvo | null } {
   const atomCost = game.unitInfo(UnitType.AtomBomb).cost(game, player);
   const enemySams = target.units(UnitType.SAMLauncher);
@@ -465,7 +470,7 @@ export function planSamSalvo(
 
     // Check gold for all fired bombs (including wasted ones)
     const totalCost = atomCost * BigInt(bombsToFire);
-    if (player.gold() < totalCost) {
+    if (budget < totalCost) {
       continue;
     }
 

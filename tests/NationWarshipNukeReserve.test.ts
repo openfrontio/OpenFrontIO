@@ -11,8 +11,8 @@ import { NationWarshipBehavior } from "@openfront/engine/execution/nation/Nation
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
 // 60x10: `nation` owns the land at x < 5, `navy` the land at x >= 55, open water between
-describe("Nation warships keep gold for hydrogen bombs when atom bombs are disabled", () => {
-  function setupSea(disabledUnits: UnitType[], silo: boolean) {
+describe("Nation warships keep gold for nukes", () => {
+  function setupSea(disabledUnits: UnitType[], silo: boolean, kept = 0n) {
     const width = 60;
     const height = 10;
     const grid: string[] = [];
@@ -42,6 +42,7 @@ describe("Nation warships keep gold for hydrogen bombs when atom bombs are disab
       game,
       nation,
       new NationEmojiBehavior(random, game, nation),
+      { nukeFund: () => kept, spendNukeFund: () => {} },
     );
     const spy = vi.spyOn(game, "addExecution");
     const ordered = () =>
@@ -96,6 +97,26 @@ describe("Nation warships keep gold for hydrogen bombs when atom bombs are disab
       price(UnitType.Warship) +
       price(UnitType.Warship, 1) +
       (reserves ? price(UnitType.HydrogenBomb) : 0n);
+    setGold(needed - 1n);
+    warships.clearSeaLane(blocker);
+    expect(ordered()).toBe(0);
+    setGold(needed);
+    warships.clearSeaLane(blocker);
+    expect(ordered()).toBe(2);
+  });
+
+  it("keeps the gold set aside for a runaway leader from a sea-lane squad", () => {
+    const kept = 3_000_000n;
+    const { game, navy, warships, ordered, setGold, price } = setupSea(
+      [],
+      true,
+      kept,
+    );
+    const water = game.ref(30, 5);
+    const blocker = navy.buildUnit(UnitType.Warship, water, {
+      patrolTile: water,
+    });
+    const needed = price(UnitType.Warship) + price(UnitType.Warship, 1) + kept;
     setGold(needed - 1n);
     warships.clearSeaLane(blocker);
     expect(ordered()).toBe(0);

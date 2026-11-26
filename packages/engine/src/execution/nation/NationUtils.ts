@@ -203,6 +203,37 @@ export function findRunawayLeader(game: Game): Player | null {
   return ranked[0].numTilesOwned() >= median * factor ? ranked[0] : null;
 }
 
+/** Lead in share of the land without fallout over a runaway leader's neighbors from which they nuke it; twice that for everyone else, keyed by difficulty */
+const RUNAWAY_NUKE_LEAD: Record<Difficulty, number | null> = {
+  [Difficulty.Easy]: null, // Never notices a runaway leader
+  [Difficulty.Medium]: 0.3,
+  [Difficulty.Hard]: 0.2,
+  [Difficulty.Impossible]: 0.1,
+};
+
+/** The runaway leader, if it isn't us or a friend and is far enough ahead of us to nuke. */
+export function runawayLeaderToNuke(game: Game, player: Player): Player | null {
+  const lead = RUNAWAY_NUKE_LEAD[game.config().gameConfig().difficulty];
+  if (lead === null) return null;
+  const leader = findRunawayLeader(game);
+  if (leader === null || leader === player || player.isFriendly(leader)) {
+    return null;
+  }
+  const land = game.numLandTiles() - game.numTilesWithFallout();
+  if (land <= 0) return null;
+  const threshold = player.sharesBorderWith(leader) ? lead : lead * 2;
+  return leader.numTilesOwned() / land - player.numTilesOwned() / land >
+    threshold
+    ? leader
+    : null;
+}
+
+/** Gold a nation keeps for nukes at the runaway leader. */
+export interface NukeFund {
+  nukeFund(): Gold;
+  spendNukeFund(cost: Gold): void;
+}
+
 /** The FFA player (not a bot) owning the most land, once early leads count */
 export function findLandLeader(game: Game): Player | null {
   if (!leadsCount(game)) return null;
