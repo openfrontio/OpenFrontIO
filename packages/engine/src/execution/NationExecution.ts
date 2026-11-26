@@ -236,6 +236,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.followUpLandings();
+    this.attackBehavior.strikeIdleSpawn();
     this.nukeBehavior.followUpStrikes();
 
     if (ticks % this.attackRate !== this.attackTick) {

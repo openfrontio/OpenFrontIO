@@ -34,6 +34,10 @@ import type {
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
+
+/** A player under this many tiles falls whole to the first tile an attack takes from it */
+export const INSTANT_CONQUEST_TILES = 100;
+
 export class AttackExecution implements Execution {
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
@@ -464,7 +468,14 @@ export class AttackExecution implements Execution {
   }
 
   private handleDeadDefender() {
-    if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
+    if (
+      !(
+        this.target.isPlayer() &&
+        this.target.numTilesOwned() < INSTANT_CONQUEST_TILES
+      )
+    ) {
+      return;
+    }
     const target: Player = this.target;
 
     this.mg.conquerPlayer(this._owner, target);

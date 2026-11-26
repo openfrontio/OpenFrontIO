@@ -31,7 +31,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../../snapshot/SnapshotContext";
-import { AttackExecution } from "../AttackExecution";
+import { AttackExecution, INSTANT_CONQUEST_TILES } from "../AttackExecution";
 import { DonateTroopsExecution } from "../DonateTroopExecution";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { AiAttackBehavior, BoatRoute } from "../utils/AiAttackBehavior";
@@ -63,6 +63,16 @@ const CRUSH_TARGET_TROOP_SHARE: Partial<Record<Difficulty, number>> = {
 
 /** Such an attack sends this many times the most troops such an enemy may have */
 const CRUSH_STACK = 2;
+
+/** Seconds after spawn a bordering enemy may sit on its spawn without expanding before we take it, keyed by difficulty */
+const IDLE_SPAWN_GRACE_SECONDS: Partial<Record<Difficulty, number>> = {
+  [Difficulty.Medium]: 6,
+  [Difficulty.Hard]: 4,
+  [Difficulty.Impossible]: 2,
+};
+
+/** Seconds after spawn until which we watch for such enemies */
+const IDLE_SPAWN_WATCH_SECONDS = 30;
 
 /** Players already pressing a target that keep us from joining a crown, victim or rich-target attack on it */
 const MAX_PILE_ON_ATTACKERS = 2;
@@ -1430,6 +1440,37 @@ export class NationAttackBehavior extends AiAttackBehavior {
         continue;
       }
       return this.sendLandAttack(enemy, () => maxTargetTroops * CRUSH_STACK);
+    }
+    return false;
+  }
+
+  /** Team games: takes a bordering enemy still idle on its spawn past the grace, which a small stack conquers whole (INSTANT_CONQUEST_TILES). */
+  strikeIdleSpawn(): boolean {
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    const grace = IDLE_SPAWN_GRACE_SECONDS[difficulty];
+    if (grace === undefined || gameMode !== GameMode.Team) return false;
+    const elapsed = this.game.elapsedGameSeconds();
+    if (elapsed < grace || elapsed > IDLE_SPAWN_WATCH_SECONDS) return false;
+    for (const target of this.game.players()) {
+      if (
+        target === this.player ||
+        target.type() === PlayerType.Bot ||
+        target.numTilesOwned() >= INSTANT_CONQUEST_TILES ||
+        this.player.isFriendly(target) ||
+        // Expanding into free land, or attacking us, which our attack would only cancel out
+        target
+          .outgoingAttacks()
+          .some((a) => !a.target().isPlayer() || a.target() === this.player) ||
+        this.player.outgoingAttacks().some((a) => a.target() === target) ||
+        !target.sharesBorderWith(this.player)
+      ) {
+        continue;
+      }
+      return this.sendLandAttack(
+        target,
+        () => Math.max(1, Math.floor(this.homeTroops() / 100)),
+        target,
+      );
     }
     return false;
   }
