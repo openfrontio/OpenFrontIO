@@ -21,11 +21,18 @@ import {
 //   size "end"      652 × ~92 px on the end screens, 64 px badge
 //   size "account"  the Account header, 96 px badge
 //   size "thumb"    160 × 64 store / customiser preview: the background only
+//   size "panel"    the in-game player panel: one strip, 28 px badge, then
+//                   flag, clan tag and name over a small prestige · level
+//                   line, then short trackers (value over label). The level
+//                   line is never cut: when the row is tight the tracker
+//                   labels truncate, then the name. Always still (never
+//                   animated) and never a title or taunt: it sits beside a
+//                   running game.
 //
 // Below 400 px wide (`narrow`, set from the strip's own width) the trackers
 // move under the name as one line with short numbers.
 
-export type PlayerCardSize = "end" | "account" | "thumb";
+export type PlayerCardSize = "end" | "account" | "thumb" | "panel";
 
 const NARROW_BELOW_PX = 400;
 
@@ -128,6 +135,89 @@ export class PlayerCard extends LitElement {
     </div>`;
   }
 
+  // The panel strip: everything on one line, the name truncating first.
+  private renderPanel(view: PlayerCardView, rarity: string): TemplateResult {
+    const badge = view.badge;
+    return html`<section
+      data-player-card="panel"
+      data-card-rarity=${rarity}
+      class="player-card relative w-full overflow-hidden rounded-xl border-2 text-white"
+    >
+      <card-background
+        .background=${view.background}
+        .animated=${false}
+      ></card-background>
+      <div
+        data-card-row
+        class="relative flex min-h-[52px] items-center gap-1.5 px-3 py-2"
+      >
+        ${
+          badge === null
+            ? nothing
+            : html`<level-badge
+                class="shrink-0"
+                .level=${badge.level}
+                .prestige=${badge.prestige}
+                .legend=${badge.legend}
+                .size=${28}
+              ></level-badge>`
+        }
+        <div class="min-w-fit flex-1">
+          <div class="flex w-0 min-w-full items-center gap-1.5">
+            ${
+              view.flag === undefined
+                ? nothing
+                : html`<img
+                    data-card-flag
+                    class="h-4 w-auto shrink-0 rounded-[2px]"
+                    src=${assetUrl(view.flag)}
+                    alt=""
+                  />`
+            }
+            ${clanTemplate(view.clanTag, true)}
+            ${nameTemplate(view.username, "min-w-0 text-base")}
+          </div>
+          ${
+            badge === null
+              ? nothing
+              : html`<div
+                  class="whitespace-nowrap [&_[data-profile-level-line]]:text-[11px] [&_[data-profile-level-line]]:tracking-normal"
+                >
+                  ${levelLineTemplate(badge, true)}
+                </div>`
+          }
+        </div>
+        ${
+          view.trackers.length === 0
+            ? nothing
+            : html`<div
+                data-card-trackers-inline
+                class="flex min-w-0 items-stretch"
+              >
+                ${view.trackers.map(
+                  (t, i) =>
+                    html`<div
+                      data-card-tracker=${t.stat}
+                      class="flex min-w-0 max-w-[4.5rem] flex-col items-center justify-center px-1 ${
+                        i > 0 ? "border-l border-white/15" : ""
+                      }"
+                    >
+                      <span
+                        class="text-sm font-black leading-none text-white tabular-nums"
+                        >${formatTracker(t.value, true)}</span
+                      >
+                      <span
+                        class="mt-0.5 max-w-full truncate text-[11px] leading-tight text-white/60"
+                        >${translateText(`player_card.tracker_${t.stat}`)}</span
+                      >
+                    </div>`,
+                )}
+              </div>`
+        }
+      </div>
+    </section>`;
+  }
+
   render() {
     const view = this.view;
     if (view === null) return nothing;
@@ -138,6 +228,7 @@ export class PlayerCard extends LitElement {
         : this.size === "account"
           ? "min-h-[140px] w-full"
           : "min-h-[92px] w-full";
+    if (this.size === "panel") return this.renderPanel(view, rarity);
     if (this.size === "thumb") {
       return html`<section
         data-player-card="thumb"

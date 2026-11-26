@@ -1,7 +1,11 @@
 import { Product } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
+import type {
+  InsufficientCurrency,
+  PurchasePreflight,
+  PurchaseResult,
+} from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import { type PricedItem, saleEndsAt, shownPrice } from "../ShownPrice";
 import { translateText } from "../Utils";
@@ -258,6 +262,7 @@ export function renderPrice(
 /** Items with a purchase in flight, by busyKey: a button for the same item
  * made again (a dialog closed and reopened mid-purchase) stays busy. */
 const busyItems = new Set<string>();
+
 const BUSY_CHANGED_EVENT = "purchase-button-busy-changed";
 
 function setItemBusy(key: string, busy: boolean) {
@@ -313,6 +318,17 @@ export class PurchaseButton extends LitElement {
   itemName: string = "";
 
   /**
+   * The end screen's check on tap: one fresh read of the player's balance
+   * that charges nothing. Affordable: the confirm box, saying what is left
+   * after the buy. Not: the shortfall box. Unset (the Store): the confirm
+   * box as before. Either way the paying handler only runs from the confirm
+   * box.
+   */
+  @property({ attribute: false })
+  preflight: ((method: "hard" | "soft") => Promise<PurchasePreflight>) | null =
+    null;
+
+  /**
    * Keep an empty line where this payment method's button would go. Set by
    * grids where sibling cards do offer the method, so the same currency lands
    * on the same line across the row.
@@ -338,11 +354,13 @@ export class PurchaseButton extends LitElement {
   @property({ type: Function })
   onPurchaseDollar?: () => Promise<PurchaseResult>;
 
+  /** Called on confirm with the amount the confirm box showed, for the
+   * purchase's price check (purchaseCosmetic's shownAmount). */
   @property({ type: Function })
-  onPurchaseHard?: () => Promise<PurchaseResult>;
+  onPurchaseHard?: (shownAmount?: number) => Promise<PurchaseResult>;
 
   @property({ type: Function })
-  onPurchaseSoft?: () => Promise<PurchaseResult>;
+  onPurchaseSoft?: (shownAmount?: number) => Promise<PurchaseResult>;
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
@@ -355,9 +373,17 @@ export class PurchaseButton extends LitElement {
     method: "hard" | "soft";
     itemName: string;
     item: PricedItem;
-    handler: () => Promise<PurchaseResult>;
+    handler: (shownAmount?: number) => Promise<PurchaseResult>;
+    // The item's busy key, so confirming holds and releases that item's
+    // buttons even after this element is handed another item.
+    busyKey: string;
+    // From the preflight's fresh read, for "you'll have N left".
+    balance?: number;
   } | null = null;
   @state() private ownBusy = false;
+  /** The currency last tapped, so the shortfall box can give focus back to
+   * that button. */
+  private lastMethod: "hard" | "soft" = "hard";
 
   /** Names the item, so every button for it shares one busy state while a
    * purchase is in flight. Empty: this button's own state only. */
@@ -456,17 +482,79 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    this.confirmingPurchase = {
-      method,
-      itemName: this.itemName,
-      item: this.pricedItem,
-      handler,
-    };
+    this.lastMethod = method;
+    // Taken at the tap, before the balance read: a grid rendered by position
+    // can hand this element another item while it is out.
+    const itemName = this.itemName;
+    const item = this.pricedItem;
+    const busyKey = this.busyKey;
+    const preflight = this.preflight;
+    if (preflight === null) {
+      this.confirmingPurchase = { method, itemName, item, handler, busyKey };
+      return;
+    }
+    // Busy while the balance is read, so a second tap can't start another.
+    this.ownBusy = true;
+    void preflight(method)
+      .then((check) => {
+        if (check.ok) {
+          this.confirmingPurchase = {
+            method,
+            itemName,
+            item,
+            handler,
+            busyKey,
+            balance: check.balance,
+          };
+        } else if (check.info) {
+          this.insufficient = check.info;
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Purchase check failed", error);
+      })
+      .finally(() => {
+        this.ownBusy = false;
+      });
   }
 
-  private executePurchase(handler?: () => Promise<PurchaseResult>) {
-    if (!handler || this.busy) return;
-    const key = this.busyKey;
+  /** The confirm box's question, with the balance after when known. The
+   * amount comes from the item captured with the dialog, never this
+   * element's live props. */
+  private confirmMessage(pending: {
+    method: "hard" | "soft";
+    itemName: string;
+    item: PricedItem;
+    balance?: number;
+  }): string {
+    const { method, itemName, item, balance } = pending;
+    const amount = shownPrice(item, method)?.price ?? 0;
+    const currency = translateText(
+      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+    );
+    return balance === undefined
+      ? translateText("store.confirm_purchase_body", {
+          item: itemName,
+          amount,
+          currency,
+        })
+      : translateText("store.confirm_purchase_body_left", {
+          item: itemName,
+          amount,
+          currency,
+          left: balance - amount,
+        });
+  }
+
+  /** Runs a purchase, holding `key` (the item's busy key; this button's own
+   * by default) busy while it is in flight. */
+  private executePurchase(
+    handler?: () => Promise<PurchaseResult>,
+    key: string = this.busyKey,
+  ) {
+    if (!handler || this.ownBusy || (key !== "" && busyItems.has(key))) {
+      return;
+    }
     this.ownBusy = true;
     if (key !== "") setItemBusy(key, true);
     void Promise.resolve()
@@ -660,24 +748,20 @@ export class PurchaseButton extends LitElement {
         this.confirmingPurchase
           ? html`<confirm-dialog
               .heading=${translateText("store.confirm_purchase_title")}
-              .message=${translateText("store.confirm_purchase_body", {
-                item: this.confirmingPurchase.itemName,
-                amount:
-                  shownPrice(
-                    this.confirmingPurchase.item,
-                    this.confirmingPurchase.method,
-                  )?.price ?? 0,
-                currency: translateText(
-                  this.confirmingPurchase.method === "hard"
-                    ? "cosmetics.hard"
-                    : "cosmetics.soft",
-                ),
-              })}
+              .message=${this.confirmMessage(this.confirmingPurchase)}
               variant="warning"
               @confirm=${() => {
                 const pending = this.confirmingPurchase;
                 this.confirmingPurchase = null;
-                this.executePurchase(pending?.handler);
+                if (pending) {
+                  // The amount the box showed, from the item it captured:
+                  // the server refuses to charge more than this.
+                  const shown = shownPrice(pending.item, pending.method)?.price;
+                  this.executePurchase(
+                    () => pending.handler(shown),
+                    pending.busyKey,
+                  );
+                }
               }}
               @cancel=${() => (this.confirmingPurchase = null)}
             ></confirm-dialog>`
@@ -685,7 +769,16 @@ export class PurchaseButton extends LitElement {
       }
       <insufficient-currency-dialog
         .info=${this.insufficient}
+        .returnFocus=${this.querySelector<HTMLElement>(
+          this.lastMethod === "hard"
+            ? ".purchase-sparkle-btn-hard"
+            : ".purchase-sparkle-btn-soft",
+        )}
         @close=${() => (this.insufficient = null)}
+        @buy-caps=${() => {
+          this.insufficient = null;
+          this.requestCurrencyPurchase("soft");
+        }}
       ></insufficient-currency-dialog>
     `;
   }

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { colord } from "colord";
 import { columnById } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,
 } from "../src/client/hud/layers/TeamStats";
+import { themeProvider } from "../src/client/theme/ThemeProvider";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 import { playerInfo, setup } from "./util/Setup";
@@ -95,6 +97,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -107,12 +110,11 @@ describe("TeamStats", () => {
     await teamStats.updateComplete;
 
     const table = teamStats.querySelector(".stats-table");
-    const picker = teamStats.querySelector("column-picker");
     const rowCells = teamStats.querySelectorAll(
       '.stats-table-row > [role="cell"]',
     );
     expect(teamStats.children).toHaveLength(1);
-    expect(picker?.closest(".stats-table")).toBe(table);
+    expect(table?.querySelector("column-picker")).toBeNull();
     expect(table?.querySelector(".stats-table-header")).not.toBeNull();
     expect(rowCells[0]?.textContent?.trim()).toBe("1");
     expect(rowCells[1]?.textContent?.trim()).toContain("Blue");
@@ -126,6 +128,129 @@ describe("TeamStats", () => {
       teamStats.querySelectorAll('.stats-table-row > [role="cell"]')[1]
         ?.textContent,
     ).toContain("Red");
+
+    teamStats.remove();
+  });
+
+  it("marks your team's row, and none for a spectator", async () => {
+    const players = ["Blue", "Red"].map((team, i) => ({
+      id: () => `${team}-player`,
+      smallID: () => i,
+      team: () => team,
+      numTilesOwned: () => 10 - i,
+      gold: () => 10n,
+      isAlive: () => true,
+    })) as unknown as PlayerView[];
+    const mount = async (me: PlayerView | null) => {
+      const teamStats = new TeamStats();
+      teamStats.game = {
+        myPlayer: () => me,
+        playerViews: () => players,
+        config: () => ({ maxTroops: () => 100 }),
+        ticks: () => 600,
+        inSpawnPhase: () => false,
+        numLandTiles: () => 100,
+        numTilesWithFallout: () => 0,
+      } as unknown as GameView;
+      teamStats.visible = true;
+      document.body.append(teamStats);
+      teamStats.refresh();
+      await teamStats.updateComplete;
+      return [...teamStats.querySelectorAll(".stats-table-row")].map((row) =>
+        row.hasAttribute("data-me"),
+      );
+    };
+
+    expect(await mount(players[1])).toEqual([false, true]);
+    expect(await mount(null)).toEqual([false, false]);
+
+    document.body.innerHTML = "";
+  });
+
+  it("is named apart from the player table", async () => {
+    const players = [
+      {
+        id: () => "blue-player",
+        smallID: () => 0,
+        team: () => "Blue",
+        numTilesOwned: () => 10,
+        gold: () => 10n,
+        isAlive: () => true,
+      },
+    ] as unknown as PlayerView[];
+    const teamStats = new TeamStats();
+    teamStats.game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      inSpawnPhase: () => false,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+    teamStats.refresh();
+    await teamStats.updateComplete;
+
+    const table = teamStats.querySelector('[role="table"]');
+    expect(table?.getAttribute("aria-label")).toBe("leaderboard.teams_table");
+    expect(table?.getAttribute("aria-rowcount")).toBe("2");
+
+    teamStats.remove();
+  });
+
+  it("shows each team's colour and how many of its players are alive", async () => {
+    const players = [
+      ["Blue", true, 10],
+      ["Blue", true, 10],
+      ["Blue", false, 0],
+      ["Red", false, 0],
+    ].map(([team, alive, tiles], i) => ({
+      id: () => `player-${i}`,
+      smallID: () => i,
+      team: () => team,
+      numTilesOwned: () => tiles,
+      gold: () => 10n,
+      isAlive: () => alive,
+    })) as unknown as PlayerView[];
+    const teamStats = new TeamStats();
+    teamStats.game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      inSpawnPhase: () => false,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+    teamStats.refresh();
+    await teamStats.updateComplete;
+
+    const [blue, red] = [...teamStats.querySelectorAll(".stats-table-row")].map(
+      (row) => row.querySelector('[data-column="team"]') as HTMLElement,
+    );
+    const chip = blue.querySelector("[data-chip]") as HTMLElement;
+    expect(blue.firstElementChild).toBe(chip);
+    expect(colord(chip.style.background).toHex()).toBe(
+      themeProvider.current().teamColor("Blue").toHex(),
+    );
+
+    // After the name, named for a screen reader and on hover.
+    const alive = blue.querySelector("[data-alive]") as HTMLElement;
+    expect(blue.lastElementChild).toBe(alive);
+    expect(alive.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      "leaderboard.players_alive 2/3",
+    );
+    expect(alive.title).toBe("leaderboard.players_alive 2/3");
+    expect(alive.hasAttribute("data-zero")).toBe(false);
+
+    // A team with nobody left stays, its count dimmed like its zeros.
+    const none = red.querySelector("[data-alive]") as HTMLElement;
+    expect(none.title).toBe("leaderboard.players_alive 0/1");
+    expect(none.hasAttribute("data-zero")).toBe(true);
 
     teamStats.remove();
   });
@@ -162,6 +287,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
       teamClanTag: (team: string) => {

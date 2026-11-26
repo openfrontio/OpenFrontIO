@@ -11,21 +11,30 @@ import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   type LevelBadge,
   packLevelBadge,
 } from "@openfront/shared/LevelBadgeWire";
+import type { PlayerCard } from "@openfront/shared/PlayerCardSchemas";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
+import { CardCatalogueRequest } from "../../components/card/CardCatalogueRequest";
+import "../../components/card/PlayerCard";
+import {
+  buildPlayerCardView,
+  type PlayerCardView,
+} from "../../components/card/PlayerCardModel";
 import "../../components/EquippedCosmeticsRow";
 import "../../components/LevelBadge";
 import type { OfIconName } from "../../components/OfIcon";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
+import { fetchCosmetics, getCachedCosmetics } from "../../Cosmetics";
 import {
   CloseViewEvent,
   ContextMenuEvent,
@@ -58,6 +67,7 @@ import { EmojiTable, ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./PlayerReportModal";
 import "./SendResourceModal";
+import { visiblePlayerCard } from "./VisiblePlayerCard";
 
 export function emptyPlayerActions(): PlayerActions {
   return {
@@ -691,7 +701,105 @@ export class PlayerPanel extends LitElement implements Controller {
     );
   }
 
+  // The card this viewer may see for `other`, resolved through the catalogue,
+  // or null: no card, bots and nations, withheld by the server (anonymised)
+  // or by the viewer's anonymous names, or the catalogue isn't loaded yet
+  // (fetched, then shown on the next render).
+  private cardViewFor(other: PlayerView): PlayerCardView | null {
+    const visible = visiblePlayerCard(
+      this.g,
+      other,
+      this.userSettings.anonymousNames(),
+    );
+    if (visible === undefined) return null;
+    const cosmetics = getCachedCosmetics();
+    if (cosmetics === null) {
+      this.cardCatalogueRequest.request();
+      return null;
+    }
+    const input = {
+      username: other.name(),
+      clanTag: other.clanTag(),
+      flag: visible.flag,
+      badge: this.levelBadgeFor(other) ?? null,
+      card: visible.card,
+    };
+    // The panel re-renders every tick and asks twice per render: hand back the
+    // same view while nothing it is built from changed, so <player-card>,
+    // its background and the cosmetics row don't re-render with it.
+    const key = JSON.stringify([
+      input.username,
+      input.clanTag,
+      input.flag,
+      input.badge,
+    ]);
+    const cached = this.cardViews.get(visible.clientID);
+    if (
+      cached !== undefined &&
+      cached.card === visible.card &&
+      cached.cosmetics === cosmetics &&
+      cached.key === key
+    ) {
+      return cached.view;
+    }
+    const view = buildPlayerCardView(input, cosmetics);
+    this.cardViews.set(visible.clientID, {
+      card: visible.card,
+      cosmetics,
+      key,
+      view,
+    });
+    return view;
+  }
+
+  // Each player's last card view and what it was built from.
+  private readonly cardViews = new Map<
+    string,
+    {
+      card: PlayerCard;
+      cosmetics: Cosmetics;
+      key: string;
+      view: PlayerCardView;
+    }
+  >();
+  // A failed fetch is tried again by a later render.
+  private readonly cardCatalogueRequest = new CardCatalogueRequest(
+    () => fetchCosmetics(),
+    () => this.requestUpdate(),
+  );
+
+  // The cosmetics the player has equipped, plus their card's paid items.
+  private renderCosmeticsRow(other: PlayerView) {
+    // Another player's look can be saved for the end screen; not your own.
+    const clientID = other.clientID();
+    const theirs = clientID !== null && clientID !== this.g.myClientID();
+    return html`<equipped-cosmetics-row
+      .cosmetics=${other.cosmetics}
+      .card=${this.cardViewFor(other)}
+      .lookGameID=${theirs ? this.g.gameID() : null}
+      .lookClientID=${theirs ? clientID : null}
+    ></equipped-cosmetics-row>`;
+  }
+
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
+    // A card owner's compact card replaces the flag, badge and name, still
+    // (never animated) beside the running game, with the close button at the
+    // end of its row. Card owners are human, so there is no player-type chip.
+    const cardView = this.cardViewFor(other);
+    if (cardView !== null) {
+      return html`
+        <div class="flex items-center gap-2.5">
+          <player-card
+            class="block min-w-0 flex-1"
+            .view=${cardView}
+            size="panel"
+          ></player-card>
+          ${this.renderCloseButton()}
+        </div>
+        ${this.renderTraitorBadge(other)}
+        ${this.renderRelationPillIfNation(other, my)}
+      `;
+    }
     const flagPath = other.cosmetics.flag;
     const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
     const country =
@@ -759,18 +867,23 @@ export class PlayerPanel extends LitElement implements Controller {
               </span>`
             : html``
         }
-        <button
-          @click=${this.handleClose}
-          class=${HUD_ICON_BUTTON}
-          aria-label=${translateText("common.close") || "Close"}
-          title=${translateText("common.close") || "Close"}
-        >
-          <of-icon name="close" size="16"></of-icon>
-        </button>
+        ${this.renderCloseButton()}
       </div>
       ${this.renderTraitorBadge(other)}
       ${this.renderRelationPillIfNation(other, my)}
     `;
+  }
+
+  // The panel's only close control: both identity rows (card or not) show it.
+  private renderCloseButton() {
+    return html`<button
+      @click=${this.handleClose}
+      class=${HUD_ICON_BUTTON}
+      aria-label=${translateText("common.close") || "Close"}
+      title=${translateText("common.close") || "Close"}
+    >
+      <of-icon name="close" size="16"></of-icon>
+    </button>`;
   }
 
   private renderResources(other: PlayerView) {
@@ -1185,11 +1298,8 @@ export class PlayerPanel extends LitElement implements Controller {
               <!-- Identity (flag, name, type, traitor, relation) -->
               <div class="mb-1">${this.renderIdentityRow(other, viewer)}</div>
 
-              <!-- Cosmetics the player has equipped -->
-              <equipped-cosmetics-row
-                .cosmetics=${other.cosmetics}
-              ></equipped-cosmetics-row>
-
+              <!-- Cosmetics the player has equipped (and Get the look) -->
+              ${this.renderCosmeticsRow(other)}
               ${
                 this.sendTarget && !isSpectator
                   ? html`

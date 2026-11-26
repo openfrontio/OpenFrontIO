@@ -2,13 +2,10 @@ import type { Team } from "@openfront/engine-api/game/GameTypes";
 import { customElement } from "lit/decorators.js";
 import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import type { ColumnId } from "../../StatsConstants";
+import { themeProvider } from "../../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel } from "../../Utils";
 import type { GameView, PlayerView } from "../../view";
-import {
-  type ColumnDef,
-  type ValueGetter,
-  recordGoldRates,
-} from "./lib/StatsColumns";
+import type { ColumnDef, ValueGetter } from "./lib/StatsColumns";
 
 export function aggregateTeamValues(
   players: readonly PlayerView[],
@@ -26,9 +23,6 @@ export function aggregateTeamValues(
 
   for (const player of players) {
     if (!player.isAlive()) continue;
-    // Keep the gold-rate tracker fed even when only the team table renders,
-    // otherwise its rate columns read back 0.
-    recordGoldRates(player, game);
     for (const column of totalled) {
       values.set(
         column.id,
@@ -50,6 +44,7 @@ export class TeamStats extends StatsTable {
   ): StatsRow[] {
     const teams = new Map<Team, PlayerView[]>();
     const myTeam = game.myPlayer()?.team() ?? null;
+    const theme = themeProvider.current();
 
     for (const player of game.playerViews()) {
       const team = player.team();
@@ -63,6 +58,11 @@ export class TeamStats extends StatsTable {
       return {
         key: team,
         name: getTranslatedPlayerTeamLabel(team, game.teamClanTag?.(team)),
+        color: theme.teamColor(team).toRgbString(),
+        alive: {
+          count: players.filter((player) => player.isAlive()).length,
+          total: players.length,
+        },
         values: aggregateTeamValues(players, columns, game),
         emphasized: team === myTeam,
         pinned: team === myTeam,

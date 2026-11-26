@@ -638,7 +638,8 @@ test("the thumbnail is drawn from the 4x map as the map generator draws one", ()
     map4xBin,
   };
   expect(Array.from(thumbnailPixels(files))).toEqual([
-    ...[0, 0, 0, 0],
+    // Transparent water keeps the generator's colour, as its webp does.
+    ...[71, 133, 181, 0],
     ...[204, 203, 158, 255],
     ...[190, 214, 138, 255],
     ...[230, 213, 168, 255],

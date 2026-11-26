@@ -1,6 +1,13 @@
 import { authoredTerrain } from "@openfront/engine-api/EditorCommands";
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { deriveTerrain } from "@openfront/engine-lib/mapgen/DeriveTerrain";
+import {
+  countLandTiles,
+  downscaledTile,
+  downscaleTerrain,
+  terrainKind,
+} from "@openfront/engine-lib/mapgen/TerrainBytes";
 import {
   SnapshotError,
   snapshotType,
@@ -35,7 +42,6 @@ const TERRAIN_LAND_MASK = 0x80;
 const TERRAIN_MAG_MASK = 0x1f;
 const IMPASSABLE_MAG = 31;
 const TERRAIN_SHORELINE_BIT = 0x40;
-const TERRAIN_OCEAN_BIT = 0x20;
 // The map generator's depth for water next to impassable terrain (packed).
 const IMPASSABLE_NEIGHBOR_MAG = 10;
 
@@ -361,7 +367,7 @@ export class WaterManager {
       const my = map.y(tile) >> 1;
       if (!mini.isValidCoord(mx, my)) continue;
       const miniTile = mini.ref(mx, my);
-      const value = miniAuthored(map, mx, my);
+      const value = downscaledTile(terrainOf(map), map.width(), mx, my);
       if (writeAuthored(mini, miniTile, value, miniKindChanged)) {
         miniEdited.push(miniTile);
       }
@@ -389,9 +395,11 @@ export class WaterManager {
     this.deriveTerrain(this.map, null, changed);
     const mini = this.miniMap;
     const miniTerrain = terrainOf(mini);
+    const terrain = terrainOf(this.map);
+    const w = this.map.width();
     for (let my = 0, t = 0; my < mini.height(); my++) {
       for (let mx = 0; mx < mini.width(); mx++, t++) {
-        const value = miniAuthored(this.map, mx, my);
+        const value = downscaledTile(terrain, w, mx, my);
         if (authoredTerrain(miniTerrain[t]) !== value) {
           mini.setTerrainByte(t, value);
         }
@@ -412,17 +420,15 @@ export class WaterManager {
     const mini = this.miniMap;
     const w = mini.width() >> 1;
     const h = mini.height() >> 1;
-    const terrain = new Uint8Array(w * h);
-    let land = 0;
-    for (let y = 0, t = 0; y < h; y++) {
-      for (let x = 0; x < w; x++, t++) {
-        terrain[t] = miniAuthored(mini, x, y);
-        if (terrainKind(terrain[t]) === 1) land++;
-      }
-    }
-    const map = new GameMapImpl(w, h, terrain, land);
-    this.deriveTerrain(map, mini, null);
-    return map;
+    const terrain = downscaleTerrain(
+      terrainOf(mini),
+      mini.width(),
+      mini.height(),
+    );
+    deriveTerrain(terrain, w, h, {
+      source: { terrain: terrainOf(mini), width: mini.width() },
+    });
+    return new GameMapImpl(w, h, terrain, countLandTiles(terrain));
   }
 
   /**
@@ -503,153 +509,25 @@ export class WaterManager {
   }
 
   /**
-   * Derives the shoreline bit, ocean bit and water depth of every tile of
-   * `map` from the authored part of the terrain, by the map generator's
-   * rules. `source` is the map `map` was downscaled from, if any: water
-   * with no coast takes its first water source's depth, as the generator's
-   * createMiniMap copies it.
+   * deriveTerrain (mapgen/DeriveTerrain) on `map`, through setTerrainByte.
+   * `source` is the map `map` was downscaled from, if any.
    */
   private deriveTerrain(
     map: GameMap,
     source: GameMap | null,
     changed: TileRef[] | null,
   ): void {
-    const w = map.width();
-    const h = map.height();
-    const total = w * h;
-    const terrain = terrainOf(map);
-    const { distArr } = this.magnitudeScratch(source !== null);
-    const queue = new Int32Array(total);
-
-    // What each tile's neighbours are: the kinds of terrain among them, and
-    // the directions in which they are water.
-    const around = new Uint8Array(total);
-    // From here distArr holds, for each water tile, its distance to
-    // passable land + 1 (0 if not reached) and the DERIVE_ flags.
-    distArr.fill(0);
-    let tail = 0;
-    for (let y = 0, t = 0; y < h; y++) {
-      for (let x = 0; x < w; x++, t++) {
-        let m = 0;
-        let k = 0;
-        if (y > 0) m |= (k = KIND_BIT[terrain[t - w]]) === WATER ? k | UP : k;
-        if (y < h - 1) {
-          m |= (k = KIND_BIT[terrain[t + w]]) === WATER ? k | DOWN : k;
-        }
-        if (x > 0) m |= (k = KIND_BIT[terrain[t - 1]]) === WATER ? k | LEFT : k;
-        if (x < w - 1) {
-          m |= (k = KIND_BIT[terrain[t + 1]]) === WATER ? k | RIGHT : k;
-        }
-        around[t] = m;
-        if (KIND_BIT[terrain[t]] === WATER && (m & LAND) !== 0) {
-          distArr[t] = 1;
-          queue[tail++] = t;
-        }
-      }
-    }
-
-    // Depth: ceil(distance to passable land / 2), capped at 31, by a BFS
-    // from the shoreline water. Water further out than the cap is 31 if
-    // its body has a coast; DERIVE_COASTLESS marks the bodies that don't.
-    for (let head = 0; head < tail; head++) {
-      const t = queue[head];
-      const d = distArr[t];
-      if (d >= MAX_MAG_DIST) continue;
-      const m = around[t];
-      if ((m & UP) !== 0 && distArr[t - w] === 0) {
-        distArr[t - w] = d + 1;
-        queue[tail++] = t - w;
-      }
-      if ((m & DOWN) !== 0 && distArr[t + w] === 0) {
-        distArr[t + w] = d + 1;
-        queue[tail++] = t + w;
-      }
-      if ((m & LEFT) !== 0 && distArr[t - 1] === 0) {
-        distArr[t - 1] = d + 1;
-        queue[tail++] = t - 1;
-      }
-      if ((m & RIGHT) !== 0 && distArr[t + 1] === 0) {
-        distArr[t + 1] = d + 1;
-        queue[tail++] = t + 1;
-      }
-    }
-
-    // The ocean is the largest body of water. On a tie the generator takes
-    // the body it finds first scanning column by column: the one holding
-    // the smallest x * h + y.
-    let ocean = -1;
-    let oceanSize = 0;
-    let oceanKey = 0;
-    const coastless: number[] = [];
-    for (let start = 0; start < total; start++) {
-      if (KIND_BIT[terrain[start]] !== WATER) continue;
-      if ((distArr[start] & DERIVE_SEEN) !== 0) continue;
-      const body = fillWaterBody(
-        start,
-        DERIVE_SEEN,
-        distArr,
-        around,
-        w,
-        h,
-        queue,
-      );
-      if (!body.coast) coastless.push(start);
-      if (
-        body.size > oceanSize ||
-        (body.size === oceanSize && body.key < oceanKey)
-      ) {
-        ocean = start;
-        oceanSize = body.size;
-        oceanKey = body.key;
-      }
-    }
-    for (const start of coastless) {
-      fillWaterBody(start, DERIVE_COASTLESS, distArr, around, w, h, queue);
-    }
-    if (ocean >= 0) {
-      fillWaterBody(ocean, DERIVE_OCEAN, distArr, around, w, h, queue);
-    }
-
-    const sourceTerrain = source !== null ? terrainOf(source) : null;
-    const sw = source?.width() ?? 0;
-    for (let y = 0, t = 0; y < h; y++) {
-      for (let x = 0; x < w; x++, t++) {
-        const b = terrain[t];
-        const m = around[t];
-        const kind = KIND_BIT[b];
-        let value = b & (TERRAIN_LAND_MASK | TERRAIN_MAG_MASK);
-        if (kind === WATER) {
-          const d = distArr[t];
-          if ((m & IMPASSABLE) !== 0) {
-            value = IMPASSABLE_NEIGHBOR_MAG;
-          } else if ((d & DERIVE_COASTLESS) !== 0) {
-            // No coast: 0, or on a minimap the depth of the first water
-            // source in createMiniMap's order (0,0), (0,1), (1,0), (1,1).
-            value = 0;
-            if (sourceTerrain !== null) {
-              const s = y * 2 * sw + x * 2;
-              for (const src of [s, s + sw, s + 1, s + sw + 1]) {
-                if ((sourceTerrain[src] & TERRAIN_LAND_MASK) === 0) {
-                  value = sourceTerrain[src] & TERRAIN_MAG_MASK;
-                  break;
-                }
-              }
-            }
-          } else {
-            const reached = d & DERIVE_DIST_MASK;
-            value = reached === 0 ? TERRAIN_MAG_MASK : reached >> 1;
-          }
-          if ((d & DERIVE_OCEAN) !== 0) value |= TERRAIN_OCEAN_BIT;
-          if ((m & LAND) !== 0) value |= TERRAIN_SHORELINE_BIT;
-        } else if (kind === LAND && (m & WATER) !== 0) {
-          value |= TERRAIN_SHORELINE_BIT;
-        }
-        if (value !== b) {
-          map.setTerrainByte(t, value);
-          changed?.push(t);
-        }
-      }
-    }
+    deriveTerrain(terrainOf(map), map.width(), map.height(), {
+      source:
+        source === null
+          ? undefined
+          : { terrain: terrainOf(source), width: source.width() },
+      dist: this.magnitudeScratch(source !== null).distArr,
+      set: (tile, value) => {
+        map.setTerrainByte(tile, value);
+        changed?.push(tile);
+      },
+    });
   }
 
   private magnitudeScratch(mini: boolean): {
@@ -1257,39 +1135,10 @@ export class WaterManager {
   }
 }
 
-// The authored terrain byte of impassable terrain.
-const IMPASSABLE_BYTE = TERRAIN_LAND_MASK | IMPASSABLE_MAG;
-
-// deriveTerrain's per-tile bits. A terrain byte's kind as a bit
-// (KIND_BIT[byte]), and the directions of a tile's water neighbours.
-const WATER = 1;
-const LAND = 2;
-const IMPASSABLE = 4;
-const UP = 8;
-const DOWN = 16;
-const LEFT = 32;
-const RIGHT = 64;
-// distArr in deriveTerrain: distance to passable land + 1, and flags.
-const DERIVE_DIST_MASK = 0x3f;
-const DERIVE_SEEN = 0x2000;
-const DERIVE_COASTLESS = 0x4000;
-const DERIVE_OCEAN = 0x8000;
-
 function terrainOf(map: GameMap): Uint8Array {
   // Direct terrain access, same precedent as ConnectedComponents
   return (map as unknown as { terrain: Uint8Array }).terrain;
 }
-
-/** 0 water, 1 land, 2 impassable. */
-function terrainKind(b: number): number {
-  if ((b & TERRAIN_LAND_MASK) === 0) return 0;
-  return (b & TERRAIN_MAG_MASK) === IMPASSABLE_MAG ? 2 : 1;
-}
-
-const KIND_BIT = Uint8Array.from(
-  { length: 256 },
-  (_, b) => 1 << terrainKind(b),
-);
 
 /**
  * Writes the authored byte `value` to the tile, clearing what is derived
@@ -1306,24 +1155,6 @@ function writeAuthored(
   if (terrainKind(b) !== terrainKind(value)) kindChanged.add(tile);
   map.setTerrainByte(tile, value);
   return true;
-}
-
-/**
- * The map generator's createMiniMap rule for the minimap tile (mx, my) of
- * `map`: water if any of its four tiles is, else impassable if any is, else
- * land at the elevation of the last, (1,1).
- */
-function miniAuthored(map: GameMap, mx: number, my: number): number {
-  const terrain = terrainOf(map);
-  const s = map.ref(mx * 2, my * 2);
-  const w = map.width();
-  const a = terrainKind(terrain[s]);
-  const b = terrainKind(terrain[s + w]);
-  const c = terrainKind(terrain[s + 1]);
-  const d = terrainKind(terrain[s + w + 1]);
-  if (a === 0 || b === 0 || c === 0 || d === 0) return 0;
-  if (a === 2 || b === 2 || c === 2 || d === 2) return IMPASSABLE_BYTE;
-  return authoredTerrain(terrain[s + w + 1]);
 }
 
 /**
@@ -1346,63 +1177,6 @@ function isShorelineTile(
     (x > 0 && terrainKind(terrain[tile - 1]) === coast) ||
     (x < w - 1 && terrainKind(terrain[tile + 1]) === coast)
   );
-}
-
-/**
- * Scan-line flood fill (as in ConnectedComponents) of the water body
- * holding `start`, setting `bit` in `marks` on its tiles. `around` is
- * deriveTerrain's. Returns the body's size, whether any of its tiles has
- * passable land beside it, and the smallest x * h + y among its tiles.
- */
-function fillWaterBody(
-  start: number,
-  bit: number,
-  marks: Uint16Array,
-  around: Uint8Array,
-  w: number,
-  h: number,
-  queue: Int32Array,
-): { size: number; coast: boolean; key: number } {
-  let size = 0;
-  let coast = 0;
-  let key = Infinity;
-  // A tile is marked when it is queued, and only the first tile of each
-  // unmarked run above or below a span is queued: the run is filled from it.
-  marks[start] |= bit;
-  queue[0] = start;
-  let tail = 1;
-  for (let head = 0; head < tail; head++) {
-    let left = queue[head];
-    let right = left;
-    while ((around[left] & LEFT) !== 0 && (marks[left - 1] & bit) === 0) {
-      marks[--left] |= bit;
-    }
-    while ((around[right] & RIGHT) !== 0 && (marks[right + 1] & bit) === 0) {
-      marks[++right] |= bit;
-    }
-    size += right - left + 1;
-    const x = left % w;
-    key = Math.min(key, x * h + (left - x) / w);
-    let upRun = false;
-    let downRun = false;
-    for (let t = left; t <= right; t++) {
-      const m = around[t];
-      coast |= m & LAND;
-      const up = (m & UP) !== 0 && (marks[t - w] & bit) === 0;
-      if (up && !upRun) {
-        marks[t - w] |= bit;
-        queue[tail++] = t - w;
-      }
-      upRun = up;
-      const down = (m & DOWN) !== 0 && (marks[t + w] & bit) === 0;
-      if (down && !downRun) {
-        marks[t + w] |= bit;
-        queue[tail++] = t + w;
-      }
-      downRun = down;
-    }
-  }
-  return { size, coast: coast !== 0, key };
 }
 
 function touchesImpassable(

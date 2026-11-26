@@ -325,15 +325,12 @@ describe("purchaseWithCurrency", () => {
       ok: false,
       code: "already_owned",
     });
-    // The body is never read: a regression that calls response.json() and
-    // discards the result would leave bodyUsed true and fail here, which no
-    // assertion on the returned value could catch.
-    expect(response.bodyUsed).toBe(false);
-    // Not an error condition: on main this fell into the !response.ok branch
-    // and logged the status. Nothing is read from the body, so nothing from
-    // it can reach a log line.
+    // The body is read only to tell this from a price_changed refusal, and
+    // none of it reaches a log line. Not an error condition: on main this
+    // fell into the !response.ok branch and logged the status.
     expect(console.error).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
+    expectNoConsoleCallContains("CANARY-a1b2");
     // One request: guards against a retry loop creeping back in.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

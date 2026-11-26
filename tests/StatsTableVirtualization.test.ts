@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { colord } from "colord";
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
@@ -20,6 +21,12 @@ function player(id: string, tiles: number): PlayerView {
     totalUnitLevels: () => tiles,
     isAlive: () => true,
     isOnSameTeam: () => false,
+    territoryColor: () => colord("#4a90d9"),
+    incomingAttacks: () => [],
+    isTraitor: () => false,
+    isAlliedWith: () => false,
+    hasEmbargoAgainst: () => false,
+    isDisconnected: () => false,
   } as unknown as PlayerView;
 }
 
@@ -29,6 +36,7 @@ function gameWith(players: PlayerView[], me: PlayerView | null): GameView {
     playerViews: () => players,
     config: () => ({ maxTroops: () => 100 }),
     ticks: () => 600,
+    inSpawnPhase: () => false,
     numLandTiles: () => 100,
     numTilesWithFallout: () => 0,
   } as unknown as GameView;
@@ -105,7 +113,7 @@ describe("StatsTable virtualization", () => {
     el.remove();
   });
 
-  it("renders the pinned row even when it is far outside the window", async () => {
+  it("draws your row even when it is far outside the window", async () => {
     const players = Array.from({ length: 299 }, (_, i) =>
       player(`p${i}`, 1000 - i),
     );
@@ -113,12 +121,62 @@ describe("StatsTable virtualization", () => {
     players.push(me);
     const el = await mount(gameWith(players, me));
 
-    const pinned = el.querySelector(".stats-table-pinned-row");
-    expect(pinned?.textContent).toContain("me");
-    expect(pinned?.textContent?.trim().split(/\s+/)[0]).toBe("300");
-    expect(scrollRows(el)).toEqual(
-      Array.from({ length: 12 }, (_, i) => `${i + 1}`),
+    const scroller = el.querySelector(".stats-table-scroll")!;
+    const mine = scroller.querySelector("[data-me]");
+    const above = scroller.querySelector("[data-near]");
+    expect(mine?.textContent).toContain("me");
+    expect(scrollRows(el)).toEqual([
+      ...Array.from({ length: 12 }, (_, i) => `${i + 1}`),
+      "299",
+      "300",
+    ]);
+    // Rows 13 to 298 have no DOM: one spacer between the window and yours
+    // with the row above it, none after them.
+    const spacers = scroller.querySelectorAll(".stats-table-spacer");
+    expect(spacers).toHaveLength(1);
+    expect(spacers[0].getAttribute("style")).toContain(
+      `height: ${(298 - 12) * 24}px`,
     );
+    expect(spacers[0].nextElementSibling).toBe(above);
+    expect(above?.nextElementSibling).toBe(mine);
+    expect(mine?.nextElementSibling).toBeNull();
+
+    el.remove();
+  });
+
+  it("keeps your row drawn when the list is scrolled past it", async () => {
+    const me = player("me", 2000);
+    const players = [
+      me,
+      ...Array.from({ length: 299 }, (_, i) => player(`p${i}`, 1000 - i)),
+    ];
+    const el = await mount(gameWith(players, me));
+
+    const scroller = el.querySelector<HTMLElement>(".stats-table-scroll")!;
+    scroller.scrollTop = 2400;
+    scroller.dispatchEvent(new Event("scroll"));
+    await el.updateComplete;
+
+    // first = floor(2400/24) - 4 = 96; last = ceil((2400+180)/24) + 4 = 112
+    const children = [...scroller.children];
+    expect(children[0].hasAttribute("data-me")).toBe(true);
+    expect(children[1].classList).toContain("stats-table-spacer");
+    expect(children[1].getAttribute("style")).toContain(`height: ${95 * 24}px`);
+    expect(scrollRows(el)).toEqual([
+      "1",
+      ...Array.from({ length: 16 }, (_, i) => `${i + 97}`),
+    ]);
+
+    el.remove();
+  });
+
+  it("sticks nothing when you have no row", async () => {
+    const players = Array.from({ length: 300 }, (_, i) =>
+      player(`p${i}`, 1000 - i),
+    );
+    const el = await mount(gameWith(players, null));
+
+    expect(el.querySelector("[data-me]")).toBeNull();
 
     el.remove();
   });

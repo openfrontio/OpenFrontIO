@@ -30,6 +30,7 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   getMessageTypeClasses: vi.fn(() => ""),
+  severityColors: {},
 }));
 vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),

@@ -26,6 +26,7 @@ import type {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { type Colord, colord } from "colord";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import type {
   NameEntry,
@@ -130,6 +131,10 @@ class ReplayPlayerView {
   }
   flag(): string | undefined {
     return this.info.flag;
+  }
+  /** The fill the map draws (from ReplayPalette); grey without a palette. */
+  territoryColor(): Colord {
+    return colord(this.info.color ?? "#808080");
   }
   /** Where the player's name is drawn, once it has been placed. */
   nameLocation(): { x: number; y: number; size: number } | undefined {
@@ -285,6 +290,8 @@ export class ReplayGameView {
   focus: ReplayPlayerView | null = null;
   /** Whether emojis are shown (the "emojis" user setting). */
   showEmojis: () => boolean = () => true;
+  /** The tick play started at (the header's spawnPhaseEnd), once known. */
+  startTick: () => number | null = () => null;
   /** Events since the HUD last asked, by GameUpdateType. */
   private readonly pending = new Map<number, unknown[]>();
 
@@ -389,6 +396,11 @@ export class ReplayGameView {
   }
   inSpawnPhase(): boolean {
     return this.spawnPhase;
+  }
+  ticksSinceStart(): number {
+    const start = this.startTick();
+    if (this.spawnPhase || start === null) return 0;
+    return Math.max(0, this.ticks() - start);
   }
   unit(id: number): ReplayUnitView | undefined {
     const state = this.frame?.units.get(id);

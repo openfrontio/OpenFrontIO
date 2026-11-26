@@ -19,6 +19,12 @@
     0 1px 2px rgb(0 0 0 / calc(0.35 * var(--hud-opacity, 1)));
   --shadow-hud-modal: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
 
+  /* A 1px dark rim and a short drop, for text drawn straight on the map. */
+  --text-shadow-hud-rim:
+    0 1px 0 rgb(0 0 0 / 0.9), 1px 0 0 rgb(0 0 0 / 0.55),
+    -1px 0 0 rgb(0 0 0 / 0.55), 0 -1px 0 rgb(0 0 0 / 0.45),
+    0 2px 3px rgb(0 0 0 / 0.55);
+
   /* Same radius as backdrop-blur-sm, which the panels used, and like it the
      blur stays at any HUD opacity: at 0% a panel is clear glass, so its text
      stays readable over the map. */
@@ -34,6 +40,93 @@
     }
   }
 
+  /* A new important row with a tone: its tint lands at full strength and
+     settles to its resting level. */
+  --animate-event-arrive: event-arrive 900ms ease-out;
+  @keyframes event-arrive {
+    from {
+      opacity: 1;
+    }
+  }
+
+  /* A new alliance card opens its space first, so the feed above glides up
+     instead of jumping, and the card rises into it once there is room. The
+     space is clipped while it opens, and only then, so the card's shadow
+     shows at rest. A browser that cannot interpolate fr rows shows the
+     space at once. */
+  --animate-card-open: card-open 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes card-open {
+    from {
+      grid-template-rows: 0fr;
+      clip-path: inset(0);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+  --animate-card-rise: hud-rise 200ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+
+  /* A gold gain popping up from the gold chip, for two seconds: in with a
+     small overshoot by 165 ms, settled by 270 ms, then up and out over the
+     last 420 ms. The animation is the pop's whole life: ControlPanel removes
+     the pop when it ends. */
+  --animate-gold-pop: gold-pop 2s both;
+  @keyframes gold-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.6);
+      animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+    8.25% {
+      opacity: 1;
+      transform: translateY(-2px) scale(1.08);
+      animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
+    }
+    13.5% {
+      transform: none;
+    }
+    79% {
+      opacity: 1;
+      transform: none;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+  /* The same two seconds without movement, for reduced motion. */
+  --animate-gold-pop-fade: gold-pop-fade 2s both;
+  @keyframes gold-pop-fade {
+    79% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  /* A merged gain bumps the pop's amount. */
+  --animate-gold-pop-bump: gold-pop-bump 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes gold-pop-bump {
+    from {
+      transform: scale(1.2);
+      color: var(--color-green-200);
+    }
+  }
+
+  /* "Copied!" in place of the game ID for 1.4 s: in by 170 ms, held, then
+     out. The button drops its copied mark when the animation ends. */
+  --animate-hud-copied: hud-copied 1.4s ease-out both;
+  @keyframes hud-copied {
+    12%,
+    88% {
+      opacity: 1;
+    }
+  }
+  /* The same 1.4 s without the fades, for reduced motion: the label swaps
+     in and out, and the animation still ends. */
+  --animate-hud-copied-swap: hud-copied 1.4s steps(1, jump-start) both;
+
   /* Pulses a red glow around a traitor's player panel, over hud-modal's own
      shadow, which the box-shadow would otherwise replace. */
   --animate-traitor-glow: traitor-glow 2.4s ease-in-out infinite;
@@ -44,6 +137,94 @@
         0 0 0 4px rgb(239 68 68 / 0.38),
         0 0 18px 6px rgb(239 68 68 / 0.26),
         var(--shadow-hud-modal);
+    }
+  }
+
+  /* An event row that goes: its content fades, then its height closes, and
+     it stays closed until EventsDisplay drops it when this ends. The row is
+     a grid of one track for it, with no minimum, so padding cannot hold it
+     open. A browser that cannot interpolate fr rows closes it in one step. */
+  --animate-event-out: event-out 300ms both;
+  @keyframes event-out {
+    from {
+      grid-template-rows: minmax(0, 1fr);
+      animation-timing-function: ease-out;
+    }
+    40% {
+      opacity: 0;
+      grid-template-rows: minmax(0, 1fr);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    to {
+      opacity: 0;
+      grid-template-rows: minmax(0, 0fr);
+    }
+  }
+
+  /* The MIRV warning's row: the navy with a red cast, opaque, under a red
+     outline and inner glow. As it arrives, the glow swells three times,
+     600 ms each, and its warning signs beat with it; then both rest. Three
+     flashes in 1.8 s, below the three a second that is the limit for
+     flashing content. */
+  --color-hud-alarm: color-mix(
+    in srgb,
+    var(--color-surface) 86%,
+    var(--color-red-800)
+  );
+  --shadow-hud-alarm:
+    inset 0 0 0 2px var(--color-red-500),
+    inset 0 0 14px 2px rgb(239 68 68 / 0.55);
+  --animate-event-alarm: event-alarm 600ms ease-in-out 3;
+  @keyframes event-alarm {
+    50% {
+      box-shadow:
+        inset 0 0 0 2px var(--color-red-200),
+        inset 0 0 26px 8px rgb(248 113 113 / 0.85);
+    }
+  }
+  --animate-event-alarm-sign: event-alarm-sign 600ms ease-in-out 3;
+  @keyframes event-alarm-sign {
+    50% {
+      scale: 1.2;
+      color: var(--color-yellow-100);
+      filter: drop-shadow(0 0 4px var(--color-yellow-400));
+    }
+  }
+
+  /* An answered alliance card shows its answer, then folds its space away
+     over 280 ms: a yes holds for 880 ms, a no or an ignore for 640 ms.
+     ActionableEvents removes the card when the fold ends. The space is
+     clipped only while it folds, so the card's shadow shows while it holds. */
+  --animate-card-accepted: card-fold 280ms cubic-bezier(0.4, 0, 0.2, 1) 880ms
+    forwards;
+  --animate-card-declined: card-fold 280ms cubic-bezier(0.4, 0, 0.2, 1) 640ms
+    forwards;
+  @keyframes card-fold {
+    from {
+      clip-path: inset(0);
+    }
+    to {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      clip-path: inset(0);
+    }
+  }
+  /* The same lives without the fold, for reduced motion: the card goes in
+     one step at the end, and the animation still ends. */
+  --animate-card-accepted-still: card-fold 280ms steps(1, jump-end) 880ms
+    forwards;
+  --animate-card-declined-still: card-fold 280ms steps(1, jump-end) 640ms
+    forwards;
+  /* The icon of the button that answered pops once, as the other buttons
+     close up around it. */
+  --animate-card-answer-pop: card-answer-pop 380ms
+    cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  @keyframes card-answer-pop {
+    from {
+      transform: scale(0.5);
+    }
+    55% {
+      transform: scale(1.22);
     }
   }
 }

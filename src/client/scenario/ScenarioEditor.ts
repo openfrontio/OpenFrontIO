@@ -68,6 +68,12 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  heightmapDocument,
+  heightmapPixels,
+  heightmapSize,
+  openHeightmap,
+} from "./HeightmapImport";
+import {
   allianceIndex,
   alliancesAllowed,
   IMPASSABLE,
@@ -77,6 +83,7 @@ import {
   MAX_SIDE,
   MAX_WARSHIPS,
   MAX_ELEVATION,
+  MIN_SIDE,
   newNation,
   newScenarioDocument,
   resizeScenarioDocument,
@@ -499,6 +506,52 @@ export class ScenarioEditor extends LitElement {
       console.error("scenario editor: resizing failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
     }
+  }
+
+  /**
+   * Creates a draft whose terrain is a PNG, at the image's size cropped as
+   * the generator crops it.
+   */
+  private async createFromHeightmap(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    // Picking the same file again imports it again.
+    input.value = "";
+    if (file === undefined || this.status !== "start") return;
+    let doc: ScenarioDocument;
+    let bitmap: ImageBitmap | null = null;
+    try {
+      bitmap = await openHeightmap(file);
+      const size = heightmapSize(bitmap.width, bitmap.height);
+      if (size === null) {
+        void showInGameAlert(
+          translateText("scenario_editor.import_heightmap_too_small", {
+            width: bitmap.width,
+            height: bitmap.height,
+            min: MIN_SIDE,
+          }),
+        );
+        return;
+      }
+      const { width, height } = size;
+      doc = heightmapDocument(
+        this.draftName(),
+        width,
+        height,
+        heightmapPixels(bitmap, width, height),
+      );
+    } catch (e) {
+      // Not an image, or a canvas over the browser's size limit.
+      console.error("scenario editor: reading the heightmap failed:", e);
+      void showInGameAlert(
+        translateText("scenario_editor.import_heightmap_failed"),
+      );
+      return;
+    } finally {
+      bitmap?.close();
+    }
+    // Left the start screen (a draft opened, the editor closed) meanwhile.
+    if (this.status !== "start" || this.abort.signal.aborted) return;
+    await this.create(async () => ({ doc }));
   }
 
   private undoOrRedo(redo: boolean): void {
@@ -1479,6 +1532,24 @@ export class ScenarioEditor extends LitElement {
                 )}
               </p>`
         }
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <label class="${button} cursor-pointer">
+          ${translateText("scenario_editor.create_from_heightmap")}
+          <input
+            type="file"
+            accept="image/png"
+            class="hidden"
+            @change=${(e: Event) =>
+              void this.createFromHeightmap(e.target as HTMLInputElement)}
+          />
+        </label>
+        <p class="w-full text-sm text-zinc-400">
+          ${translateText("scenario_editor.heightmap_hint", {
+            min: MIN_SIDE,
+            max: MAX_SIDE.toLocaleString(),
+          })}
+        </p>
       </div>
     `);
   }

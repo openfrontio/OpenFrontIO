@@ -22,15 +22,17 @@ import { z } from "zod";
 
 const pack = (badge: LevelBadge): number => packLevelBadge(badge)!;
 
-// The roster's level badge rides lobby_info as the last, optional field of
-// ClientInfo. These pin the wire contract that comment in Schemas.ts promises:
-// it round-trips, an entry without it is byte-identical to the pre-badge
-// layout, and a frame encoded before the field existed still decodes.
+// The roster's level badge rides lobby_info as an optional field of
+// ClientInfo, the last bit of the header's first byte. These pin the wire
+// contract the comment in WireSchemas.ts promises: it round-trips, and the
+// layout around it. cardBackground, appended after it, opened a second header
+// byte; every peer runs the same build, so frames from before that need not
+// decode (packages/zbin/README.md).
 
 const NewClientInfo = zb.object(ClientInfoSchema.shape);
 // A frozen copy of ClientInfo as it was before levelBadge was appended —
-// spelled out, not derived from the live shape, so a field added after the
-// badge (which would spill into a second header byte) fails these tests.
+// spelled out, not derived from the live shape, so the layout comparison
+// below notices any other field moving.
 const PreBadgeClientInfo = zb.object({
   clientID: z.string(),
   username: UsernameSchema,
@@ -59,11 +61,11 @@ const FULL: ClientInfo = {
 };
 
 describe("ClientInfo.levelBadge on the wire", () => {
-  it("stays the last field of ClientInfo", () => {
-    // Its presence bit is the last of the one-byte header; a field after it
-    // would move it and break pre-badge frames.
+  it("is followed only by cardBackground, the last field of ClientInfo", () => {
+    // Its presence bit is the last of the header's first byte; cardBackground's
+    // is the first of the second.
     const keys = Object.keys(ClientInfoSchema.shape);
-    expect(keys[keys.length - 1]).toBe("levelBadge");
+    expect(keys.slice(-2)).toEqual(["levelBadge", "cardBackground"]);
   });
 
   it.each<LevelBadge>([
@@ -102,20 +104,14 @@ describe("ClientInfo.levelBadge on the wire", () => {
     }
   });
 
-  it("encodes an entry without a badge byte-identically to the pre-badge layout", () => {
-    // The badge took the last free bit of the one-byte header; a second header
-    // byte would change every entry, badge or not.
-    for (const entry of [PLAIN, FULL]) {
-      expect(NewClientInfo.serialize(entry)).toEqual(
-        PreBadgeClientInfo.serialize(entry),
-      );
-    }
-  });
-
-  it("decodes an entry encoded before the badge existed", () => {
+  it("an entry without a badge is the pre-badge layout plus an empty second header byte", () => {
+    // The badge took the last free bit of the first header byte, so the
+    // first byte and every field after the header are unchanged; the second
+    // header byte (cardBackground absent) is zero.
     for (const entry of [PLAIN, FULL]) {
       const old = PreBadgeClientInfo.serialize(entry);
-      expect(NewClientInfo.parseBytes(old)).toEqual(entry);
+      const now = NewClientInfo.serialize(entry);
+      expect(Array.from(now)).toEqual([old[0], 0, ...Array.from(old.slice(1))]);
     }
   });
 

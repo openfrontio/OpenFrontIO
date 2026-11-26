@@ -1,7 +1,4 @@
-import type {
-  PlayerCardRefs,
-  TrackerStat,
-} from "@openfront/shared/PlayerCardSchemas";
+import type { TrackerStat } from "@openfront/shared/PlayerCardSchemas";
 import { getApiBase } from "./ApiBase";
 import { getAuthHeader, logOut } from "./Auth";
 import { broadcastFreshUserMe } from "./Cosmetics";
@@ -13,29 +10,6 @@ export interface CardLoadoutBody {
   title: string | null;
   taunt: string | null;
   trackers: TrackerStat[];
-}
-
-// A saved loadout as /users/@me would carry it, for patching a copy in hand
-// (when the refresh after a save fails, it still has to show the save).
-// Tracker values come from `previous`; a newly equipped one reads 0 until
-// the next /users/@me.
-export function cardRefsFromLoadout(
-  loadout: CardLoadoutBody,
-  previous: PlayerCardRefs | null | undefined,
-): PlayerCardRefs {
-  const values = new Map(
-    (previous?.trackers ?? []).map((t) => [t.stat, t.value] as const),
-  );
-  const refs: PlayerCardRefs = {
-    trackers: loadout.trackers.map((stat) => ({
-      stat,
-      value: values.get(stat) ?? 0,
-    })),
-  };
-  if (loadout.background !== null) refs.background = loadout.background;
-  if (loadout.title !== null) refs.title = loadout.title;
-  if (loadout.taunt !== null) refs.taunt = loadout.taunt;
-  return refs;
 }
 
 export type SaveCardResult =
@@ -52,8 +26,8 @@ export type SaveCardResult =
 
 // PUT /users/@me/card: the whole loadout (idempotent). On success it
 // broadcasts a fresh /users/@me before returning, so everything holding the
-// player's card (the Account header, a recreated My Card tab, other editors)
-// reads the saved one. A failed refresh doesn't fail the save.
+// player's card (the Account header, the Inventory's card editor) reads the
+// saved one. A failed refresh doesn't fail the save.
 //
 // `stillWanted` is asked once the bearer token is in hand, just before the
 // PUT: reading the token can wait on a JWT refresh, and a sign-out (or

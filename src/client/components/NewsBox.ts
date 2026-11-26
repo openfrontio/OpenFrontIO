@@ -1,4 +1,4 @@
-import type { NewsItem } from "@openfront/shared/ApiSchemas";
+import type { NewsItem, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import type { ClientPlatform } from "@openfront/shared/WireSchemas";
 import { LitElement, html, nothing } from "lit";
@@ -9,13 +9,26 @@ import {
   fetchCosmetics,
   invalidateCosmetics,
   refreshStaleCosmetics,
+  type ResolvedCosmetic,
 } from "../Cosmetics";
+import { COSMETICS_CHANGED } from "../Experiments";
+import { fetchPlayPrices, sellsOnlyThroughPlay } from "../Payments";
+import {
+  type PlayPrices,
+  playProductIds,
+  storePurchasables,
+} from "../StoreSellable";
+import { lastUserMeResponse } from "../UserMeBroadcast";
 import {
   HIDE_SALE_BANNERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
 } from "../UserSettings";
 import { translateText } from "../Utils";
-import { runningSales, visibleBannerSales } from "./SaleBanner";
+import {
+  runningSales,
+  salesPlayerCanBuy,
+  visibleBannerSales,
+} from "./SaleBanner";
 import {
   showSteamAwardsBanner,
   STEAM_AWARDS_NOMINATIONS_END,
@@ -85,10 +98,26 @@ export class NewsBox extends LitElement {
   // The sales news.json announces: a sale set not to announce gets no banner.
   @state() private announcedSales: ReadonlySet<string> = new Set();
   private saleTimer: ReturnType<typeof setTimeout> | null = null;
+  // Bumped by every catalog the box takes: a read started before it (a slow
+  // first fetch) must not put an older catalog back.
+  private salesRead = 0;
   // The markdown renderer is its own chunk, loaded alongside the news.
   private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
     null;
   private cycleTimer: ReturnType<typeof setInterval> | null = null;
+  // The signed-in player, so a sale on only what they own gets no banner.
+  @state() private userMe: UserMeResponse | false =
+    lastUserMeResponse()?.response ?? false;
+  // In the Android app: Play's prices for the catalog's packs, which decide
+  // whether the Store lists a pack at all.
+  private playPrices: PlayPrices = null;
+  private playPricesFor: Cosmetics | null = null;
+  private purchasableFor: {
+    cosmetics: Cosmetics;
+    userMe: UserMeResponse | false;
+    playPrices: PlayPrices;
+    items: ResolvedCosmetic[];
+  } | null = null;
   // Drops the Steam Awards banner when nominations close.
   private awardsTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -98,7 +127,10 @@ export class NewsBox extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     globalThis.addEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
+    document.addEventListener("userMeResponse", this.onUserMe);
+    this.userMe = lastUserMeResponse()?.response ?? false;
     void this.loadNews();
     void this.loadSales();
     const untilAwardsEnd = STEAM_AWARDS_NOMINATIONS_END - Date.now();
@@ -109,7 +141,62 @@ export class NewsBox extends LitElement {
     }
   }
 
+  // A refetched catalog (the player's store experiment group landed or
+  // changed, or a purchase met a changed price): the banner shows its sales,
+  // so a Deeper player sees their group's % here as in the store.
+  private onCosmeticsChanged = (event: Event) => {
+    const fresh = (event as CustomEvent<Cosmetics>).detail;
+    if (!fresh || !this.isConnected) return;
+    this.salesRead++;
+    // Its sales may end sooner than the next check: reschedule from it,
+    // without fetching again.
+    this.showSales(fresh, 0);
+  };
   private rerender = (): void => this.requestUpdate();
+
+  private onUserMe = (event: Event): void => {
+    this.userMe = (event as CustomEvent<UserMeResponse | false>).detail;
+  };
+
+  /**
+   * What the store would sell this player, by the Store's own rule, resolved
+   * once per catalog and account (the box re-renders every few seconds while
+   * news cycles). The banner opens the Store without an affiliate code.
+   */
+  private purchasable(cosmetics: Cosmetics): ResolvedCosmetic[] {
+    const cached = this.purchasableFor;
+    if (
+      cached?.cosmetics === cosmetics &&
+      cached.userMe === this.userMe &&
+      cached.playPrices === this.playPrices
+    ) {
+      return cached.items;
+    }
+    const { userMe, playPrices } = this;
+    const items = storePurchasables(cosmetics, userMe, null, playPrices);
+    this.purchasableFor = { cosmetics, userMe, playPrices, items };
+    return items;
+  }
+
+  /**
+   * Asks Play for the catalog's pack prices, once per catalog. A failed ask
+   * is tried again on the next catalog check.
+   */
+  private async loadPlayPrices(cosmetics: Cosmetics): Promise<void> {
+    if (!sellsOnlyThroughPlay() || this.playPricesFor === cosmetics) return;
+    this.playPricesFor = cosmetics;
+    let prices: PlayPrices;
+    try {
+      prices = await fetchPlayPrices(playProductIds(cosmetics));
+    } catch (error) {
+      console.warn("Play prices unavailable", error);
+      if (this.playPricesFor === cosmetics) this.playPricesFor = null;
+      return;
+    }
+    if (this.playPricesFor !== cosmetics) return;
+    this.playPrices = prices;
+    this.requestUpdate();
+  }
 
   /**
    * Fetches the catalog for its running sales, and keeps it current for as long
@@ -118,9 +205,18 @@ export class NewsBox extends LitElement {
    * has started.
    */
   private async loadSales(attempt = 0) {
+    const read = ++this.salesRead;
     const cosmetics = await fetchCosmetics();
-    if (!this.isConnected) return;
-    if (cosmetics !== null) this.cosmetics = cosmetics;
+    if (!this.isConnected || read !== this.salesRead) return;
+    this.showSales(cosmetics, attempt);
+  }
+
+  /** Shows a catalog's sales and schedules the next check from them. */
+  private showSales(cosmetics: Cosmetics | null, attempt: number) {
+    if (cosmetics !== null) {
+      this.cosmetics = cosmetics;
+      void this.loadPlayPrices(cosmetics);
+    }
     // Re-render even when the refetch hands back the same catalog: a sale
     // whose end has passed drops out of the banner on time.
     this.requestUpdate();
@@ -215,7 +311,9 @@ export class NewsBox extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     globalThis.removeEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
+    document.removeEventListener("userMeResponse", this.onUserMe);
     this.stopCycle();
     this.clearSaleTimer();
     if (this.awardsTimer !== null) clearTimeout(this.awardsTimer);
@@ -268,8 +366,15 @@ export class NewsBox extends LitElement {
 
   /** The running sales' banner, or nothing when none is running. */
   private renderSales() {
+    const running = runningSales(this.cosmetics, this.announcedSales);
     const sales = visibleBannerSales(
-      runningSales(this.cosmetics, this.announcedSales),
+      this.cosmetics === null
+        ? running
+        : salesPlayerCanBuy(
+            running,
+            this.cosmetics,
+            this.purchasable(this.cosmetics),
+          ),
     );
     if (sales.length === 0) return nothing;
     return html`<sale-banner

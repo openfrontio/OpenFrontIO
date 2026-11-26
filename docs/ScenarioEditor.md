@@ -355,9 +355,12 @@ be started from.
 
 PNG import is editor code and is small: decode the image, apply the
 generator's pixel rules (blue channel for elevation, black for impassable,
-transparent for water), and send the result as one terrain edit. The
+transparent for water; `imageTerrain` in `engine-lib/mapgen`), and start a
+new draft with that terrain, from the start screen as a stock map is. The
 generator's optional removal of tiny islands and lakes is a later tool, not
-part of import.
+part of import. The image is cropped from the top left to the limits below,
+as the generator crops it, and the draft takes the cropped size; an image
+with a side under 100 is refused.
 
 Limits: width and height are multiples of 4, each from 100 to 5000, so a
 map is at most 25 million tiles. The engine, renderer and snapshot all
@@ -625,13 +628,6 @@ are shareable.
 - **Web purchase**: another way to set the same account flag. The editor is
   already in every build.
 - Units, team scenarios, triggers.
-- **Map generator in TypeScript.** With terrain derivation in the engine, the
-  Go generator and the engine are two implementations of the same rules.
-  Rewriting the generator on top of the engine's code would leave one. It is
-  not needed for the editor. The constraint is that CI regenerates every
-  stock map and fails on any byte difference, so the rewrite has to reproduce
-  the current files exactly, thumbnails included, or regenerate all of them
-  in one change.
 
 ## Open questions
 

@@ -120,6 +120,7 @@ export interface ClientOpts {
   device?: Client["device"];
   claims?: Client["claims"];
   levelBadge?: Client["levelBadge"];
+  card?: Client["card"];
 }
 
 let nextClient = 1;
@@ -149,6 +150,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.platform,
     opts.device,
     opts.levelBadge,
+    opts.card,
   );
 }
 

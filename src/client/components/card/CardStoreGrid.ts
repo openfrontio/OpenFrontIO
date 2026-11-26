@@ -1,30 +1,43 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import {
+  type CardTracker,
   type Cosmetics,
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
-import { html, LitElement, nothing, type TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
+import {
+  html,
+  LitElement,
+  nothing,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import type { PricedItem } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
+import type { PurchaseButton } from "../PurchaseButton";
 import "../PurchaseButton";
 import {
+  CARD_ITEM_GROUP,
+  CARD_ITEM_TYPES,
   type CardItem,
   type CardItemType,
   cardItemName,
   isOfferedCardItem,
-  cardPrices,
 } from "./CardItems";
+import "./CardItemPreview";
 import "./PlayerCard";
-import { buildPlayerCardView } from "./PlayerCardModel";
+import { buildPlayerCardView, type PlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
 // itself first, then trackers and backgrounds (titles and taunts are held
 // back). Without the card, its items still sell (the card comes first, as
 // in "Get {name}'s look") but each says it needs the card. Earned items
 // aren't listed (they're never sold). Prices in Plutonium and/or caps,
-// bought through the store's purchase flow.
+// bought through the store's purchase flow. A tile's preview opens a
+// large, animated preview of the item on the card.
 
 const PLACEMENT: StorePlacement = {
   kind: "tab",
@@ -32,11 +45,13 @@ const PLACEMENT: StorePlacement = {
   subTab: "card",
 };
 
-const SECTIONS: [keyof Cosmetics, CardItemType][] = [
-  ["playerCards", "playerCard"],
-  ["cardTrackers", "cardTracker"],
-  ["cardBackgrounds", "cardBackground"],
-];
+// In CARD_ITEM_TYPES order: card, trackers, backgrounds.
+const SECTIONS: [keyof Cosmetics, CardItemType][] = CARD_ITEM_TYPES.map(
+  (type) => [CARD_ITEM_GROUP[type], type],
+);
+
+// The value a tracker shows in its large preview.
+const SAMPLE_TRACKER_VALUE = 1904;
 
 export interface CardStoreTracker {
   observe(el: Element, key: string, placement: StorePlacement): void;
@@ -70,12 +85,33 @@ export class CardStoreGrid extends LitElement {
   @property({ attribute: false }) cosmetics: Cosmetics | null = null;
   @property({ attribute: false }) flares: readonly string[] = [];
   @property({ attribute: false }) tracker: CardStoreTracker | null = null;
+  /** An item a Store link asked for (`<type>:<name>`), e.g. after a top-up
+   * from the end screen: once it shows it is selected, scrolled to and its
+   * Buy focused, and `requested-item-shown` tells the Store. */
+  @property({ attribute: false }) requestedItem: string | null = null;
+  /** The viewer's name, for the large preview's card. */
+  @property({ attribute: false }) username = "";
+  /** And their level badge. */
+  @property({ attribute: false }) badge: LevelBadge | null = null;
+  @state() private selected: string | null = null;
+  /** The item in the large preview. */
+  @state() private previewing: { type: CardItemType; item: CardItem } | null =
+    null;
 
   createRenderRoot() {
     return this;
   }
 
+  protected willUpdate(changed: PropertyValues<this>): void {
+    // The request was handled: clear the selection, so the same item can be
+    // asked for again.
+    if (changed.has("requestedItem") && this.requestedItem === null) {
+      this.selected = null;
+    }
+  }
+
   protected updated(): void {
+    this.showRequested();
     const tracker = this.tracker;
     if (tracker === null) return;
     for (const el of this.querySelectorAll<HTMLElement>(
@@ -86,7 +122,44 @@ export class CardStoreGrid extends LitElement {
     tracker.releaseDetached();
   }
 
-  private buy(type: CardItemType, item: CardItem, method: "hard" | "soft") {
+  private showRequested(): void {
+    const key = this.requestedItem;
+    if (key === null || key === this.selected) return;
+    const tile = [
+      ...this.querySelectorAll<HTMLElement>("[data-card-store-item]"),
+    ].find((el) => el.dataset.cardStoreItem === key);
+    // The catalogue loads after open: keep asking until the item shows.
+    if (tile === undefined) return;
+    this.selected = key;
+    tile.scrollIntoView({ block: "center" });
+    // Once its Buy has rendered: bring the tile into view again (the grid
+    // may have grown above it meanwhile) and focus the Buy.
+    void this.updateComplete.then(async () => {
+      const button = tile.querySelector<PurchaseButton>("purchase-button");
+      await button?.updateComplete;
+      tile.scrollIntoView({ block: "center" });
+      tile
+        .querySelector<HTMLButtonElement>(
+          "purchase-button button:not([disabled])",
+        )
+        ?.focus({ preventScroll: true });
+    });
+    this.dispatchEvent(
+      new CustomEvent("requested-item-shown", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  // `shownAmount`: what the confirm box showed; the server refuses (409) to
+  // charge more than that.
+  private buy(
+    type: CardItemType,
+    item: CardItem,
+    method: "hard" | "soft",
+    shownAmount?: number,
+  ) {
     this.tracker?.click(`${type}:${item.name}`, PLACEMENT);
     const resolved: ResolvedCosmetic = {
       type,
@@ -95,7 +168,7 @@ export class CardStoreGrid extends LitElement {
       relationship: "purchasable",
       key: `${type}:${item.name}`,
     };
-    return purchaseCosmetic(resolved, method, PLACEMENT);
+    return purchaseCosmetic(resolved, method, PLACEMENT, shownAmount);
   }
 
   private preview(type: CardItemType, item: CardItem): TemplateResult {
@@ -120,6 +193,52 @@ export class CardStoreGrid extends LitElement {
     </div>`;
   }
 
+  /** The viewer's card with the previewed item on it. Tracker values are
+   * a sample (the Store doesn't know the viewer's stats). */
+  private previewView(type: CardItemType, item: CardItem): PlayerCardView {
+    return buildPlayerCardView(
+      {
+        username: this.username,
+        clanTag: null,
+        badge: this.badge,
+        card: {
+          background: type === "cardBackground" ? item.name : undefined,
+          trackers:
+            type === "cardTracker"
+              ? [
+                  {
+                    stat: (item as CardTracker).stat,
+                    value: SAMPLE_TRACKER_VALUE,
+                  },
+                ]
+              : [],
+        },
+      },
+      this.cosmetics,
+    );
+  }
+
+  /** Closes the large preview, if one is open (the Store closing: it hides
+   * without removing this grid, and an open preview keeps its Tab trap). */
+  closePreview(): void {
+    this.previewing = null;
+  }
+
+  private renderPreview() {
+    const entry = this.previewing;
+    if (entry === null) return nothing;
+    return html`<card-item-preview
+      .entry=${entry}
+      .view=${this.previewView(entry.type, entry.item)}
+      .note=${
+        entry.type === "cardTracker"
+          ? translateText("inventory_card.preview_sample")
+          : ""
+      }
+      .onClose=${() => (this.previewing = null)}
+    ></card-item-preview>`;
+  }
+
   render() {
     const items = cardStoreItems(this.cosmetics);
     if (items.length === 0) {
@@ -132,14 +251,29 @@ export class CardStoreGrid extends LitElement {
     return html`<div class="flex flex-wrap justify-center gap-3 p-3">
       ${items.map(({ type, item }) => {
         const key = `${type}:${item.name}`;
-        const prices = cardPrices(item);
+        const selected = this.selected === key;
         return html`<div
           data-card-store-item=${key}
           data-cosmetic-shell
           data-cosmetic-rarity=${String(item.rarity)}
-          class="flex w-44 flex-col gap-1.5 rounded-xl border-2 p-2 text-white"
+          ?data-card-store-selected=${selected}
+          class="flex w-44 flex-col gap-1.5 rounded-xl border-2 p-2 text-white ${
+            selected
+              ? "ring-4 ring-sky-400 ring-offset-2 ring-offset-black"
+              : ""
+          }"
         >
-          ${this.preview(type, item)}
+          <button
+            type="button"
+            data-card-store-preview
+            aria-label=${translateText("inventory_card.preview", {
+              name: cardItemName(type, item),
+            })}
+            class="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+            @click=${() => (this.previewing = { type, item })}
+          >
+            ${this.preview(type, item)}
+          </button>
           <span
             class="text-[10px] font-bold uppercase tracking-wider text-white/50"
             >${translateText(`win_modal.loadout_type_${type}`)}</span
@@ -163,20 +297,25 @@ export class CardStoreGrid extends LitElement {
                   >${translateText("my_card.owned")}</span
                 >`
               : html`<purchase-button
-                  .priceHard=${prices.hard?.price ?? null}
-                  .priceSoft=${prices.soft?.price ?? null}
-                  .listPriceHard=${prices.hard?.listPrice ?? null}
-                  .listPriceSoft=${prices.soft?.listPrice ?? null}
-                  .promotion=${prices.promotion ?? null}
+                  .priceHard=${item.priceHard ?? null}
+                  .priceSoft=${item.priceSoft ?? null}
+                  .listPriceHard=${item.listPriceHard ?? null}
+                  .listPriceSoft=${item.listPriceSoft ?? null}
+                  .promotion=${
+                    (item as { promotion?: PricedItem["promotion"] })
+                      .promotion ?? null
+                  }
                   .rarity=${String(item.rarity)}
                   .itemName=${cardItemName(type, item)}
-                  .onPurchaseHard=${() => this.buy(type, item, "hard")}
-                  .onPurchaseSoft=${() => this.buy(type, item, "soft")}
+                  .onPurchaseHard=${(shown?: number) =>
+                    this.buy(type, item, "hard", shown)}
+                  .onPurchaseSoft=${(shown?: number) =>
+                    this.buy(type, item, "soft", shown)}
                 ></purchase-button>`
           }
         </div>`;
       })}
-      ${nothing}
+      ${this.renderPreview()}
     </div>`;
   }
 }

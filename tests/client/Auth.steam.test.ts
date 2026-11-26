@@ -5,6 +5,8 @@ import {
   getDesktopSessionState,
   logOut,
   retrySteamSignIn,
+  sessionUncertain,
+  userAuth,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { subscribeDesktopSessionRecovery } from "../../src/client/DesktopSessionRecovery";
@@ -27,6 +29,99 @@ beforeEach(async () => {
   setBootstrapConfig();
   await logOut();
   vi.restoreAllMocks();
+});
+
+// sessionUncertain: "couldn't check" vs "signed out" for the end screen's
+// Buy. A Steam exchange settles it like /auth/refresh does.
+describe("Steam login: sessionUncertain", () => {
+  const onSteam = () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: true,
+      ticket: "ticket123",
+    });
+  };
+  const answer = (status: number) =>
+    vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response("{}", { status }));
+
+  it.each([500, 503, 429])(
+    "a Steam exchange that gets a %i: uncertain",
+    async (status) => {
+      onSteam();
+      answer(status);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+    },
+  );
+
+  it("a Steam exchange that never reaches the server: uncertain", async () => {
+    onSteam();
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new TypeError("Failed to fetch"),
+    );
+    expect(await userAuth()).toBe(false);
+    expect(sessionUncertain()).toBe(true);
+  });
+
+  const noTicket = (reason: SteamTicketFailure) =>
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({ ok: false, reason });
+
+  // Only the shell declining to bind this Steam id says anything about the
+  // session. A hung native call, an IPC race, Steam's client being down or
+  // our API unreachable from the shell settle nothing.
+  it.each(["api-unreachable", "timeout", "error", "unavailable"] as const)(
+    "no ticket (%s): uncertain",
+    async (reason) => {
+      onSteam();
+      noTicket(reason);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+    },
+  );
+
+  it.each(["needs-account", "ticket-rejected"] as const)(
+    "no ticket (%s) after an uncertain one: settled, signed out",
+    async (reason) => {
+      onSteam();
+      noTicket("timeout");
+      await userAuth();
+      expect(sessionUncertain()).toBe(true);
+      noTicket(reason);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(false);
+    },
+  );
+
+  it("a Steam login that succeeds after an unreachable one: settled", async () => {
+    onSteam();
+    answer(503);
+    await userAuth();
+    expect(sessionUncertain()).toBe(true);
+    vi.mocked(globalThis.fetch).mockRestore();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jwt: "not-a-real-jwt", expiresIn: 900 }), {
+        status: 200,
+      }),
+    );
+    await userAuth();
+    expect(sessionUncertain()).toBe(false);
+  });
+
+  it("a Steam ticket rejected (401) after an unreachable one: settled", async () => {
+    onSteam();
+    answer(503);
+    await userAuth();
+    expect(sessionUncertain()).toBe(true);
+    vi.mocked(globalThis.fetch).mockRestore();
+    answer(401);
+    expect(await userAuth()).toBe(false);
+    expect(sessionUncertain()).toBe(false);
+  });
 });
 
 describe("Steam login", () => {

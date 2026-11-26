@@ -6,7 +6,7 @@ interface IconFile {
   file: string;
   /** Drawn as an <img> to keep its colours; other icons take currentColor. */
   multicolor?: boolean;
-  /** The file is 100×125 with the artist's credit in the bottom 25 units. */
+  /** A 4:5 file whose art is its top square. */
   crop?: boolean;
 }
 
@@ -14,6 +14,7 @@ export const OF_ICONS = {
   close: { file: "XIcon.svg", crop: true },
   back: { file: "BackIconWhite.svg" },
   check: { file: "CheckIconWhite.svg" },
+  focus: { file: "FocusIconWhite.svg" },
   "chevron-right": { file: "ChevronRightIconWhite.svg" },
   plus: { file: "PlusIconWhite.svg" },
   hourglass: { file: "HourglassIconWhite.svg" },
@@ -27,12 +28,21 @@ export const OF_ICONS = {
   land: { file: "ClaimIcon.svg" },
   leaderboard: { file: "LeaderboardIconSolidWhite.svg" },
   team: { file: "TeamIconSolidWhite.svg" },
+  "leaderboard-outline": { file: "LeaderboardIconRegularWhite.svg" },
+  "team-outline": { file: "TeamIconRegularWhite.svg" },
+  columns: { file: "ColumnsIconWhite.svg" },
+  clan: { file: "GuildIconWhite.svg" },
+  player: { file: "ProfileIcon.svg" },
+  "player-type": { file: "PlayerTypeIconWhite.svg" },
   gold: { file: "GoldCoinIcon.svg", multicolor: true },
   troops: { file: "SoldierIcon.svg" },
+  max: { file: "UpperLimitIcon.svg" },
   traitor: { file: "TraitorIcon.svg" },
   trade: { file: "TradingIconWhite.svg" },
   embargo: { file: "StopIconWhite.svg" },
+  disconnected: { file: "DisconnectedIcon.svg" },
   alliance: { file: "AllianceIconWhite.svg" },
+  "alliance-request": { file: "AllianceRequestWhiteIcon.svg" },
   "break-alliance": { file: "TraitorIconWhite.svg" },
   chat: { file: "ChatIconWhite.svg" },
   emoji: { file: "EmojiIconWhite.svg" },
@@ -44,6 +54,21 @@ export const OF_ICONS = {
   nation: { file: "CityIconWhite.svg" },
   tribe: { file: "SwordIconWhite.svg" },
   swap: { file: "SwapIconWhite.svg" },
+  sword: { file: "SwordIconWhite.svg" },
+  explosion: { file: "ExplosionIconWhite.svg" },
+  info: { file: "InfoIconRegularWhite.svg" },
+  warning: { file: "WarningIconWhite.svg" },
+  lock: { file: "LockIconWhite.svg" },
+  city: { file: "CityIconWhite.svg" },
+  factory: { file: "FactoryIconWhite.svg" },
+  port: { file: "PortIcon.svg" },
+  "missile-silo": { file: "MissileSiloIconWhite.svg" },
+  "sam-launcher": { file: "SamLauncherIconWhite.svg" },
+  warship: { file: "BattleshipIconWhite.svg" },
+  boat: { file: "BoatIconWhite.svg" },
+  "atom-bomb": { file: "NukeIconWhite.svg" },
+  "hydrogen-bomb": { file: "MushroomCloudIconWhite.svg", crop: true },
+  mirv: { file: "MIRVIcon.svg" },
 } as const satisfies Record<string, IconFile>;
 
 export type OfIconName = keyof typeof OF_ICONS;
@@ -82,7 +107,8 @@ export class OfIcon extends LitElement {
       />`;
     }
     // The mask uses the file's alpha, so its fill colour does not matter. A
-    // cropped file is sized to the box's width and the credit falls below it.
+    // cropped file is sized to the box's width, so what is under its top
+    // square falls below the box.
     const mask = `url('${src}') ${icon.crop ? "top / 100% 125%" : "center / contain"} no-repeat`;
     return html`<span
       aria-hidden="true"

@@ -1,14 +1,23 @@
-import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { PlayerCard } from "@openfront/shared/PlayerCardSchemas";
-import { WireGameStartInfo } from "@openfront/shared/WireSchemas";
+import {
+  GameInfo,
+  ServerMessage,
+  WireGameStartInfo,
+} from "@openfront/shared/WireSchemas";
+import {
+  decodeServerMessage,
+  encodeServerMessage,
+} from "@openfront/shared/ZbinWire";
 import { describe, expect, it } from "vitest";
 import { NameVisibility } from "../../src/server/NameVisibility";
 import {
   FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
 } from "../../src/server/Privilege";
-import { makeClient } from "../util/GameServerHarness";
+import { makeClient, makeGame } from "../util/GameServerHarness";
 
 const item = { product: null, rarity: "epic" };
 const cosmetics = {
@@ -185,5 +194,116 @@ describe("startInfoFor: the card follows name visibility", () => {
       info,
     );
     expect(cardOf(view, "bob")).toEqual(card);
+  });
+});
+
+// The lobby roster carries the equipped card background's cosmetic name
+// (ClientInfo.cardBackground), read from the card resolved at join — the same
+// /users/@me lookup as levelBadge (Worker.ts -> resolveCard -> Client.card ->
+// NameVisibility.lobbyClients). Never from the join message.
+describe("lobby roster: the card background", () => {
+  const byId = (info: GameInfo, id: string) =>
+    info.clients!.find((c) => c.clientID === id)!;
+
+  function lobby(config: Partial<GameConfig> = {}, impl = checker) {
+    const game = makeGame({
+      config: { gameType: GameType.Private, ...config },
+    });
+    const join = (id: string, flares: string[], r = refs) =>
+      game.joinClient(
+        makeClient({
+          clientID: id,
+          username: `N_${id}`,
+          publicId: `${id}-pub`,
+          card: impl.resolveCard(flares, r, `${id}-pub`),
+        }),
+      );
+    join("owner001", ALL);
+    // Owns the background but not the card.
+    join(
+      "nocard01",
+      ALL.filter((f) => !f.startsWith("playerCard:")),
+    );
+    // Owns the card but not the background.
+    join(
+      "nobg0001",
+      ALL.filter((f) => f !== "cardBackground:bg_pacific"),
+    );
+    // Owns the card, nothing equipped.
+    join("bare0001", ["playerCard:standard"], {
+      ...refs,
+      background: undefined,
+    } as never);
+    // A guest: no /users/@me lookup, so no card.
+    game.joinClient(
+      makeClient({ clientID: "guest001", username: "Guest", publicId: "g" }),
+    );
+    return game;
+  }
+
+  it("stamps only a card owner who owns the background", () => {
+    const info = lobby().gameInfo("guest001");
+    expect(byId(info, "owner001").cardBackground).toBe("bg_pacific");
+    for (const id of ["nocard01", "nobg0001", "bare0001", "guest001"]) {
+      expect(byId(info, id).cardBackground).toBeUndefined();
+    }
+  });
+
+  it("catalogue unavailable at join (fail-open checker): no background", () => {
+    const info = lobby({}, new FailOpenPrivilegeChecker() as never).gameInfo(
+      "guest001",
+    );
+    expect(byId(info, "owner001").cardBackground).toBeUndefined();
+  });
+
+  it("never comes from the join message's cosmetics", () => {
+    const game = makeGame({ config: { gameType: GameType.Private } });
+    game.joinClient(
+      makeClient({
+        clientID: "liar0001",
+        username: "Liar",
+        publicId: "liar-pub",
+        cosmetics: { cardBackground: "bg_pacific" } as never,
+      }),
+    );
+    const info = game.gameInfo("liar0001");
+    expect(byId(info, "liar0001").cardBackground).toBeUndefined();
+  });
+
+  it("anonymised entries never carry it; the player still sees their own", () => {
+    const game = lobby({ anonymizeNames: true });
+    const forGuest = game.gameInfo("guest001");
+    expect(byId(forGuest, "owner001").username).not.toBe("N_owner001");
+    expect(byId(forGuest, "owner001").cardBackground).toBeUndefined();
+    const forOwner = game.gameInfo("owner001");
+    expect(byId(forOwner, "owner001").cardBackground).toBe("bg_pacific");
+    // The public HTTP view (no viewer) anonymises everyone.
+    for (const c of game.gameInfo().clients!) {
+      expect(c.cardBackground).toBeUndefined();
+    }
+  });
+
+  it("a viewer granted real names sees it", () => {
+    const info = lobby({
+      anonymizeNames: true,
+      nameReveals: ["guest001"],
+    }).gameInfo("guest001");
+    expect(byId(info, "owner001").cardBackground).toBe("bg_pacific");
+  });
+
+  it("survives the lobby_info encoding end to end", () => {
+    const game = lobby();
+    const msg: ServerMessage = {
+      type: "lobby_info",
+      lobby: game.gameInfo("guest001"),
+      myClientID: "guest001",
+    };
+    const back = decodeServerMessage(
+      encodeServerMessage(msg, undefined),
+      undefined,
+    );
+    if (back.type !== "lobby_info") throw new Error("wrong type");
+    expect(byId(back.lobby, "owner001").cardBackground).toBe("bg_pacific");
+    expect(byId(back.lobby, "nobg0001")).not.toHaveProperty("cardBackground");
   });
 });
