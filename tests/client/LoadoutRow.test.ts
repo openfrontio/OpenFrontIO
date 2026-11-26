@@ -312,6 +312,7 @@ describe("promoChoice", () => {
     canWishlist: true,
     rand: 0.9,
     hasLooks: false,
+    canSell: true,
   };
   it("tutorial still wins in first 3 games", () => {
     expect(promoChoice({ ...base, gamesPlayed: 2 })).toBe("tutorial");
@@ -335,6 +336,17 @@ describe("promoChoice", () => {
     const iframe = { ...base, inIframe: true, hasLooks: true };
     expect(promoChoice(iframe)).toBe("steam");
     expect(promoChoice({ ...iframe, canWishlist: false })).toBe("discord");
+  });
+  it("promotions hidden: never a buy box, the other promos as usual", () => {
+    // Steam, so no wishlist either.
+    const hidden = { ...base, canSell: false, canWishlist: false };
+    expect(promoChoice(hidden)).toBe("discord");
+    expect(promoChoice({ ...hidden, hasLooks: true })).toBe("discord");
+    expect(promoChoice({ ...hidden, rand: 0.1 })).toBe("discord");
+    expect(promoChoice({ ...hidden, gamesPlayed: 2 })).toBe("tutorial");
+    expect(promoChoice({ ...hidden, hasLooks: true, gamesPlayed: 2 })).toBe(
+      "tutorial",
+    );
   });
 });
 

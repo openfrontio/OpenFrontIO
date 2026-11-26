@@ -66,6 +66,7 @@ import {
   type ResolvedCosmetic,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
+import { promotionsHidden } from "../../Promotions";
 import { COSMETICS_CHANGED } from "../../Experiments";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
@@ -749,6 +750,7 @@ export class WinModal extends LitElement implements Controller {
       canWishlist: !isDesktopShell(),
       rand: this.rand,
       hasLooks: looks.length > 0,
+      canSell: !promotionsHidden(this.userSettings),
     });
   }
 

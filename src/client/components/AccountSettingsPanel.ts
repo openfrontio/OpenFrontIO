@@ -222,7 +222,8 @@ export class AccountSettingsPanel extends LitElement {
   }
 
   // Store: in the Steam app only, players can turn the sale banners (sales and
-  // flash deals) off, on the home screen and in the store. On = shown, like
+  // flash deals) off, on the home screen and in the store — and, with them,
+  // the end-of-game buy box (Promotions.ts). On = shown, like
   // the Privacy rows. Not offered anywhere else, where banners always show.
   private renderStoreCard(): TemplateResult | typeof nothing {
     if (!isSteamShell()) return nothing;

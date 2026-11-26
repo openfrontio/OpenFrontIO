@@ -115,8 +115,8 @@
     "reward_monthly_bonus": "Monthly subscription bonus",
     "reward_prestige": "Prestige reward",
     "reward_signup_bonus": "Subscription signup bonus",
-    "sale_banners_desc": "Sale and flash deal banners on the home screen and at the top of the store. Turning them off doesn't change any prices.",
-    "sale_banners_title": "Show sale banners",
+    "sale_banners_desc": "Sale and flash deal banners on the home screen and in the store, and cosmetics suggestions after each game. The Store itself always stays. Turning them off doesn't change any prices.",
+    "sale_banners_title": "Show store promotions",
     "search_visibility_desc": "Your public profile page can appear in Google and other search results. Turn this off to keep it out of search; search engines can take a while to drop a page they have already indexed. Anyone with the link can still open it.",
     "search_visibility_failed": "Couldn't update your search setting. Please try again.",
     "search_visibility_title": "Show my profile in search engines",
@@ -2831,6 +2831,12 @@
     "xp_plus": "+{xp}",
     "xp_progress": "{current} / {next} XP",
     "xp_total": "+{xp} XP"
+  },
+  "promotions_prompt": {
+    "body": "You can turn off sale banners and the cosmetics suggestions after each game. The Store stays right where it is whenever you want it, though you might miss a sale. You can change this any time in Account Settings.",
+    "heading": "Turn off store promotions?",
+    "hide": "Turn them off",
+    "keep": "Keep them"
   },
   "public_game_modifier": {
     "compact_map": "Compact Map",

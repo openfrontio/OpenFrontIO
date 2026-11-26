@@ -59,6 +59,8 @@ function boot(
     claimStringsReady: true,
     reportThanksDue: false,
     reportThanksStringsReady: true,
+    promotionsPromptDue: false,
+    promotionsPromptStringsReady: true,
     giftEndingDue: false,
     giftEndingStringsReady: true,
     renewalPushedDue: false,
@@ -453,6 +455,8 @@ describe("runBootInterrupt", () => {
         calls.grantStored.push(update(context.grantStore)),
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      markPromotionsPromptSeen: () => {},
+      setHidePromotions: () => {},
       now: () => now,
       ...overrides,
     };
@@ -804,6 +808,8 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     claimStringsReady: claimPromptStringsReady(unready),
     reportThanksDue: false,
     reportThanksStringsReady: false,
+    promotionsPromptDue: false,
+    promotionsPromptStringsReady: true,
     giftEndingDue: false,
     giftEndingStringsReady: false,
     renewalPushedDue: false,
@@ -839,6 +845,8 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
         markMessageSeen: () => {},
+        markPromotionsPromptSeen: () => {},
+        setHidePromotions: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -960,6 +968,8 @@ describe("running the Steam grant notices", () => {
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      markPromotionsPromptSeen: () => {},
+      setHidePromotions: () => {},
       now: () => now,
     };
     return { base, calls };
@@ -1124,6 +1134,8 @@ describe("an interrupt the player never answered", () => {
         calls.grantStored.push(update(context.grantStore)),
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      markPromotionsPromptSeen: () => {},
+      setHidePromotions: () => {},
       now: () => now,
     };
     return { base, calls, settle: open.settle };
@@ -1278,6 +1290,8 @@ describe("running the report thank-you", () => {
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
         markMessageSeen: () => {},
+        markPromotionsPromptSeen: () => {},
+        setHidePromotions: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -1311,6 +1325,8 @@ describe("running the report thank-you", () => {
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
         markMessageSeen: (kind) => events.push(`seen ${kind}`),
+        markPromotionsPromptSeen: () => {},
+        setHidePromotions: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -1348,6 +1364,8 @@ function quietPorts(overrides: Partial<BootInterruptPorts> = {}) {
     updateSteamGrant: () => {},
     markNoticeSeen: () => {},
     markMessageSeen: (kind) => calls.seen.push(kind),
+    markPromotionsPromptSeen: () => {},
+    setHidePromotions: () => {},
     now: () => 1_757_000_000_000,
     ...overrides,
   };
@@ -1639,5 +1657,86 @@ describe("the renewal notice", () => {
     expect(calls.alerted[0].body).toBe(
       `t(${BOOT_INTERRUPT_KEYS.renewalPushedGift}) t(${BOOT_INTERRUPT_KEYS.renewalPushedRunsUntil})`,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// "Hide OpenFront promotions?" — the one-time Steam prompt
+// ---------------------------------------------------------------------------
+
+describe("promotions prompt", () => {
+  const steamBoot = (overrides: Partial<BootInterruptInputs> = {}) =>
+    boot({
+      // Nothing else wants this boot.
+      claimPromptDue: false,
+      promotionsPromptDue: true,
+      ...overrides,
+    });
+
+  it("takes a boot nothing else wants", () => {
+    expect(nextBootInterrupt(steamBoot())).toBe("promotions-prompt");
+  });
+
+  it("goes ahead of rewards, which would otherwise starve it", () => {
+    expect(nextBootInterrupt(steamBoot({ rewardCount: 2 }))).toBe(
+      "promotions-prompt",
+    );
+  });
+
+  it("yields to anything with more riding on it", () => {
+    expect(nextBootInterrupt(steamBoot({ lapseNoticeDue: true }))).toBe(
+      "lapse-notice",
+    );
+    expect(
+      nextBootInterrupt(
+        steamBoot({ grantEndedDue: true, grantStringsReady: true }),
+      ),
+    ).toBe("grant-ended");
+  });
+
+  it("never over a deep link, and never without its strings", () => {
+    expect(nextBootInterrupt(steamBoot({ cleanHomepage: false }))).toBeNull();
+    expect(
+      nextBootInterrupt(
+        steamBoot({ promotionsPromptStringsReady: false, rewardCount: 1 }),
+      ),
+    ).toBe("rewards");
+  });
+
+  function promoPorts(answer: boolean) {
+    const events: string[] = [];
+    const { ports } = quietPorts({
+      confirm: async (body, heading, confirmText, cancelText) => {
+        events.push(`confirm ${body}|${heading}|${confirmText}|${cancelText}`);
+        return answer;
+      },
+      markPromotionsPromptSeen: () => events.push("seen"),
+      setHidePromotions: (hide) => events.push(`hide ${hide}`),
+    });
+    return { ports, events };
+  }
+  const context = {
+    claimStore: {},
+    grantStore: {},
+    publicId: "me",
+    steamNotice: null,
+    renewalPushed: null,
+  };
+
+  it("records itself before asking, then hides on yes", async () => {
+    const { ports, events } = promoPorts(true);
+    await runBootInterrupt("promotions-prompt", context, ports);
+    expect(events).toEqual([
+      "seen",
+      "confirm t(promotions_prompt.body)|t(promotions_prompt.heading)|" +
+        "t(promotions_prompt.hide)|t(promotions_prompt.keep)",
+      "hide true",
+    ]);
+  });
+
+  it("a no is still an answer: recorded, nothing changed", async () => {
+    const { ports, events } = promoPorts(false);
+    await runBootInterrupt("promotions-prompt", context, ports);
+    expect(events).toEqual(["seen", expect.stringMatching(/^confirm /)]);
   });
 });

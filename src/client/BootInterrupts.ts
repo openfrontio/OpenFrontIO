@@ -22,6 +22,7 @@ import {
 } from "@openfront/shared/ApiSchemas";
 import type { DesktopUpdateState } from "./DesktopShell";
 import { lapseNoticeDue } from "./PlayerName";
+import { PROMOTIONS_PROMPT_KEYS } from "./Promotions";
 import {
   steamGrantEndedShown,
   steamGrantEndingShown,
@@ -48,6 +49,7 @@ export type BootInterrupt =
   | "lapse-notice"
   | "grant-ended"
   | "gift-ending"
+  | "promotions-prompt"
   | "rewards"
   | "report-thanks";
 
@@ -110,6 +112,13 @@ export interface BootInterruptInputs {
   reportThanksDue: boolean;
   /** reportThanksStringsReady(...), as grantStringsReady. */
   reportThanksStringsReady: boolean;
+  /**
+   * promotionsPromptDue(...) (Promotions.ts) — a Steam device that has not
+   * yet been asked whether to turn store promotions off.
+   */
+  promotionsPromptDue: boolean;
+  /** promotionsPromptStringsReady(...), as grantStringsReady. */
+  promotionsPromptStringsReady: boolean;
 }
 
 /**
@@ -322,6 +331,12 @@ export function nextBootInterrupt(
 
   if (inputs.giftEndingDue && inputs.giftEndingStringsReady)
     return "gift-ending";
+
+  // Above rewards, which re-fires every boot while anything is claimable and
+  // so would otherwise starve a once-per-device question. Below everything
+  // else: nothing is at risk, and an unasked prompt keeps for the next launch.
+  if (inputs.promotionsPromptDue && inputs.promotionsPromptStringsReady)
+    return "promotions-prompt";
 
   if (inputs.rewardCount > 0) return "rewards";
 
@@ -680,7 +695,12 @@ export interface BootInterruptPorts {
   /** translateText. Echoes the key back until the language files land. */
   translate(key: string, params?: Record<string, string | number>): string;
   /** Opens a confirm dialog; resolves true when the player accepts. */
-  confirm(body: string, heading: string, confirmText: string): Promise<boolean>;
+  confirm(
+    body: string,
+    heading: string,
+    confirmText: string,
+    cancelText?: string,
+  ): Promise<boolean>;
   /** Opens a close-only dialog; resolves when dismissed. */
   alert(body: string, heading: string): Promise<void>;
   /** The display name of a subscription tier id (translateCosmetic). */
@@ -703,6 +723,10 @@ export interface BootInterruptPorts {
   markNoticeSeen(notice: string): void;
   /** POST /users/@me/messages/seen. Fire and forget. */
   markMessageSeen(kind: string): void;
+  /** UserSettings.markPromotionsPromptSeen. */
+  markPromotionsPromptSeen(): void;
+  /** UserSettings.setHideSaleBanners: turns store promotions off. */
+  setHidePromotions(hide: boolean): void;
   now(): number;
 }
 
@@ -966,6 +990,20 @@ async function runInterrupt(
     }
     case "lapse-notice":
       return;
+    case "promotions-prompt": {
+      // Recorded before the dialog opens, like the claim prompt: once per
+      // device whichever way they answer, and the promise only settles on
+      // dismissal. Declining (or closing) keeps promotions as they are.
+      ports.markPromotionsPromptSeen();
+      const hide = await ports.confirm(
+        ports.translate(PROMOTIONS_PROMPT_KEYS.body),
+        ports.translate(PROMOTIONS_PROMPT_KEYS.heading),
+        ports.translate(PROMOTIONS_PROMPT_KEYS.confirm),
+        ports.translate(PROMOTIONS_PROMPT_KEYS.cancel),
+      );
+      if (hide) ports.setHidePromotions(true);
+      return;
+    }
     case "rewards":
       ports.openRewards();
       return;
