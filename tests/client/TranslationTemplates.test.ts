@@ -7,11 +7,12 @@ import { translationTemplates } from "../../src/client/Utils";
 function langSelector(
   translations: Record<string, string> | undefined,
   defaultTranslations: Record<string, string>,
+  currentLang = "fr",
 ) {
   const el = Object.assign(document.createElement("lang-selector"), {
     translations,
     defaultTranslations,
-    currentLang: "fr",
+    currentLang,
   });
   document.body.appendChild(el);
   return el;
@@ -32,6 +33,22 @@ describe("translationTemplates", () => {
     expect(translationTemplates("clan_map.")).toEqual({
       claim_land: "Revendiquer",
       tip_claim: "Claim it for {troops} troops",
+    });
+  });
+
+  it("in debug mode gives each key's own full name, as translateText shows it", () => {
+    langSelector(
+      undefined,
+      {
+        "clan_map.claim_land": "Claim land",
+        "clan_map.tip_claim": "Claim it for {troops} troops",
+        "other.key": "y",
+      },
+      "debug",
+    );
+    expect(translationTemplates("clan_map.")).toEqual({
+      claim_land: "clan_map.claim_land",
+      tip_claim: "clan_map.tip_claim",
     });
   });
 });
