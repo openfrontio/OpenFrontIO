@@ -5,7 +5,7 @@ import {
   type Cosmetics,
   type PlayerCardItem,
 } from "@openfront/shared/CosmeticSchemas";
-import { translateText } from "../../Utils";
+import { translateText } from "../../Translate";
 
 // The player card cosmetics, as the client lists and sells them. Titles and
 // taunts are held back: their schemas and catalogue entries stay, but the

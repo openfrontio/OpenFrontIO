@@ -234,6 +234,9 @@
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
   },
+  "card_preview": {
+    "sample_name": "Your Name"
+  },
   "change_username_modal": {
     "title": "Change Username",
     "unavailable": "Username management isn't available on this account yet."

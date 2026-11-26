@@ -121,9 +121,17 @@ export class PreviewAnimationTicker {
   private detonatedNukes = new Set<number>();
 
   constructor(
-    private readonly config: PreviewAnimationConfig,
+    private config: PreviewAnimationConfig,
     private readonly startTime = performance.now(),
   ) {}
+
+  /**
+   * Swap the spiral settings without restarting: the clock and the
+   * detonation state carry on, so a trail in flight keeps flying.
+   */
+  setSpiralParams(spiralParams: SpiralParams | null): void {
+    this.config = { ...this.config, spiralParams };
+  }
 
   private getNukeCycleDuration(): number {
     const expDur = this.config.explosionDurationSec ?? 3.5;

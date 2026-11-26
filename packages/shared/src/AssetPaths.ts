@@ -44,6 +44,24 @@ export function normalizeAssetPath(path: string): string {
   return normalizedPath;
 }
 
+// blob: and data: URLs carry no "//" but are just as final: a blob: URL is a
+// file the page itself holds (an artist's dropped image in the dashboard's
+// card preview), and a data: URL is the image itself. Only the cosmetic
+// preview package needs them, so they pass through only once it opts in. In
+// the game, a cosmetic's url comes from the catalogue, and the catalogue must
+// never be able to point every player at an inline image: there they are
+// treated as paths, as they always were.
+let pageUrlsAllowed = false;
+
+/**
+ * Pass blob: and data: URLs through buildAssetUrl() unchanged. Only the
+ * cosmetic preview package calls this (configurePreviewAssets()); the game
+ * never does.
+ */
+export function allowPageAssetUrls(allowed: boolean = true): void {
+  pageUrlsAllowed = allowed;
+}
+
 // Any scheme, not just http(s): the desktop shell resolves assets against an
 // absolute app://openfront base (its cdnBase), and an already-resolved URL
 // can be handed back to assetUrl() (e.g. WebGLFrameBuilder re-resolves
@@ -53,7 +71,10 @@ export function normalizeAssetPath(path: string): string {
 // "/app%3A/openfront/_assets/..." — a 404, and a country flag that silently
 // never rendered in game on desktop.
 function isAbsoluteUrl(path: string): boolean {
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(path);
+  return (
+    /^[a-z][a-z0-9+.-]*:\/\//i.test(path) ||
+    (pageUrlsAllowed && /^(?:blob|data):/i.test(path))
+  );
 }
 
 export function buildAssetUrl(

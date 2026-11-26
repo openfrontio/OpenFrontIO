@@ -11,7 +11,7 @@ import {
   prestigeTier,
   TIER_COLORS,
 } from "../Progression";
-import { translateText } from "../Utils";
+import { translateText } from "../Translate";
 import {
   badgeArrived,
   dequeueBadge,

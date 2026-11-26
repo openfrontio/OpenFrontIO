@@ -1,7 +1,7 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { translateText } from "../../Utils";
+import { translateText } from "../../Translate";
 import { levelBadgeAccent } from "../LevelBadge";
 import "./CardBackground";
 import { formatTracker, type PlayerCardView } from "./PlayerCardModel";

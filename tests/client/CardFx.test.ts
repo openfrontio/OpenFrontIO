@@ -4,7 +4,9 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CardBackground } from "../../src/client/components/card/CardBackground";
 import {
+  anyCardFxStopped,
   cardFxStopped,
+  onCardFxSessionStop,
   resetCardFxSession,
   SHIMMER_BAND_WIDTH,
   shimmerBand,
@@ -486,6 +488,35 @@ describe("<card-background> effect layers", () => {
     expect(cardFxStopped("account")).toBe(false);
     expect(layerEls(account)).toHaveLength(2);
     expect(rafCallbacks.size).toBe(1);
+  });
+
+  it("tells listeners which surface slow frames stopped, until unsubscribed", async () => {
+    const heard = vi.fn();
+    const unsubscribe = onCardFxSessionStop(heard);
+    await running(NEON, "end");
+    let now = frames(0, 1000, 16);
+    now = frames(now + 70, now + 6000, 70);
+    expect(cardFxStopped("end")).toBe(true);
+    expect(anyCardFxStopped()).toBe(true);
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenLastCalledWith("end");
+
+    // After a restart, the next stop is heard again; after unsubscribing,
+    // nothing is.
+    resetCardFxSession();
+    expect(anyCardFxStopped()).toBe(false);
+    await running(STORM, "account");
+    now = frames(now + 16, now + 1000, 16);
+    now = frames(now + 70, now + 6000, 70);
+    expect(heard).toHaveBeenCalledTimes(2);
+    expect(heard).toHaveBeenLastCalledWith("account");
+    unsubscribe();
+    resetCardFxSession();
+    await running(NEON, "panel");
+    now = frames(now + 16, now + 1000, 16);
+    frames(now + 70, now + 6000, 70);
+    expect(cardFxStopped("panel")).toBe(true);
+    expect(heard).toHaveBeenCalledTimes(2);
   });
 
   it("stops a ~40 ms device that also hitches over 250 ms every 1.2 s", async () => {

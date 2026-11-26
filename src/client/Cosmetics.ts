@@ -57,6 +57,7 @@ import {
   hasPendingPurchase,
   peekPendingPurchase,
 } from "./components/inventory/PendingEquip";
+import { getCachedCosmetics, setCachedCosmetics } from "./CosmeticsCache";
 import { isDesktopShell } from "./DesktopShell";
 import {
   COSMETICS_CHANGED,
@@ -95,7 +96,6 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
-let __cosmeticsCache: Cosmetics | null = null;
 let __cosmeticsFetchedAt = 0;
 /**
  * What one catalog request was fetched for (store experiments,
@@ -132,14 +132,9 @@ export const EXPERIMENTS_WAIT_MS = 1500;
 /** How long a fetched catalog is trusted before the store refetches it. */
 export const COSMETICS_STALE_MS = 60_000;
 
-/**
- * Synchronous accessor for the most recently resolved cosmetics. Returns null
- * before the first successful `fetchCosmetics()` call. Useful when a code path
- * cannot await (e.g. WebGL per-frame sync).
- */
-export function getCachedCosmetics(): Cosmetics | null {
-  return __cosmeticsCache;
-}
+// The synchronous accessor lives in CosmeticsCache.ts, so the renderer can
+// read the catalogue without importing this file's store and payment code.
+export { getCachedCosmetics };
 
 export type PaymentMethod = "dollar" | "hard" | "soft";
 
@@ -1586,7 +1581,7 @@ export function activeSale(
  */
 export function refreshStaleCosmetics(now: number = Date.now()): boolean {
   if (
-    __cosmeticsCache === null ||
+    getCachedCosmetics() === null ||
     now - __cosmeticsFetchedAt <= COSMETICS_STALE_MS
   ) {
     return false;
@@ -1601,7 +1596,8 @@ export function refreshStaleCosmetics(now: number = Date.now()): boolean {
  */
 export function cosmeticsCacheIsStale(now: number = Date.now()): boolean {
   return (
-    __cosmeticsCache === null || now - __cosmeticsFetchedAt > COSMETICS_STALE_MS
+    getCachedCosmetics() === null ||
+    now - __cosmeticsFetchedAt > COSMETICS_STALE_MS
   );
 }
 
@@ -1666,7 +1662,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       const patternKeys = Object.keys(result.data.patterns).sort();
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
-      __cosmeticsCache = result.data;
+      setCachedCosmetics(result.data);
       __cosmeticsFetchedAt = Date.now();
       tag.landed = true;
       const generation = tag.generation ?? null;
@@ -1711,7 +1707,7 @@ export async function reloadCosmetics(): Promise<Cosmetics | null> {
   const fresh = await request;
   // Only the catalog now in use: a reload that a newer one overtook hands its
   // data back but must not replace what the newer one put on screen.
-  if (fresh !== null && fresh === __cosmeticsCache) announceCatalog(fresh);
+  if (fresh !== null && fresh === getCachedCosmetics()) announceCatalog(fresh);
   return fresh;
 }
 

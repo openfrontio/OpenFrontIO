@@ -36,6 +36,11 @@ vi.mock("../../src/client/Utils", () => ({
   copyToClipboard: vi.fn(),
   showToast: vi.fn(),
 }));
+// The card and badge components take translateText from Translate.ts.
+vi.mock("../../src/client/Translate", () => ({
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+}));
 
 vi.mock("../../src/client/Api", () => ({
   getUserMe,
