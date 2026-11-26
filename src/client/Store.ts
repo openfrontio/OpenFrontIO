@@ -424,6 +424,9 @@ export class StoreModal extends BaseModal {
     // a store reattached while open would hold it for good.
     this.dealRollover = null;
     this.shownFlashPromotionId = null;
+    // Neither field is reactive: redraw so a reattached store doesn't keep
+    // the placeholder's markup.
+    this.requestUpdate();
     super.disconnectedCallback();
   }
 
