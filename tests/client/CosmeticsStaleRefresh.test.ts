@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   COSMETICS_STALE_MS,
+  cosmeticsCacheIsStale,
   fetchCosmetics,
+  getCachedCosmetics,
   invalidateCosmetics,
   refreshStaleCosmetics,
 } from "../../src/client/Cosmetics";
@@ -47,5 +49,33 @@ describe("refreshStaleCosmetics", () => {
     );
     await fetchCosmetics();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the newer catalog when an older fetch lands last", async () => {
+    const body = { patterns: {}, flags: {} };
+    let resolveOlder: (body: unknown) => void = () => {};
+    fetchMock.mockImplementationOnce(async () => ({
+      ok: true,
+      status: 200,
+      json: () => new Promise((r) => (resolveOlder = r)),
+    }));
+    fetchMock.mockImplementationOnce(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => body,
+    }));
+    const first = fetchCosmetics();
+    invalidateCosmetics();
+    const newer = await fetchCosmetics();
+    expect(newer).not.toBeNull();
+    expect(getCachedCosmetics()).toBe(newer);
+
+    resolveOlder(body);
+    // The older caller still gets its answer, but the cache keeps the newer.
+    const older = await first;
+    expect(older).not.toBeNull();
+    expect(older).not.toBe(newer);
+    expect(getCachedCosmetics()).toBe(newer);
+    expect(cosmeticsCacheIsStale()).toBe(false);
   });
 });
