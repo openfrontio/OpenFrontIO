@@ -1,6 +1,6 @@
 import { html, nothing, TemplateResult } from "lit";
 import { clampPrestige } from "../../Progression";
-import { translateText } from "../../Utils";
+import { translateText } from "../../Translate";
 import { splitAccountUsername, usernameText } from "../ui/UsernameText";
 
 // Who a player is, as the profile card shows it: the clan tag, the name and

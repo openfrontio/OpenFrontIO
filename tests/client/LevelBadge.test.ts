@@ -5,6 +5,11 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
+// The card and badge components take translateText from Translate.ts.
+vi.mock("../../src/client/Translate", () => ({
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+}));
 
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import {

@@ -4,6 +4,11 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
+// The card and badge components take translateText from Translate.ts.
+vi.mock("../../src/client/Translate", () => ({
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+}));
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardBackground } from "../../src/client/components/card/CardBackground";
 import { PlayerCard } from "../../src/client/components/card/PlayerCard";

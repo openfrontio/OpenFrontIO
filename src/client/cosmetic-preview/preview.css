@@ -1,0 +1,21 @@
+/*
+ * The utilities the previews use, and nothing else: no preflight, so the
+ * host app's own base styles are left alone.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* The game's own colours the card uses (src/client/styles.css). */
+@theme {
+  --color-aquarius: #3fa9f5;
+}
+
+@source "../components/cosmetics/CosmeticRenderCanvas.ts";
+@source "./preview.ts";
+/* Card backgrounds: the player card, its background and what it renders. */
+@source "./card.ts";
+@source "../components/card/PlayerCard.ts";
+@source "../components/card/CardBackground.ts";
+@source "../components/card/ProfileIdentity.ts";
+@source "../components/LevelBadge.ts";
+@source "../components/ui/UsernameText.ts";

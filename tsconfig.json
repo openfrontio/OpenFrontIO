@@ -18,7 +18,11 @@
     "scripts/replay",
     "scripts/split-packages",
     "scripts/gen-maps",
-    "vite.config.ts"
+    "vite.config.ts",
+    "vite.cosmetic-preview.config.ts",
+    "scripts/buildCosmeticPreview.ts",
+    "scripts/cosmeticPreviewTypes.ts",
+    "scripts/cosmeticPreviewVersion.ts"
   ],
   "exclude": [
     "node_modules",

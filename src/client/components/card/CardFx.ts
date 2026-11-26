@@ -225,14 +225,35 @@ export function cardFxStopped(surface = DEFAULT_SURFACE): boolean {
   return stoppedSurfaces.has(surface);
 }
 
-// Tests only: forget every slow-frame stop.
+// Forget every slow-frame stop. The game never does (a stop lasts the
+// session); tests do, and so does the cosmetic-preview package, whose
+// previewer lets an artist restart after one slow moment. Cards already
+// stopped stay still until they are mounted again.
 export function resetCardFxSession(): void {
   stoppedSurfaces.clear();
+}
+
+// Whether slow frames stopped animation on any surface. The game asks per
+// surface; the cosmetic-preview package, which shows one card, asks this.
+export function anyCardFxStopped(): boolean {
+  return stoppedSurfaces.size > 0;
+}
+
+const stopListeners = new Set<(surface: string) => void>();
+
+// Calls `cb` with the surface each time slow frames stop one. Returns the
+// unsubscribe. The game doesn't listen; the cosmetic-preview package does.
+export function onCardFxSessionStop(cb: (surface: string) => void): () => void {
+  stopListeners.add(cb);
+  return () => {
+    stopListeners.delete(cb);
+  };
 }
 
 function stopSurface(surface: string): void {
   stoppedSurfaces.add(surface);
   for (const fx of [...live]) if (fx.surface === surface) fx.destroy();
+  for (const cb of [...stopListeners]) cb(surface);
 }
 
 // A card's surface: the size of the <player-card> it sits in.

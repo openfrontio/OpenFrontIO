@@ -9,7 +9,7 @@ import { decodePatternData } from "@openfront/shared/PatternDecoder";
 import { base64url } from "jose";
 import { html, LitElement, nothing, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { ResolvedCosmetic } from "../../Cosmetics";
+import type { ResolvedCosmetic } from "../../Cosmetics";
 import {
   CosmeticPreviewConfig,
   CosmeticPreviewRenderer,
@@ -23,7 +23,7 @@ import {
   UT_TRANSPORT,
   UT_WARSHIP,
 } from "../../render/types/UnitType";
-import { translateText } from "../../Utils";
+import { translateText } from "../../Translate";
 import { attributesToExplosionParams } from "../../WebGLFrameBuilder";
 
 /**
@@ -45,6 +45,13 @@ export class CosmeticRenderCanvas extends LitElement {
 
   @property({ attribute: false })
   salvoEnabled = false;
+
+  // Set only by the cosmetic-preview package, which shows one cosmetic after
+  // another on the same canvas: a change to the same scene then updates what
+  // is playing and keeps the camera. The store opens a fresh canvas per
+  // preview and leaves this off.
+  @property({ attribute: false })
+  reuseScene = false;
 
   @state()
   private hasError = false;
@@ -138,7 +145,11 @@ export class CosmeticRenderCanvas extends LitElement {
       config.effectColors = this.customColors;
     }
     config.salvoMode = this.salvoEnabled;
-    this.renderer.setCosmetic(config);
+    if (this.reuseScene) {
+      if (this.renderer.updateCosmetic(config) !== "reframe") return;
+    } else {
+      this.renderer.setCosmetic(config);
+    }
 
     if (config.mode === "SKIN") {
       const isSmall = this.checkIsSmallSkin(this.resolved);

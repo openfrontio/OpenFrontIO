@@ -18,6 +18,11 @@ vi.mock("../../src/client/Utils", () => ({
   copyToClipboard: vi.fn(),
   showToast: vi.fn(),
 }));
+// The card and badge components take translateText from Translate.ts.
+vi.mock("../../src/client/Translate", () => ({
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+}));
 
 import type { Progress, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
