@@ -29,7 +29,6 @@ var categoryOrder = []string{
 	"fictional",
 	"arcade",
 	"tournament",
-	"classic",
 }
 
 // mapInfo is the subset of info.json fields used for code generation.
