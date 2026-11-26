@@ -420,6 +420,13 @@ export class StoreModal extends BaseModal {
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
     this.saleRetryTimer = null;
     this.saleRefetchGeneration++;
+    // With the refetch cancelled nothing would clear the deal placeholder, so
+    // a store reattached while open would hold it for good.
+    this.dealRollover = null;
+    this.shownFlashPromotionId = null;
+    // Neither field is reactive: redraw so a reattached store doesn't keep
+    // the placeholder's markup.
+    this.requestUpdate();
     super.disconnectedCallback();
   }
 

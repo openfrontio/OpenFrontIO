@@ -760,6 +760,20 @@ describe("store Featured tab", () => {
       again.close();
       expect(internals(again).dealRollover).toBeNull();
     });
+
+    it("clears when the store is removed mid-rollover", async () => {
+      const modal = await openOnDeal();
+      await endDeal(modal);
+      expect(internals(modal).dealRollover).not.toBeNull();
+      expect(modal.querySelector("[data-featured-rollover]")).toBeTruthy();
+      // The refetch is cancelled, so nothing else would clear it on reattach.
+      modal.remove();
+      expect(internals(modal).dealRollover).toBeNull();
+      // Reattached, the placeholder drawn before the removal is gone too.
+      document.body.appendChild(modal);
+      await modal.updateComplete;
+      expect(modal.querySelector("[data-featured-rollover]")).toBeNull();
+    });
   });
 
   describe("a catalog the open will replace", () => {
