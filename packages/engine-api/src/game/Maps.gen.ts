@@ -72,6 +72,7 @@ export enum GameMapType {
   HornOfAfrica = "Horn Of Africa", // map-generator/assets/maps/hornofafrica/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
+  Indochina = "Indochina", // map-generator/assets/maps/indochina/info.json
   IrishSea = "Irish Sea", // map-generator/assets/maps/irishsea/info.json
   Italia = "Italia", // map-generator/assets/maps/italia/info.json
   Japan = "Japan", // map-generator/assets/maps/japan/info.json
@@ -1573,6 +1574,17 @@ export const maps: readonly MapInfo[] = [
     author: "Tristar",
     descriptionKey: "map_description.indiansubcontinent",
     location: { lat: 22, lon: 79 },
+  },
+  {
+    id: "Indochina",
+    type: GameMapType.Indochina,
+    translationKey: "map.indochina",
+    categories: ["new", "asia"],
+    defaultNationCount: 66,
+    themes: ["asia"],
+    author: "Tristar",
+    descriptionKey: "map_description.indochina",
+    location: { lat: 15, lon: 100 },
   },
   {
     id: "IrishSea",

@@ -1,0 +1,416 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [1110, 691],
+      "flag": "Akha",
+      "name": "Akha"
+    },
+    {
+      "coordinates": [1212, 1027],
+      "flag": "French Indochina",
+      "name": "French Indochina"
+    },
+    {
+      "coordinates": [965, 603],
+      "flag": "Hmong",
+      "name": "Hmong"
+    },
+    {
+      "coordinates": [1396, 1446],
+      "flag": "Khmer Loeu",
+      "name": "Khmer Loeu"
+    },
+    {
+      "coordinates": [1186, 908],
+      "flag": "Kingdom of Laos",
+      "name": "Kingdom of Laos"
+    },
+    {
+      "coordinates": [1142, 2222],
+      "flag": "Malaya",
+      "name": "Malaya"
+    },
+    {
+      "coordinates": [1, 285],
+      "flag": "Mughal Empire",
+      "name": "Mughal Empire"
+    },
+    {
+      "coordinates": [1229, 773],
+      "flag": "Nguyen Dynasty",
+      "name": "Nguyen Dynasty"
+    },
+    {
+      "coordinates": [911, 1994],
+      "flag": "Perlis",
+      "name": "Perlis"
+    },
+    {
+      "coordinates": [487, 638],
+      "flag": "Sagaing",
+      "name": "Sagaing"
+    },
+    {
+      "coordinates": [638, 691],
+      "flag": "Shan State",
+      "name": "Taunggyi"
+    },
+    {
+      "coordinates": [336, 12],
+      "flag": "Tibetan Empire",
+      "name": "Tibetan Empire"
+    }
+  ],
+  "categories": ["new", "asia"],
+  "id": "Indochina",
+  "map": {
+    "height": 2456,
+    "num_land_tiles": 2490755,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 614,
+    "num_land_tiles": 148728,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1228,
+    "num_land_tiles": 612543,
+    "width": 1000
+  },
+  "name": "Indochina",
+  "nations": [
+    {
+      "coordinates": [16, 534],
+      "flag": "bd",
+      "name": "Dhaka"
+    },
+    {
+      "coordinates": [191, 638],
+      "flag": "bd",
+      "name": "Chittagong"
+    },
+    {
+      "coordinates": [319, 475],
+      "flag": "in",
+      "name": "Imphal"
+    },
+    {
+      "coordinates": [169, 323],
+      "flag": "in",
+      "name": "Guwahati"
+    },
+    {
+      "coordinates": [112, 181],
+      "flag": "bt",
+      "name": "Thimphu"
+    },
+    {
+      "coordinates": [189, 10],
+      "flag": "tibet",
+      "name": "Lhasa"
+    },
+    {
+      "coordinates": [561, 1094],
+      "flag": "Yangon",
+      "name": "Yangon"
+    },
+    {
+      "coordinates": [541, 833],
+      "flag": "mm",
+      "name": "Naypyidaw"
+    },
+    {
+      "coordinates": [454, 790],
+      "flag": "mm",
+      "name": "Magway"
+    },
+    {
+      "coordinates": [546, 678],
+      "flag": "Mandalay",
+      "name": "Mandalay"
+    },
+    {
+      "coordinates": [662, 375],
+      "flag": "Kachin",
+      "name": "Myitkyina"
+    },
+    {
+      "coordinates": [280, 781],
+      "flag": "Rakhine",
+      "name": "Sittwe"
+    },
+    {
+      "coordinates": [677, 1140],
+      "flag": "Mon State",
+      "name": "Mawlamyine"
+    },
+    {
+      "coordinates": [731, 1341],
+      "flag": "Tanintharyi",
+      "name": "Dawei"
+    },
+    {
+      "coordinates": [900, 1331],
+      "flag": "th",
+      "name": "Bangkok"
+    },
+    {
+      "coordinates": [792, 938],
+      "flag": "th",
+      "name": "Chiang Mai"
+    },
+    {
+      "coordinates": [912, 1934],
+      "flag": "th",
+      "name": "Hat Yai"
+    },
+    {
+      "coordinates": [725, 1836],
+      "flag": "th",
+      "name": "Phuket"
+    },
+    {
+      "coordinates": [345, 1904],
+      "flag": "in",
+      "name": "Nicobar Islands"
+    },
+    {
+      "coordinates": [258, 1509],
+      "flag": "in",
+      "name": "Andaman Islands"
+    },
+    {
+      "coordinates": [1031, 1253],
+      "flag": "th",
+      "name": "Nakhon Ratchasima"
+    },
+    {
+      "coordinates": [960, 1411],
+      "flag": "th",
+      "name": "Pattaya"
+    },
+    {
+      "coordinates": [874, 1153],
+      "flag": "th",
+      "name": "Nakhon Sawan"
+    },
+    {
+      "coordinates": [837, 837],
+      "flag": "th",
+      "name": "Chiang Rai"
+    },
+    {
+      "coordinates": [1089, 1152],
+      "flag": "th",
+      "name": "Khon Kaen"
+    },
+    {
+      "coordinates": [1240, 1230],
+      "flag": "th",
+      "name": "Ubon Ratchathani"
+    },
+    {
+      "coordinates": [843, 1504],
+      "flag": "th",
+      "name": "Prachuap Khiri Khan"
+    },
+    {
+      "coordinates": [1989, 614],
+      "flag": "mo",
+      "name": "Macau"
+    },
+    {
+      "coordinates": [1273, 1526],
+      "flag": "kh",
+      "name": "Phnom Penh"
+    },
+    {
+      "coordinates": [1177, 1372],
+      "flag": "kh",
+      "name": "Siem Reap"
+    },
+    {
+      "coordinates": [1173, 1610],
+      "flag": "kh",
+      "name": "Sihanoukville"
+    },
+    {
+      "coordinates": [1083, 967],
+      "flag": "la",
+      "name": "Vientiane"
+    },
+    {
+      "coordinates": [1302, 1101],
+      "flag": "la",
+      "name": "Savannakhet"
+    },
+    {
+      "coordinates": [1377, 1292],
+      "flag": "la",
+      "name": "Pakse"
+    },
+    {
+      "coordinates": [1346, 738],
+      "flag": "Hanoi",
+      "name": "Hanoi"
+    },
+    {
+      "coordinates": [1418, 1613],
+      "flag": "vn",
+      "name": "Ho Chi Minh City"
+    },
+    {
+      "coordinates": [1078, 833],
+      "flag": "la",
+      "name": "Luang Prabang"
+    },
+    {
+      "coordinates": [1300, 1683],
+      "flag": "vn",
+      "name": "Can Tho"
+    },
+    {
+      "coordinates": [1575, 1201],
+      "flag": "vn",
+      "name": "Da Nang"
+    },
+    {
+      "coordinates": [1434, 1069],
+      "flag": "vn",
+      "name": "Hue"
+    },
+    {
+      "coordinates": [1622, 1422],
+      "flag": "vn",
+      "name": "Nha Trang"
+    },
+    {
+      "coordinates": [1314, 922],
+      "flag": "vn",
+      "name": "Vinh"
+    },
+    {
+      "coordinates": [1186, 2379],
+      "flag": "sg",
+      "name": "Singapore"
+    },
+    {
+      "coordinates": [1029, 2237],
+      "flag": "Kuala Lumpur",
+      "name": "Kuala Lumpur"
+    },
+    {
+      "coordinates": [887, 2049],
+      "flag": "Penang",
+      "name": "Penang"
+    },
+    {
+      "coordinates": [1097, 2039],
+      "flag": "Terengganu",
+      "name": "Kuala Terengganu"
+    },
+    {
+      "coordinates": [1973, 535],
+      "flag": "cn",
+      "name": "Guangzhou"
+    },
+    {
+      "coordinates": [1687, 848],
+      "flag": "cn",
+      "name": "Haikou"
+    },
+    {
+      "coordinates": [1492, 560],
+      "flag": "cn",
+      "name": "Nanning"
+    },
+    {
+      "coordinates": [1098, 404],
+      "flag": "cn",
+      "name": "Kunming"
+    },
+    {
+      "coordinates": [1434, 6],
+      "flag": "cn",
+      "name": "Chongqing"
+    },
+    {
+      "coordinates": [846, 182],
+      "flag": "cn",
+      "name": "Shangri-la"
+    },
+    {
+      "coordinates": [1367, 344],
+      "flag": "cn",
+      "name": "Guiyang"
+    },
+    {
+      "coordinates": [1643, 384],
+      "flag": "cn",
+      "name": "Guilin"
+    },
+    {
+      "coordinates": [875, 290],
+      "flag": "cn",
+      "name": "Lijiang"
+    },
+    {
+      "coordinates": [915, 393],
+      "flag": "cn",
+      "name": "Dali"
+    },
+    {
+      "coordinates": [1679, 72],
+      "flag": "cn",
+      "name": "Zhangjiajie"
+    },
+    {
+      "coordinates": [1821, 121],
+      "flag": "cn",
+      "name": "Changsha"
+    },
+    {
+      "coordinates": [1166, 559],
+      "flag": "cn",
+      "name": "Honghe"
+    },
+    {
+      "coordinates": [809, 640],
+      "flag": "Wa State",
+      "name": "Wa State"
+    },
+    {
+      "coordinates": [479, 2038],
+      "flag": "Aceh",
+      "name": "Aceh"
+    },
+    {
+      "coordinates": [728, 2220],
+      "flag": "id",
+      "name": "Medan"
+    },
+    {
+      "coordinates": [1008, 2451],
+      "flag": "id",
+      "name": "Pekanbaru"
+    },
+    {
+      "coordinates": [1728, 2367],
+      "flag": "Sarawak",
+      "name": "Kuching"
+    },
+    {
+      "coordinates": [1872, 2307],
+      "flag": "Sarawak",
+      "name": "Sibu"
+    },
+    {
+      "coordinates": [1553, 2161],
+      "flag": "id",
+      "name": "Riau Islands"
+    }
+  ],
+  "themes": ["asia"],
+  "translation_key": "map.indochina"
+}
