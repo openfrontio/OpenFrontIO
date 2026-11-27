@@ -1,6 +1,7 @@
 import { html, LitElement, render as litRender } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { renderTroops } from "@openfront/engine-lib/Format";
+import "../../components/OfIcon";
 
 const TOOLTIP =
   "fixed z-9400 hud-modal rounded-lg px-3 py-2 pointer-events-none text-white animate-hud-rise motion-reduce:animate-none";
@@ -47,6 +48,7 @@ export class TroopTooltip extends LitElement {
         <div class=${TOOLTIP} role="tooltip">
           <div class=${TITLE}>Troops to send</div>
           <div class=${COUNT}>
+            <of-icon name="sword" size="16"></of-icon>
             ${renderTroops(this.troops)}
           </div>
           <div class=${PERCENTAGE}>
