@@ -1011,16 +1011,17 @@ async function runInterrupt(
     case "lapse-notice":
       return;
     case "promotions-prompt": {
-      // Recorded before the dialog opens, like the claim prompt: once per
-      // device whichever way they answer, and the promise only settles on
-      // dismissal. Declining (or closing) keeps promotions as they are.
-      ports.markPromotionsPromptSeen();
+      // Recorded once the player has answered, like the claim prompt: a quit,
+      // crash or update reload under the open dialog must not spend its only
+      // showing. Once per device whichever way they answer; declining (or
+      // closing) keeps promotions as they are.
       const hide = await ports.confirm(
         ports.translate(PROMOTIONS_PROMPT_KEYS.body),
         ports.translate(PROMOTIONS_PROMPT_KEYS.heading),
         ports.translate(PROMOTIONS_PROMPT_KEYS.confirm),
         ports.translate(PROMOTIONS_PROMPT_KEYS.cancel),
       );
+      ports.markPromotionsPromptSeen();
       if (hide) ports.setHidePromotions(true);
       return;
     }

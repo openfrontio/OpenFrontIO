@@ -1164,6 +1164,20 @@ describe("an interrupt the player never answered", () => {
     }
   });
 
+  it("leaves the promotions prompt unseen while its dialog is open", async () => {
+    const { base, calls, settle } = ports();
+    const marked: string[] = [];
+    base.markPromotionsPromptSeen = () => marked.push("seen");
+    base.setHidePromotions = (hide) => marked.push(`hide ${hide}`);
+    const running = runBootInterrupt("promotions-prompt", context, base);
+    await Promise.resolve();
+    expect(calls.opened).toBe(1);
+    expect(marked).toEqual([]);
+    settle();
+    await running;
+    expect(marked).toEqual(["seen", "hide true"]);
+  });
+
   // The lapse notice marks the sign-off shown from inside a re-run's dispatch,
   // and a new grant period resets the record. Neither may be undone by a
   // write that lands after the dialog.
@@ -1725,13 +1739,13 @@ describe("promotions prompt", () => {
     renewalPushed: null,
   };
 
-  it("records itself before asking, then hides on yes", async () => {
+  it("asks, records itself once answered, then hides on yes", async () => {
     const { ports, events } = promoPorts(true);
     await runBootInterrupt("promotions-prompt", context, ports);
     expect(events).toEqual([
-      "seen",
       "confirm t(promotions_prompt.body)|t(promotions_prompt.heading)|" +
         "t(promotions_prompt.hide)|t(promotions_prompt.keep)",
+      "seen",
       "hide true",
     ]);
   });
@@ -1756,6 +1770,6 @@ describe("promotions prompt", () => {
   it("a no is still an answer: recorded, nothing changed", async () => {
     const { ports, events } = promoPorts(false);
     await runBootInterrupt("promotions-prompt", context, ports);
-    expect(events).toEqual(["seen", expect.stringMatching(/^confirm /)]);
+    expect(events).toEqual([expect.stringMatching(/^confirm /), "seen"]);
   });
 });
