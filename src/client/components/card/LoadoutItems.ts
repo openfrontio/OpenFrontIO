@@ -39,8 +39,8 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
 
 /**
  * What to offer from `view` (the killer's card): the card itself if the
- * viewer lacks it, then the killer's background and trackers (titles and
- * taunts are held back). Every candidate, in that order:
+ * viewer lacks it, then the killer's background, title and trackers (taunts
+ * are held back). Every candidate, in that order:
  * the end screen caps each row (endScreenLookRows).
  * Anything the viewer owns, or that is neither sold nor earnable, is skipped.
  */
@@ -62,6 +62,9 @@ export function loadoutItems(
       "cardBackground",
       cosmetics?.cardBackgrounds?.[view.background.name],
     ]);
+  }
+  if (view.title) {
+    candidates.push(["cardTitle", cosmetics?.cardTitles?.[view.title.name]]);
   }
   for (const t of view.trackers) {
     candidates.push(["cardTracker", cosmetics?.cardTrackers?.[t.stat]]);

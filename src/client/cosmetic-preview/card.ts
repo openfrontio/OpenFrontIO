@@ -267,6 +267,7 @@ function mountCardBackgroundPreview(
           rarity: bg.rarity ?? "common",
           animation,
         },
+        title: null,
         trackers: spec.card === "thumb" ? [] : SAMPLE_TRACKERS,
       };
     }

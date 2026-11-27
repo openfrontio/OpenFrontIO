@@ -166,10 +166,10 @@ describe("store deep links", () => {
     expect(subTabForItem("pattern:hearts:red")).toBe("patterns");
     expect(subTabForItem("skin:mountain")).toBe("patterns");
     expect(subTabForItem("cardBackground:bg_frontline")).toBe("card");
+    expect(subTabForItem("cardTitle:warmonger")).toBe("card");
   });
 
-  it("held-back taunts and titles don't open the Card sub-tab", () => {
+  it("held-back taunts don't open the Card sub-tab", () => {
     expect(subTabForItem("taunt:salute")).toBe("patterns");
-    expect(subTabForItem("cardTitle:warmonger")).toBe("patterns");
   });
 });

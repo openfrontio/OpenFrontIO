@@ -168,8 +168,8 @@ export function subTabForItem(itemKey: string): CosmeticsSubTab {
   if (itemKey.startsWith("crown:")) return "crowns";
   if (itemKey.startsWith("flag:")) return "flags";
   const type = itemKey.split(":")[0];
-  // Held-back titles and taunts aren't card item types here: their links open
-  // the default.
+  // Held-back taunts aren't card item types here: their links open the
+  // default.
   if (isCardItemType(type)) return "card";
   return "patterns";
 }

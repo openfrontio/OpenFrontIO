@@ -22,6 +22,7 @@ import {
   CARD_SLOT_KINDS,
   CardEditor,
   cardChanges,
+  isSingleSlot,
   draftFromCard,
   loadoutBody,
   moveRow,
@@ -162,6 +163,7 @@ describe("card draft", () => {
 
   const rows = (...trackers: (string | null)[]) => ({
     background: null,
+    title: null,
     rows: { tracker: trackers },
   });
 
@@ -209,18 +211,69 @@ describe("card draft", () => {
     ).toEqual(["a", "c", "d"]);
   });
 
-  it("the body keeps held-back title and taunt and drops empty rows", () => {
+  it("loadoutBody sends the draft title and the held taunt, dropping empty rows", () => {
     const d = pickInto(
-      draftFromCard(CARD),
-      { kind: "tracker", index: 1 },
-      null,
+      pickInto(draftFromCard(CARD), { kind: "tracker", index: 1 }, null),
+      { kind: "title" },
+      "veteran",
     );
-    expect(loadoutBody(d, { title: "warmonger", taunt: "salute" })).toEqual({
+    expect(loadoutBody(d, { taunt: "salute" })).toEqual({
       background: "bg_pacific",
-      title: "warmonger",
+      title: "veteran",
       taunt: "salute",
       trackers: ["wins", "best_elo"],
     });
+  });
+
+  it("draft reads the saved title", () => {
+    expect(draftFromCard(CARD).title).toBe("warmonger");
+    expect(draftFromCard({ trackers: [] }).title).toBeNull();
+    expect(draftFromCard(null).title).toBeNull();
+  });
+
+  it("the background and the title are the single slots", () => {
+    expect(isSingleSlot({ kind: "background" })).toBe(true);
+    expect(isSingleSlot({ kind: "title" })).toBe(true);
+    expect(isSingleSlot({ kind: "tracker", index: 0 })).toBe(false);
+  });
+
+  it("picking a title is one change, listed after the background", () => {
+    const saved = draftFromCard({ ...CARD, title: null });
+    const titled = pickInto(saved, { kind: "title" }, "warmonger");
+    expect(cardChanges(saved, titled)).toEqual([
+      { slot: { kind: "title" }, from: null, to: "warmonger" },
+    ]);
+    const both = pickInto(
+      pickInto(titled, { kind: "tracker", index: 0 }, "games_played"),
+      { kind: "background" },
+      "bg_storm",
+    );
+    expect(cardChanges(saved, both).map((c) => c.slot.kind)).toEqual([
+      "background",
+      "title",
+      "tracker",
+    ]);
+  });
+
+  it("No title clears the title", () => {
+    const saved = draftFromCard(CARD);
+    const cleared = pickInto(saved, { kind: "title" }, null);
+    expect(cleared.title).toBeNull();
+    expect(cardChanges(saved, cleared)).toEqual([
+      { slot: { kind: "title" }, from: "warmonger", to: null },
+    ]);
+  });
+
+  it("replaying by item carries a title change onto another card", () => {
+    const before = draftFromCard(CARD);
+    const after = pickInto(before, { kind: "title" }, "veteran");
+    const base = draftFromCard({ ...CARD, background: "bg_storm" });
+    const out = replayByItem(base, before, after);
+    expect(out.title).toBe("veteran");
+    expect(out.background).toBe("bg_storm");
+    // An untouched title follows the other card.
+    const other = draftFromCard({ ...CARD, title: "champion" });
+    expect(replayByItem(other, before, before).title).toBe("champion");
   });
 });
 
@@ -287,6 +340,54 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(0);
     vi.advanceTimersByTime(SAVED_SHOWN_MS);
     expect(editor.saveState).toBe("idle");
+  });
+
+  it("a stale saved title is sent back unchanged", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    editor.seed(me({ ...CARD, title: "gone" }, ["cardTracker:games_played"]));
+    expect(editor.draft.title).toBe("gone");
+    expect(editor.changeCount()).toBe(0);
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    await editor.save();
+    expect(api.save.mock.calls[0][0]).toMatchObject({
+      title: "gone",
+      taunt: "salute",
+    });
+  });
+
+  it("an unowned title blocks saving; an owned one saves", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTitle:veteran"]));
+    editor.pick({ kind: "title" }, "champion");
+    expect(editor.unownedInChanges().map((u) => u.flare)).toEqual([
+      "cardTitle:champion",
+    ]);
+    expect(editor.canSave()).toBe(false);
+    editor.pick({ kind: "title" }, "veteran");
+    expect(editor.canSave()).toBe(true);
+    await editor.save();
+    expect(api.save.mock.calls[0][0]).toMatchObject({ title: "veteran" });
+    expect(editor.saved.title).toBe("veteran");
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("the stored title comes from the server's answer", async () => {
+    api.save.mockResolvedValue({
+      ok: true,
+      loadout: {
+        background: "bg_pacific",
+        title: null,
+        taunt: "salute",
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+    });
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTitle:veteran"]));
+    editor.pick({ kind: "title" }, "veteran");
+    await editor.save();
+    expect(editor.saved.title).toBeNull();
   });
 
   it("a failed save keeps the changes", async () => {
@@ -474,9 +575,9 @@ describe("CardEditor", () => {
     ]);
     expect(editor.draft.rows.tracker).toContain("best_elo");
     expect(editor.draft.rows.tracker).not.toContain("nukes_launched");
-    expect(
-      loadoutBody(editor.draft, { title: null, taunt: null }).trackers,
-    ).toEqual(["best_elo"]);
+    expect(loadoutBody(editor.draft, { taunt: null }).trackers).toEqual([
+      "best_elo",
+    ]);
   });
 
   it("Discard mid-save, then the save fails: the draft ends on the card the server kept", async () => {
@@ -1272,6 +1373,27 @@ describe("CardEditor", () => {
       "nukes_launched",
       "games_played",
     ]);
+    expect(editor.changeCount()).toBe(1);
+  });
+
+  it("a title change made elsewhere survives a background edit here", () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "background" }, "bg_storm");
+    // Another device saved a new title meanwhile.
+    editor.seed(me({ ...CARD, title: "veteran" }, ALL_OWNED));
+    expect(editor.draft.title).toBe("veteran");
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.changeCount()).toBe(1);
+  });
+
+  it("a title edit here survives a background change made elsewhere", () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL_OWNED));
+    editor.pick({ kind: "title" }, null);
+    editor.seed(me({ ...CARD, background: "bg_storm" }, ALL_OWNED));
+    expect(editor.draft.title).toBeNull();
+    expect(editor.draft.background).toBe("bg_storm");
     expect(editor.changeCount()).toBe(1);
   });
 
