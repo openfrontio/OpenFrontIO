@@ -38,6 +38,10 @@ export function storeItemKey(key: string): string {
   return `pattern:${name}`;
 }
 
+// The custom Plutonium amount card's key. It has no catalog entry; the API
+// lists it under this key (pack:custom_amount, type "pack").
+export const CUSTOM_AMOUNT_ITEM_KEY = "pack:custom_amount";
+
 export function storePlatform(): StoreEventsBody["platform"] {
   if (isSteamShell()) return "steam";
   if (crazyGamesSDK.isOnCrazyGames()) return "crazygames";

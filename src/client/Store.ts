@@ -78,7 +78,7 @@ import {
   sellable,
   storePurchasables,
 } from "./StoreSellable";
-import { StoreTracker } from "./StoreTracking";
+import { CUSTOM_AMOUNT_ITEM_KEY, StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
@@ -870,6 +870,19 @@ export class StoreModal extends BaseModal {
     return null;
   }
 
+  /** The custom amount card's placement, read when it is bought. */
+  private readonly customAmountPlacement = (): StorePlacement | undefined =>
+    this.placementFor(this.querySelector("custom-currency-card") ?? this);
+
+  private readonly trackCustomAmountClick = (): void => {
+    try {
+      const placement = this.customAmountPlacement();
+      if (placement) this.tracker?.click(CUSTOM_AMOUNT_ITEM_KEY, placement);
+    } catch {
+      // Analytics must never break the click.
+    }
+  };
+
   private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
     try {
       const placement = this.placementFor(el ?? this);
@@ -1600,7 +1613,11 @@ export class StoreModal extends BaseModal {
       emptyTranslationKey: "store.no_packs",
       trailingContent: !playOnly
         ? html`<custom-currency-card
+            data-store-product
+            data-cosmetic-key=${CUSTOM_AMOUNT_ITEM_KEY}
             class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
+            .placement=${this.customAmountPlacement}
+            .onActivate=${this.trackCustomAmountClick}
           ></custom-currency-card>`
         : this.cosmetics !== null && this.playPrices === null
           ? html`<div

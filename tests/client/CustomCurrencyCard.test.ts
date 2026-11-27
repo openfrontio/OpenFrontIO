@@ -125,6 +125,36 @@ describe("CustomCurrencyCard", () => {
     );
   });
 
+  it("sends the store placement and counts the press as a click", async () => {
+    const onActivate = vi.fn();
+    card!.placement = () => ({ kind: "tab", tab: "packs" });
+    card!.onActivate = onActivate;
+    await buyAmount(240);
+
+    await vi.waitFor(() =>
+      expect(startPurchase).toHaveBeenCalledWith({
+        kind: "custom_currency",
+        hardAmount: 240,
+        placement: { kind: "tab", tab: "packs" },
+      }),
+    );
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it("still buys when the placement throws", async () => {
+    card!.placement = () => {
+      throw new Error("analytics");
+    };
+    await buyAmount(240);
+
+    await vi.waitFor(() =>
+      expect(startPurchase).toHaveBeenCalledWith({
+        kind: "custom_currency",
+        hardAmount: 240,
+      }),
+    );
+  });
+
   it("says nothing while a redirect is under way", async () => {
     await buyAmount(240);
     await vi.waitFor(() => expect(startPurchase).toHaveBeenCalled());
