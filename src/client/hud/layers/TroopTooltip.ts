@@ -1,6 +1,6 @@
+import { renderTroops } from "@openfront/engine-lib/Format";
 import { html, LitElement, render as litRender } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { renderTroops } from "@openfront/engine-lib/Format";
 import "../../components/OfIcon";
 
 const TOOLTIP =
@@ -51,9 +51,7 @@ export class TroopTooltip extends LitElement {
             <of-icon name="sword" size="16"></of-icon>
             ${renderTroops(this.troops)}
           </div>
-          <div class=${PERCENTAGE}>
-            ${this.percentage}%
-          </div>
+          <div class=${PERCENTAGE}>${this.percentage}%</div>
         </div>
       `,
       this.portal,
@@ -63,10 +61,7 @@ export class TroopTooltip extends LitElement {
 
     const left = Math.max(
       EDGE_PX,
-      Math.min(
-        this.x + GAP_PX,
-        window.innerWidth - EDGE_PX - box.offsetWidth,
-      ),
+      Math.min(this.x + GAP_PX, window.innerWidth - EDGE_PX - box.offsetWidth),
     );
 
     const top = Math.max(

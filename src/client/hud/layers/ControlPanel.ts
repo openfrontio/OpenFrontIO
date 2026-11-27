@@ -14,7 +14,11 @@ import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { repeat } from "lit/directives/repeat.js";
 import { Controller } from "../../Controller";
-import { AttackRatioEvent, MouseMoveEvent, isForwardedClick } from "../../InputHandler";
+import {
+  AttackRatioEvent,
+  MouseMoveEvent,
+  isForwardedClick,
+} from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
@@ -993,7 +997,7 @@ export class ControlPanel extends LitElement implements Controller {
         .y=${this._tipY}
         .visible=${this._tipVisible}
       ></troop-tooltip>
-    `
+    `;
   }
 
   render() {
@@ -1009,8 +1013,7 @@ export class ControlPanel extends LitElement implements Controller {
           ${this.renderRatioLabel()} ${this.renderRatioButton()}
           ${this.renderRatioSlider()}
         </div>
-        ${this.renderRatioPopup()}
-        ${this.renderTroopTooltip()}
+        ${this.renderRatioPopup()} ${this.renderTroopTooltip()}
       </div>
     `;
   }
