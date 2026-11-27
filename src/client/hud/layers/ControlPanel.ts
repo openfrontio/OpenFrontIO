@@ -14,7 +14,7 @@ import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { repeat } from "lit/directives/repeat.js";
 import { Controller } from "../../Controller";
-import { AttackRatioEvent, isForwardedClick } from "../../InputHandler";
+import { AttackRatioEvent, MouseMoveEvent, isForwardedClick } from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
@@ -24,6 +24,7 @@ import "../../components/OfIcon";
 import { TICKS_PER_SECOND, ticksToSeconds } from "../GameTicks";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
+import "./TroopTooltip";
 // Safari before 17 has no popovers; the gold gain pop falls back to sitting
 // inside the gold box there.
 const supportsPopover = "showPopover" in HTMLElement.prototype;
@@ -190,6 +191,17 @@ export class ControlPanel extends LitElement implements Controller {
 
   private _lastTroopIncreaseRate: number | undefined;
 
+  @state()
+  private _tipVisible = false;
+  @state()
+  private _tipX = 0;
+  @state()
+  private _tipY = 0;
+  private _tipTimer?: number;
+
+  private _mouseX = 0;
+  private _mouseY = 0;
+
   // Border detection cache
   private _nearbyPlayerIDs: Set<number> = new Set();
   private _borderRefreshCounter: number = 0;
@@ -249,6 +261,15 @@ export class ControlPanel extends LitElement implements Controller {
     this.onBus(OnboardingLowTroopsEvent, (e) => {
       this._lowTroopsAlert = e.low;
     });
+    this.onBus(MouseMoveEvent, (e) => {
+      this._mouseX = e.x;
+      this._mouseY = e.y;
+
+      if (this._tipVisible) {
+        this._tipX = this._mouseX;
+        this._tipY = this._mouseY;
+      }
+    });
     this.onBus(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
 
@@ -267,6 +288,7 @@ export class ControlPanel extends LitElement implements Controller {
 
       this.attackRatio = newAttackRatio;
       this.onAttackRatioChange(this.attackRatio);
+      this.showTroopTooltip();
     });
     return () => {
       if (gen === this.initGeneration) {
@@ -954,6 +976,26 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private showTroopTooltip() {
+    this._tipX = this._mouseX;
+    this._tipY = this._mouseY;
+    this._tipVisible = true;
+    window.clearTimeout(this._tipTimer);
+    this._tipTimer = window.setTimeout(() => (this._tipVisible = false), 800);
+  }
+
+  private renderTroopTooltip() {
+    return html`
+      <troop-tooltip
+        .troops=${(this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio}
+        .percentage=${Math.round(this.attackRatio * 100)}
+        .x=${this._tipX}
+        .y=${this._tipY}
+        .visible=${this._tipVisible}
+      ></troop-tooltip>
+    `
+  }
+
   render() {
     return html`
       <div
@@ -968,6 +1010,7 @@ export class ControlPanel extends LitElement implements Controller {
           ${this.renderRatioSlider()}
         </div>
         ${this.renderRatioPopup()}
+        ${this.renderTroopTooltip()}
       </div>
     `;
   }
