@@ -1451,14 +1451,11 @@ describe("StoreModal cosmetic browser", () => {
     expect(card(modal, flag.key)?.state).toBe("focused");
   });
 
-  it("hides the Card sub-tab when only held-back taunts and titles are sold", async () => {
+  it("hides the Card sub-tab when only held-back taunts are sold", async () => {
     const item = { product: null, rarity: "rare" };
     const heldBackOnly = {
       patterns: {},
       flags: {},
-      cardTitles: {
-        veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
-      },
       taunts: {
         salute: {
           ...item,
@@ -1492,6 +1489,21 @@ describe("StoreModal cosmetic browser", () => {
       expect(
         withBackground.querySelector("[data-store-subtab='card']"),
       ).not.toBeNull(),
+    );
+  });
+
+  it("shows the Card sub-tab when a title is sold", async () => {
+    const item = { product: null, rarity: "rare" };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      cardTitles: {
+        veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
+      },
+    } as unknown as Cosmetics);
+    const modal = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(modal.querySelector("[data-store-subtab='card']")).not.toBeNull(),
     );
   });
 
