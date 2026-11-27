@@ -391,6 +391,8 @@ describe("the steam-notice boot interrupt", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      promotionsPromptDue: false,
+      promotionsPromptStringsReady: true,
       giftEndingDue: false,
       giftEndingStringsReady: true,
       renewalPushedDue: false,
@@ -454,6 +456,8 @@ describe("the steam-notice boot interrupt", () => {
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: (notice) => calls.seen.push(notice),
       markMessageSeen: () => {},
+      markPromotionsPromptSeen: () => {},
+      setHidePromotions: () => {},
       now: () => NOW,
     };
     return { base, calls };

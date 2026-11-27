@@ -102,6 +102,8 @@ describe("boot sequencing against a real <username-input>", () => {
       updateSteamGrant: () => {},
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      markPromotionsPromptSeen: () => {},
+      setHidePromotions: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -121,6 +123,8 @@ describe("boot sequencing against a real <username-input>", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      promotionsPromptDue: false,
+      promotionsPromptStringsReady: true,
       giftEndingDue: false,
       giftEndingStringsReady: true,
       renewalPushedDue: false,
