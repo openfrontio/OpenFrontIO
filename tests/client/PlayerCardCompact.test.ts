@@ -30,6 +30,7 @@ const VIEW: PlayerCardView = {
     rarity: "legendary",
     animation: { layers: [] },
   },
+  title: null,
   trackers: [
     { stat: "wins", value: 1204 },
     { stat: "best_elo", value: 1840 },

@@ -195,14 +195,12 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     expect(seededAfter).toBe(true);
   });
 
-  it("has a Background row and three tracker rows, no Taunt or Title slot", async () => {
+  it("has a Background row and three tracker rows, no Taunt slot", async () => {
     await render(userMe(OWNER));
     expect(q("[data-card-slot='background']")).not.toBeNull();
     expect(qa("[data-card-slot-row]")).toHaveLength(3);
     expect(q("[data-card-slot='taunt']")).toBeNull();
-    expect(q("[data-card-slot='title']")).toBeNull();
     expect(tab.textContent).not.toContain("my_card.slot_taunt");
-    expect(tab.textContent).not.toContain("my_card.slot_title");
   });
 
   it("rows read left to right in the saved order", async () => {
@@ -398,6 +396,143 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     expect(q("[data-card-unlock-note]")!.textContent).toContain(
       "Season 1 · free tier 20",
     );
+  });
+});
+
+describe("<inventory-card-tab> title", () => {
+  const TITLED = {
+    ...COSMETICS,
+    cardTitles: {
+      warmonger: {
+        ...item,
+        name: "warmonger",
+        text: "Warmonger",
+        priceSoft: 500,
+      },
+      veteran: {
+        ...item,
+        rarity: "epic",
+        name: "veteran",
+        text: "Veteran",
+        accent: "#ef4444",
+        priceSoft: 500,
+      },
+      champion: {
+        ...item,
+        name: "champion",
+        text: "Champion",
+        unlockSource: { kind: "seasonFree", label: "Season 1" },
+      },
+    },
+  } as unknown as Cosmetics;
+  const UNTITLED = { ...SAVED, title: undefined };
+  const titleRow = () => q("[data-card-slot='title']");
+  const previewTitle = () =>
+    q("[data-card-preview] [data-card-title]")?.textContent?.trim() ?? null;
+
+  it("shows a Title row after the trackers", async () => {
+    await render(userMe(OWNER, UNTITLED), TITLED);
+    const row = titleRow()!;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain("inventory_card.title");
+    expect(row.textContent).toContain("inventory_card.title_none");
+    const trackers = q("[data-card-rows='tracker']")!;
+    expect(
+      trackers.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("no titles in the catalogue hides the Title row", async () => {
+    await render(userMe(OWNER, UNTITLED), { ...COSMETICS, cardTitles: {} });
+    expect(titleRow()).toBeNull();
+    await render(userMe(OWNER, UNTITLED), {
+      ...COSMETICS,
+      cardTitles: undefined,
+    } as unknown as Cosmetics);
+    expect(titleRow()).toBeNull();
+    await render(userMe(OWNER, UNTITLED), null);
+    expect(titleRow()).toBeNull();
+  });
+
+  it("a stale saved title reads No title, and is sent back unchanged", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    // SAVED has "warmonger", which COSMETICS doesn't have.
+    await render(userMe(OWNER));
+    expect(titleRow()!.textContent).toContain("inventory_card.title_none");
+    expect(previewTitle()).toBeNull();
+    await click(row(2).querySelector("[data-card-row-open]"));
+    await pickTile("cardTracker:games_played");
+    await click(q("[data-card-save]"));
+    expect(api.save.mock.calls[0][0]).toMatchObject({ title: "warmonger" });
+  });
+
+  it("the picker lists owned, for sale and earned titles", async () => {
+    await render(userMe([...OWNER, "cardTitle:veteran"], UNTITLED), TITLED);
+    await click(titleRow());
+    expect(q("[data-card-picker]")!.dataset.cardPicker).toBe("title");
+    expect(tileState("cardTitle:veteran")).toBe("owned");
+    expect(q("[data-card-pick='cardTitle:warmonger']")).toBeNull();
+    await click(q("[data-card-filter='all']"));
+    expect(tileState("cardTitle:warmonger")).toBe("forSale");
+    expect(tileState("cardTitle:champion")).toBe("earned");
+    // Each tile shows the title on the default card.
+    expect(
+      pick("cardTitle:veteran")
+        .querySelector("[data-card-title]")
+        ?.textContent?.trim(),
+    ).toBe("Veteran");
+    await pickTile("cardTitle:champion");
+    expect(editor.changeCount()).toBe(0);
+    expect(q("[data-card-unlock-note]")!.textContent).toContain("Season 1");
+  });
+
+  it("picking a title updates the With changes preview", async () => {
+    await render(userMe([...OWNER, "cardTitle:veteran"], UNTITLED), TITLED);
+    expect(previewTitle()).toBeNull();
+    await click(titleRow());
+    await pickTile("cardTitle:veteran");
+    expect(editor.draft.title).toBe("veteran");
+    expect(previewTitle()).toBe("Veteran");
+    expect(titleRow()!.textContent).toContain("Veteran");
+    await click(q("[data-card-view='saved']"));
+    expect(previewTitle()).toBeNull();
+  });
+
+  it("an unowned title previews and is bought in place", async () => {
+    await render(userMe(OWNER, UNTITLED), TITLED);
+    await click(titleRow());
+    await click(q("[data-card-filter='all']"));
+    await pickTile("cardTitle:warmonger");
+    expect(previewTitle()).toBe("Warmonger");
+    expect(q("[data-card-buy='cardTitle:warmonger']")).not.toBeNull();
+    expect(q<HTMLButtonElement>("[data-card-save]")!.disabled).toBe(true);
+  });
+
+  it("No title clears the title", async () => {
+    await render(
+      userMe([...OWNER, "cardTitle:veteran"], { ...SAVED, title: "veteran" }),
+      TITLED,
+    );
+    expect(previewTitle()).toBe("Veteran");
+    await click(titleRow());
+    const clear = q<HTMLButtonElement>("[data-card-clear-slot]")!;
+    expect(clear.textContent).toContain("inventory_card.title_none");
+    await click(clear);
+    expect(editor.draft.title).toBeNull();
+    expect(previewTitle()).toBeNull();
+  });
+
+  it("lists a title change; Discard restores it", async () => {
+    await render(userMe([...OWNER, "cardTitle:warmonger"], UNTITLED), TITLED);
+    await click(titleRow());
+    await pickTile("cardTitle:warmonger");
+    const summary = q("[data-card-changes-summary]")!.textContent!;
+    expect(summary).toContain('"slot":"inventory_card.title"');
+    expect(summary).toContain('"from":"inventory_card.title_none"');
+    expect(summary).toContain('"to":"Warmonger"');
+    await click(q("[data-card-discard]"));
+    expect(editor.draft.title).toBeNull();
+    expect(previewTitle()).toBeNull();
   });
 });
 

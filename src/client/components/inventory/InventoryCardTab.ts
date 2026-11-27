@@ -31,8 +31,12 @@ import {
   type CardDraft,
   type CardEditor,
   type CardSlotKind,
+  type CardSingleSlotKind,
   type CardSlotRef,
+  isSingleSlot,
   pickInto,
+  SINGLE_SLOT_SECTION,
+  SINGLE_SLOT_TYPE,
   sameSlot,
   slotItem,
   swapPreview,
@@ -55,9 +59,7 @@ interface PickerEntry {
 }
 
 function slotKey(slot: CardSlotRef): string {
-  return slot.kind === "background"
-    ? "background"
-    : `${slot.kind}:${slot.index}`;
+  return isSingleSlot(slot) ? slot.kind : `${slot.kind}:${slot.index}`;
 }
 
 /**
@@ -171,6 +173,7 @@ export class InventoryCardTab extends LitElement {
           : null,
         card: {
           background: draft.background ?? undefined,
+          title: draft.title ?? undefined,
           trackers: draft.rows.tracker
             .filter((s): s is string => s !== null)
             .map((stat) => ({
@@ -232,27 +235,58 @@ export class InventoryCardTab extends LitElement {
 
   // ---- Rows ----------------------------------------------------------------
 
-  private renderBackgroundRow(): TemplateResult {
-    const editor = this.editor!;
-    const slot: CardSlotRef = { kind: "background" };
-    const name = editor.draft.background;
-    const changed = name !== editor.saved.background;
+  /** The swatch at the start of a single slot's row: the background's art,
+   * or the title's first letter in its accent. */
+  private singleSwatch(
+    kind: CardSingleSlotKind,
+    name: string | null,
+  ): TemplateResult {
+    if (kind === "title") {
+      const title =
+        name !== null ? this.cosmetics?.cardTitles?.[name] : undefined;
+      return html`<span
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-black/40 text-lg font-black"
+        style=${title ? `color: ${title.accent ?? "#fbbf24"}` : ""}
+        aria-hidden="true"
+        >${title ? title.text.slice(0, 1) : ""}</span
+      >`;
+    }
     const url =
       name !== null ? this.cosmetics?.cardBackgrounds?.[name]?.url : undefined;
-    const open = this.openSlot?.kind === "background";
+    return html`<span
+      class="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-black/40 bg-cover bg-center"
+      style=${url ? `background-image:url("${url}")` : ""}
+    ></span>`;
+  }
+
+  /** Whether the Title row shows: when the picker could list a title (owned,
+   * for sale or earned), or one is saved or picked. */
+  private titleRowShown(): boolean {
+    const editor = this.editor!;
+    if (editor.saved.title !== null || editor.draft.title !== null) {
+      return true;
+    }
+    return Object.values(this.cosmetics?.cardTitles ?? {}).some(
+      (t) => itemStateOf(this.resolve("cardTitle", t), false) !== null,
+    );
+  }
+
+  private renderSingleRow(kind: CardSingleSlotKind): TemplateResult {
+    const editor = this.editor!;
+    const slot: CardSlotRef = { kind };
+    const name = editor.draft[kind];
+    const changed = name !== editor.saved[kind];
+    const open = this.openSlot?.kind === kind;
     return html`<button
       type="button"
-      data-card-slot="background"
+      data-card-slot=${kind}
       aria-expanded=${open ? "true" : "false"}
       class="flex min-h-14 w-full items-center gap-3 rounded-xl border p-2 text-left transition-colors ${
         changed ? "border-dashed border-white" : "border-white/10"
       } ${open ? "bg-blue-500/15" : "bg-white/5 hover:bg-white/10"}"
       @click=${() => this.toggleSlot(slot)}
     >
-      <span
-        class="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-black/40 bg-cover bg-center"
-        style=${url ? `background-image:url("${url}")` : ""}
-      ></span>
+      ${this.singleSwatch(kind, name)}
       <span class="flex min-w-0 flex-1 flex-col">
         <span
           class="text-[11px] font-black uppercase tracking-wider text-white/60"
@@ -265,7 +299,7 @@ export class InventoryCardTab extends LitElement {
           changed
             ? html`<span class="text-[11px] text-white/60"
                 >${translateText("inventory_card.was", {
-                  name: this.itemName(slot, editor.saved.background),
+                  name: this.itemName(slot, editor.saved[kind]),
                 })}</span
               >`
             : nothing
@@ -454,15 +488,14 @@ export class InventoryCardTab extends LitElement {
 
   private pickerEntries(slot: CardSlotRef): PickerEntry[] {
     const editor = this.editor!;
-    const section =
-      slot.kind === "background"
-        ? (this.cosmetics?.cardBackgrounds ?? {})
-        : ((this.cosmetics?.[CARD_SLOT_KINDS[slot.kind].section] ??
-            {}) as Record<string, CardItem>);
-    const type: CardItemType =
-      slot.kind === "background"
-        ? "cardBackground"
-        : CARD_SLOT_KINDS[slot.kind].type;
+    const section = (this.cosmetics?.[
+      isSingleSlot(slot)
+        ? SINGLE_SLOT_SECTION[slot.kind]
+        : CARD_SLOT_KINDS[slot.kind].section
+    ] ?? {}) as Record<string, CardItem>;
+    const type: CardItemType = isSingleSlot(slot)
+      ? SINGLE_SLOT_TYPE[slot.kind]
+      : CARD_SLOT_KINDS[slot.kind].type;
     const entries: PickerEntry[] = [];
     for (const item of Object.values(section) as CardItem[]) {
       // A row holds the item's name, which is also what's saved as the
@@ -489,11 +522,11 @@ export class InventoryCardTab extends LitElement {
     editor: CardEditor,
   ): PickerEntry {
     const name = resolved.cosmetic!.name;
-    if (slot.kind === "background") {
-      if (editor.draft.background === name) {
+    if (isSingleSlot(slot)) {
+      if (editor.draft[slot.kind] === name) {
         return {
           resolved,
-          state: editor.saved.background === name ? "equipped" : "unsaved",
+          state: editor.saved[slot.kind] === name ? "equipped" : "unsaved",
           note: null,
         };
       }
@@ -556,7 +589,7 @@ export class InventoryCardTab extends LitElement {
   }
 
   private artwork(slot: CardSlotRef, item: CardItem): TemplateResult {
-    if (slot.kind === "background") {
+    if (isSingleSlot(slot)) {
       return html`<player-card
         size="thumb"
         .view=${buildPlayerCardView(
@@ -564,7 +597,7 @@ export class InventoryCardTab extends LitElement {
             username: "",
             clanTag: null,
             badge: null,
-            card: { background: item.name, trackers: [] },
+            card: { [slot.kind]: item.name, trackers: [] },
           },
           this.cosmetics,
         )}
@@ -583,7 +616,7 @@ export class InventoryCardTab extends LitElement {
 
   private hint(slot: CardSlotRef): string {
     const editor = this.editor!;
-    if (slot.kind !== "background" && this.hovered !== null) {
+    if (!isSingleSlot(slot) && this.hovered !== null) {
       const swap = swapPreview(editor.draft, slot, this.hovered);
       if (swap !== null) {
         return swap.displaced === null
@@ -599,9 +632,7 @@ export class InventoryCardTab extends LitElement {
             });
       }
     }
-    return slot.kind === "background"
-      ? ""
-      : translateText("inventory_card.swap_note");
+    return isSingleSlot(slot) ? "" : translateText("inventory_card.swap_note");
   }
 
   private renderStoreTile(slot: CardSlotRef): TemplateResult {
@@ -620,16 +651,14 @@ export class InventoryCardTab extends LitElement {
     const slot = this.openSlot;
     if (slot === null || this.editor === null) return nothing;
     const entries = this.pickerEntries(slot);
-    const heading =
-      slot.kind === "background"
-        ? translateText("inventory_card.pick_background")
-        : translateText(`inventory_card.pick_${slot.kind}`, {
-            slot: slot.index + 1,
-          });
-    const current =
-      slot.kind === "background"
-        ? this.editor.draft.background
-        : (this.editor.draft.rows[slot.kind][slot.index] ?? null);
+    const heading = isSingleSlot(slot)
+      ? translateText(`inventory_card.pick_${slot.kind}`)
+      : translateText(`inventory_card.pick_${slot.kind}`, {
+          slot: slot.index + 1,
+        });
+    const current = isSingleSlot(slot)
+      ? this.editor.draft[slot.kind]
+      : (this.editor.draft.rows[slot.kind][slot.index] ?? null);
     return html`<section
       data-card-picker=${slotKey(slot)}
       aria-label=${heading}
@@ -665,7 +694,9 @@ export class InventoryCardTab extends LitElement {
           ${translateText(
             slot.kind === "background"
               ? "inventory.use_default"
-              : "inventory_card.leave_empty",
+              : slot.kind === "title"
+                ? "inventory_card.title_none"
+                : "inventory_card.leave_empty",
           )}
         </button>
       </div>
@@ -811,6 +842,7 @@ export class InventoryCardTab extends LitElement {
           class="block w-full"
           .view=${this.view({
             background: this.sampleBackground(),
+            title: null,
             rows: { tracker: [] },
           })}
         ></player-card>
@@ -857,8 +889,9 @@ export class InventoryCardTab extends LitElement {
           class="grid min-w-0 gap-4 @3xl:grid-cols-[17rem_minmax(0,1fr)] @3xl:items-start"
         >
           <div class="order-2 flex min-w-0 flex-col gap-3 @3xl:order-1">
-            ${this.renderBackgroundRow()}
+            ${this.renderSingleRow("background")}
             ${CARD_SLOT_KIND_LIST.map((kind) => this.renderRows(kind))}
+            ${this.titleRowShown() ? this.renderSingleRow("title") : nothing}
           </div>
           <div class="order-1 min-w-0 @3xl:order-2">
             ${this.renderPreview()}
