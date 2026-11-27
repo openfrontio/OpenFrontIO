@@ -22,6 +22,16 @@ describe("cardItemName", () => {
       }),
     ).toBe("Neon Grid");
   });
+
+  it("a title goes by its text", () => {
+    expect(
+      cardItemName("cardTitle", {
+        ...base,
+        name: "warmonger",
+        text: "Warmonger of the North",
+      }),
+    ).toBe("Warmonger of the North");
+  });
 });
 
 // The one map from a card item type to its catalogue group (Cosmetics.ts,
@@ -35,6 +45,11 @@ describe("CARD_ITEM_GROUP", () => {
       playerCard: "playerCards",
       cardTracker: "cardTrackers",
       cardBackground: "cardBackgrounds",
+      cardTitle: "cardTitles",
     });
+  });
+
+  it("cardTitle lives in cardTitles", () => {
+    expect(CARD_ITEM_GROUP.cardTitle).toBe("cardTitles");
   });
 });
