@@ -45,6 +45,12 @@ const COSMETICS = {
   },
   cardTitles: {
     warmonger: { ...item, name: "warmonger", text: "Warmonger" },
+    bloodied: {
+      ...item,
+      name: "bloodied",
+      text: "Bloodied",
+      accent: "#ef4444",
+    },
   },
   taunts: {
     salute: { ...item, name: "salute", tauntKind: "icon", preset: "salute" },
@@ -59,8 +65,8 @@ const VOLT = buildPlayerCardView(
     badge: { level: 47, prestige: 2, legend: false },
     card: {
       background: "bg_frontline",
-      // Saved, but held back: never shown.
       title: "warmonger",
+      // Saved, but held back: never shown.
       taunt: "salute",
       trackers: [
         { stat: "wins", value: 1204 },
@@ -126,6 +132,31 @@ describe("buildPlayerCardView", () => {
       trackers: [],
     });
   });
+
+  it("default card has no title", () => {
+    expect(defaultPlayerCardView("Volt", null).title).toBeNull();
+  });
+
+  it("resolves the equipped title through the catalogue", () => {
+    expect(VOLT.title).toEqual({
+      name: "warmonger",
+      text: "Warmonger",
+      accent: undefined,
+    });
+  });
+
+  it("unknown title or no cardTitles in the catalogue resolves to null", () => {
+    const card = { title: "gone", trackers: [] };
+    const input = { username: "Volt", clanTag: null, badge: null, card };
+    expect(buildPlayerCardView(input, COSMETICS).title).toBeNull();
+    const noTitles = { ...COSMETICS, cardTitles: undefined } as Cosmetics;
+    expect(
+      buildPlayerCardView(
+        { ...input, card: { title: "warmonger", trackers: [] } },
+        noTitles,
+      ).title,
+    ).toBeNull();
+  });
 });
 
 describe("formatTracker", () => {
@@ -155,11 +186,67 @@ describe("<player-card>", () => {
   }
   const text = (sel: string) => card.querySelector(sel)?.textContent ?? "";
 
-  it("a saved title or taunt is never shown (held back)", async () => {
+  it("a saved taunt is never shown (held back)", async () => {
     await render(VOLT);
-    expect(card.querySelector("[data-card-title]")).toBeNull();
     expect(card.querySelector("[data-card-taunt-icon]")).toBeNull();
-    expect(card.textContent).not.toContain("Warmonger");
+  });
+
+  const titled = (title: string) =>
+    buildPlayerCardView(
+      {
+        username: "Volt",
+        clanTag: null,
+        badge: null,
+        card: { title, trackers: [] },
+      },
+      COSMETICS,
+    );
+
+  it("renders the equipped title in its accent", async () => {
+    await render(titled("bloodied"));
+    const line = card.querySelector<HTMLElement>("[data-card-title]");
+    expect(line?.textContent?.trim()).toBe("Bloodied");
+    expect(line?.getAttribute("style")).toContain("#ef4444");
+  });
+
+  it("title without accent is gold", async () => {
+    await render(titled("warmonger"));
+    const line = card.querySelector<HTMLElement>("[data-card-title]");
+    expect(line?.textContent?.trim()).toBe("Warmonger");
+    expect(line?.getAttribute("style")).toContain("#fbbf24");
+  });
+
+  it("the title shows on every size, on one truncated line", async () => {
+    for (const size of ["end", "account", "panel", "thumb"] as const) {
+      await render(titled("warmonger"), { size });
+      const line = card.querySelector<HTMLElement>("[data-card-title]");
+      expect(line?.textContent?.trim(), size).toBe("Warmonger");
+      expect(line?.className, size).toContain("truncate");
+      card.remove();
+    }
+  });
+
+  it("unknown title renders no title line", async () => {
+    await render(titled("gone"));
+    expect(card.querySelector("[data-card-title]")).toBeNull();
+    expect(card.textContent).toContain("Volt");
+  });
+
+  it("no cardTitles in the catalogue renders the card", async () => {
+    const noTitles = { ...COSMETICS, cardTitles: undefined } as Cosmetics;
+    await render(
+      buildPlayerCardView(
+        {
+          username: "Volt",
+          clanTag: null,
+          badge: null,
+          card: { title: "warmonger", trackers: [] },
+        },
+        noTitles,
+      ),
+    );
+    expect(card.querySelector("[data-card-title]")).toBeNull();
+    expect(card.textContent).toContain("Volt");
   });
 
   it("renders badge, flag, clan tag, name, level line and three trackers", async () => {
