@@ -33,7 +33,10 @@ import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTwoTiles } from "../Util";
 import { NationAttackBehavior } from "./NationAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
-import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
+import {
+  isMirvWorthSavingFor,
+  victoryDenialTarget,
+} from "./NationMIRVBehavior";
 import {
   blastHitsFriendly,
   circleTiles,
@@ -208,10 +211,13 @@ export class NationNukeBehavior {
     const saving = this.isSavingForMirv();
     const incoming = incomingNukes(this.game);
     const targets = this.nukeTargetsToTry(incoming);
-    // The runaway leader comes next, for when our first pick is held back or offers no spot
+    // The runaway leader, and while saving up for a MIRV a player close to winning, come next,
+    // for when our first pick is held back or offers no spot
     const leader = runawayLeaderToNuke(this.game, this.player);
-    if (leader !== null && !targets.includes(leader)) {
-      targets.push(leader);
+    const denial = saving ? victoryDenialTarget(this.game, this.player) : null;
+    const exempt = [leader, denial].filter((p): p is Player => p !== null);
+    for (const p of exempt) {
+      if (!targets.includes(p)) targets.push(p);
     }
     if (targets.length === 0) {
       return;
@@ -221,9 +227,8 @@ export class NationNukeBehavior {
     const gold = this.player.gold();
     const othersGold = gold - (this.nukeFund?.nukeFund() ?? 0n);
     const budget = (target: Player) => (target === leader ? gold : othersGold);
-    const nukeTypes = this.nukeTypesToTry(saving, othersGold);
-    const leaderNukeTypes =
-      leader === null ? [] : this.nukeTypesToTry(false, gold);
+    const nukeTypes = this.nukeTypesToTry(othersGold);
+    const leaderNukeTypes = leader === null ? [] : this.nukeTypesToTry(gold);
     if (nukeTypes.length === 0 && leaderNukeTypes.length === 0) {
       return;
     }
@@ -231,11 +236,11 @@ export class NationNukeBehavior {
     this.removeOldNukeEvents();
     let salvoTarget: Player | null = null;
     for (const [i, target] of targets.entries()) {
-      // Saving up for a MIRV holds nukes back, but not from the runaway leader
-      const held = saving && target !== leader;
+      // Saving up for a MIRV holds nukes back, but not from those two
+      const held = saving && !exempt.includes(target);
       if (!this.mayNuke(target, held)) {
-        // Without the leader to fall back on, a first pick we may not nuke ends the round
-        if (i === 0 && leader === null) return;
+        // Without either to fall back on, a first pick we may not nuke ends the round
+        if (i === 0 && exempt.length === 0) return;
         continue;
       }
       if (!held) salvoTarget ??= target;
@@ -267,7 +272,7 @@ export class NationNukeBehavior {
       target.type() !== PlayerType.Bot && // Don't nuke tribes (as opposed to nations and humans)
       !this.player.isOnSameTeam(target) &&
       this.attackBehavior.shouldAttack(target) &&
-      // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them, with atom bombs
+      // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them
       (!held || this.isHittingUs(target))
     );
   }
@@ -320,12 +325,11 @@ export class NationNukeBehavior {
   }
 
   /** Hydrogen bomb first; on Hard & Impossible, an atom bomb if no spot is worth a hydrogen bomb. */
-  private nukeTypesToTry(atomOnly: boolean, budget: Gold): NukeType[] {
+  private nukeTypesToTry(budget: Gold): NukeType[] {
     const config = this.game.config();
     const difficulty = config.gameConfig().difficulty;
     const types: NukeType[] = [];
     if (
-      !atomOnly &&
       !config.isUnitDisabled(UnitType.HydrogenBomb) &&
       budget >= this.getPerceivedNukeCost(UnitType.HydrogenBomb)
     ) {
@@ -704,6 +708,7 @@ export class NationNukeBehavior {
     for (const nuke of nukes) {
       const sender = nuke.owner();
       if (this.player.isFriendly(sender)) continue;
+      if (this.isHarmlessTo(sender, this.player)) continue;
       const targetTile = nuke.targetTile();
       if (
         targetTile !== undefined &&

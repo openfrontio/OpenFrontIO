@@ -2,6 +2,7 @@ import {
   Difficulty,
   PlayerInfo,
   PlayerType,
+  TerraNullius,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
@@ -13,16 +14,16 @@ import {
 } from "@openfront/engine/execution/nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { vi } from "vitest";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
 const SIZE = 200;
 const LEADER_WEST_EDGE = 45;
 
-// 200x200 land in a ring of water, so territory samples span the whole territory: `nation`
-// west of x=40, `bystander` up to x=45, and `leader` with the remaining 77%. With `sams`, a grid
-// of the test config's 20-tile SAMs covers all of it.
-function setupLeader(difficulty: Difficulty, { sams }: { sams: boolean }) {
+// 200x200 land in a ring of water, so territory samples span the whole territory: `nation`,
+// `bystander` and `leader` own the land west of each of `eastEdges`, the rest is free.
+function setupField(difficulty: Difficulty, eastEdges: number[]) {
   const grid: string[] = [];
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
@@ -35,13 +36,23 @@ function setupLeader(difficulty: Difficulty, { sams }: { sams: boolean }) {
   const nation = add("nation", PlayerType.Nation);
   const bystander = add("bystander", PlayerType.Human);
   const leader = add("leader", PlayerType.Human);
+  const owners = [nation, bystander, leader];
   game.map().forEachTile((tile) => {
     if (!game.map().isLand(tile)) return;
     const x = game.x(tile);
-    if (x < 40) nation.conquer(tile);
-    else if (x < LEADER_WEST_EDGE) bystander.conquer(tile);
-    else leader.conquer(tile);
+    owners[eastEdges.findIndex((edge) => x < edge)]?.conquer(tile);
   });
+  nation.buildUnit(UnitType.MissileSilo, game.ref(5, 100), {});
+  return { game, nation, bystander, leader };
+}
+
+// `leader` owns the 77% east of x=45. With `sams`, a grid of the test config's 20-tile SAMs covers all of it.
+function setupLeader(difficulty: Difficulty, { sams }: { sams: boolean }) {
+  const { game, nation, leader } = setupField(difficulty, [
+    40,
+    LEADER_WEST_EDGE,
+    SIZE,
+  ]);
   leader.buildUnit(UnitType.City, game.ref(120, 100), {});
   if (sams) {
     for (let x = LEADER_WEST_EDGE + 12; x < SIZE; x += 25) {
@@ -50,10 +61,67 @@ function setupLeader(difficulty: Difficulty, { sams }: { sams: boolean }) {
       }
     }
   }
-  nation.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
   game.endSpawnPhase();
   return { game, nation, leader };
 }
+
+// `leader` owns 48% of the land, 43 points more than `nation`, and 9.5x as much as `bystander`, which
+// borders `nation` and is a bit bigger
+function setupRunawayLeader(difficulty: Difficulty) {
+  const field = setupField(difficulty, [10, 20, 115]);
+  field.game.endSpawnPhase();
+  return field;
+}
+
+function mirvTarget(game: Game, nation: Player): Player | TerraNullius | null {
+  nation.addGold(100_000_000n);
+  const random = new PseudoRandom(1);
+  vi.spyOn(random, "chance").mockReturnValue(false);
+  const behavior = new NationMIRVBehavior(
+    random,
+    game,
+    nation,
+    new NationEmojiBehavior(random, game, nation),
+  );
+  const spy = vi.spyOn(game, "addExecution");
+  behavior.considerMIRV();
+  const mirv = spy.mock.calls
+    .map(([e]) => e)
+    .find((e) => e instanceof MirvExecution);
+  return mirv === undefined ? null : game.owner(mirv["dst"]);
+}
+
+describe("Nations and MIRVs at players close to winning", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Hard's victory denial bar is half the land without fallout; leads count from minute 8, and a
+  // runaway leader we don't border must be 40 points ahead of us
+  it.each([
+    ["no one is close to winning", 0, 0, "bystander"],
+    ["a runaway leader", 8 * 600, 0, "leader"],
+    ["a leader over half the land without fallout", 0, 12_000, "leader"],
+  ] as const)("Hard, %s: MIRVs the %s", (_, ticks, fallout, target) => {
+    const players = setupRunawayLeader(Difficulty.Hard);
+    const { game, nation } = players;
+    vi.spyOn(game, "ticks").mockReturnValue(
+      game.config().numSpawnPhaseTurns() + ticks,
+    );
+    vi.spyOn(game, "numTilesWithFallout").mockReturnValue(fallout);
+    expect(mirvTarget(game, nation)).toBe(players[target]);
+  });
+
+  it("Hard saves up for a MIRV and a hydrogen bomb before anyone is close to winning", () => {
+    const { game, nation } = setupRunawayLeader(Difficulty.Hard);
+    const behavior = new NationStructureBehavior(
+      new PseudoRandom(1),
+      game,
+      nation,
+    );
+    expect(behavior["getSaveUpTarget"]()).toBe(30_000_000n);
+  });
+});
 
 describe("MIRV warheads getting past SAMs", () => {
   it("every warhead lands without SAMs, none under a full SAM grid", () => {

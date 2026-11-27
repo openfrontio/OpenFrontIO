@@ -412,35 +412,23 @@ describe("Nation strike nukes", () => {
     },
   );
 
-  it.each([false, true])(
-    "Impossible: nukes back a much weaker neighbor only on structures, without following up (city: %s)",
-    async (city) => {
+  // Impossible leaves alone an army under half of its ~1.3M
+  it.each([
+    [200_000, false],
+    [1_000_000, true],
+  ])(
+    "Impossible: nukes back a neighbor with %i troops whose bomb is flying at it: %s",
+    async (humanTroops, nukes) => {
       const { game, nation, human, nukeBehavior } = await setupFront(
         Difficulty.Impossible,
       );
-      setTroops(game, nation, human, 1_000_000, 200_000);
+      setTroops(game, nation, human, 1_000_000, humanTroops);
       human.buildUnit(UnitType.HydrogenBomb, game.ref(150, 150), {
         targetTile: game.ref(50, 100),
         trajectory: [],
       });
-      if (city) human.buildUnit(UnitType.City, game.ref(150, 100), {});
-      expect(nukeBehavior.findBestNukeTarget()).toBe(human);
 
-      nukeBehavior.maybeSendNuke();
-      game.executeNextTick();
-      game.executeNextTick();
-      const nukes = nation.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
-      expect(nukes).toHaveLength(city ? 1 : 0);
-      // A follow-up attack starts the tick after the bomb lands
-      let ticksAfterLanding = 0;
-      for (let i = 0; i < 300 && ticksAfterLanding < 3; i++) {
-        game.executeNextTick();
-        nukeBehavior.followUpStrikes();
-        if (nukes.every((n) => !n.isActive())) ticksAfterLanding++;
-      }
-
-      expect(ticksAfterLanding).toBe(3);
-      expect(attacksOn(nation, human)).toHaveLength(0);
+      expect(nukeBehavior.findBestNukeTarget()).toBe(nukes ? human : null);
     },
   );
 
@@ -457,7 +445,8 @@ describe("Nation strike nukes", () => {
 });
 
 describe("Nation nuke saving", () => {
-  // Easy & Medium, and team games, never forget; Hard & Impossible take 3000 ticks to get back to the real 750k
+  // With the human on 85% of the land, a MIRV is worth saving for. Easy & Medium, and team games,
+  // never forget; Hard & Impossible take 3000 ticks to get back to the real 750k
   it.each([
     [Difficulty.Medium, false, 3000, 10_000_000n],
     [Difficulty.Hard, false, 0, 10_000_000n],
@@ -469,6 +458,8 @@ describe("Nation nuke saving", () => {
     async (difficulty, teams, ago, perceived) => {
       const { game, nation, nukeBehavior } = await setupFront(difficulty, {
         teams,
+        split: 20,
+        humanFrom: 20,
       });
       nation.removeGold(nation.gold() - 1_000_000n);
       nukeBehavior["atomBombPerceivedCost"] = 10_000_000n;
@@ -495,30 +486,45 @@ describe("Nation nuke saving", () => {
   });
 
   // 20M left of 40M earned in the first minute: the 30M of a MIRV and a hydrogen bomb is within reach
+  async function setupSaving(difficulty: Difficulty) {
+    // A narrow nation, so a hydrogen bomb fits on the human's side
+    const { game, nation, human, nukeBehavior } = await setupFront(difficulty, {
+      split: 20,
+      humanFrom: 20,
+    });
+    // A much weaker attacker wouldn't be worth nuking back
+    setTroops(game, nation, human, 200_000, 300_000);
+    expect(nation.troops()).toBeLessThan(game.config().maxTroops(nation));
+    nation.removeGold(nation.gold() - 20_000_000n);
+    const launch = () => {
+      nukeBehavior.maybeSendNuke();
+      game.executeNextTick();
+      game.executeNextTick();
+      return nation.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
+    };
+    return { game, nation, human, launch };
+  }
+
   it.each([Difficulty.Hard, Difficulty.Impossible])(
-    "%s: saving up for a MIRV, holds back a strike but nukes back a neighbor attacking it with an atom bomb",
+    "%s: saving up for a MIRV, holds back a strike but nukes back a neighbor attacking it",
     async (difficulty) => {
-      // A narrow nation, so a hydrogen bomb fits on the human's side
-      const { game, nation, human, nukeBehavior } = await setupFront(
-        difficulty,
-        { split: 20, humanFrom: 20 },
-      );
-      // A much weaker attacker wouldn't be worth nuking back
-      setTroops(game, nation, human, 200_000, 300_000);
-      expect(nation.troops()).toBeLessThan(game.config().maxTroops(nation));
-      nation.removeGold(nation.gold() - 20_000_000n);
-      const launch = () => {
-        nukeBehavior.maybeSendNuke();
-        game.executeNextTick();
-        game.executeNextTick();
-        return nation.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
-      };
+      const { game, nation, human, launch } = await setupSaving(difficulty);
+      // A map 2.5x as big, so the human's 34k tiles stay below the victory denial bar
+      vi.spyOn(game, "numLandTiles").mockReturnValue(100_000);
 
       expect(launch()).toHaveLength(0);
 
       game.addExecution(new AttackExecution(100_000, human, nation.id()));
       game.executeNextTick();
-      expect(launch().map((u) => u.type())).toEqual([UnitType.AtomBomb]);
+      expect(launch().map((u) => u.type())).toEqual([UnitType.HydrogenBomb]);
+    },
+  );
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: saving up for a MIRV, still nukes a neighbor close to winning",
+    async (difficulty) => {
+      const { launch } = await setupSaving(difficulty);
+      expect(launch().map((u) => u.type())).toEqual([UnitType.HydrogenBomb]);
     },
   );
 });
