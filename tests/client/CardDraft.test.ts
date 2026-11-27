@@ -575,9 +575,9 @@ describe("CardEditor", () => {
     ]);
     expect(editor.draft.rows.tracker).toContain("best_elo");
     expect(editor.draft.rows.tracker).not.toContain("nukes_launched");
-    expect(
-      loadoutBody(editor.draft, { taunt: null }).trackers,
-    ).toEqual(["best_elo"]);
+    expect(loadoutBody(editor.draft, { taunt: null }).trackers).toEqual([
+      "best_elo",
+    ]);
   });
 
   it("Discard mid-save, then the save fails: the draft ends on the card the server kept", async () => {

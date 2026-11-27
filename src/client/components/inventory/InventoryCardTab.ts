@@ -31,6 +31,7 @@ import {
   type CardDraft,
   type CardEditor,
   type CardSlotKind,
+  type CardSingleSlotKind,
   type CardSlotRef,
   isSingleSlot,
   pickInto,
@@ -172,6 +173,7 @@ export class InventoryCardTab extends LitElement {
           : null,
         card: {
           background: draft.background ?? undefined,
+          title: draft.title ?? undefined,
           trackers: draft.rows.tracker
             .filter((s): s is string => s !== null)
             .map((stat) => ({
@@ -233,27 +235,58 @@ export class InventoryCardTab extends LitElement {
 
   // ---- Rows ----------------------------------------------------------------
 
-  private renderBackgroundRow(): TemplateResult {
-    const editor = this.editor!;
-    const slot: CardSlotRef = { kind: "background" };
-    const name = editor.draft.background;
-    const changed = name !== editor.saved.background;
+  /** The swatch at the start of a single slot's row: the background's art,
+   * or the title's first letter in its accent. */
+  private singleSwatch(
+    kind: CardSingleSlotKind,
+    name: string | null,
+  ): TemplateResult {
+    if (kind === "title") {
+      const title =
+        name !== null ? this.cosmetics?.cardTitles?.[name] : undefined;
+      return html`<span
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-black/40 text-lg font-black"
+        style=${title ? `color: ${title.accent ?? "#fbbf24"}` : ""}
+        aria-hidden="true"
+        >${title ? title.text.slice(0, 1) : ""}</span
+      >`;
+    }
     const url =
       name !== null ? this.cosmetics?.cardBackgrounds?.[name]?.url : undefined;
-    const open = this.openSlot?.kind === "background";
+    return html`<span
+      class="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-black/40 bg-cover bg-center"
+      style=${url ? `background-image:url("${url}")` : ""}
+    ></span>`;
+  }
+
+  /** Whether the Title row shows: when the picker could list a title (owned,
+   * for sale or earned), or one is saved or picked. */
+  private titleRowShown(): boolean {
+    const editor = this.editor!;
+    if (editor.saved.title !== null || editor.draft.title !== null) {
+      return true;
+    }
+    return Object.values(this.cosmetics?.cardTitles ?? {}).some(
+      (t) => itemStateOf(this.resolve("cardTitle", t), false) !== null,
+    );
+  }
+
+  private renderSingleRow(kind: CardSingleSlotKind): TemplateResult {
+    const editor = this.editor!;
+    const slot: CardSlotRef = { kind };
+    const name = editor.draft[kind];
+    const changed = name !== editor.saved[kind];
+    const open = this.openSlot?.kind === kind;
     return html`<button
       type="button"
-      data-card-slot="background"
+      data-card-slot=${kind}
       aria-expanded=${open ? "true" : "false"}
       class="flex min-h-14 w-full items-center gap-3 rounded-xl border p-2 text-left transition-colors ${
         changed ? "border-dashed border-white" : "border-white/10"
       } ${open ? "bg-blue-500/15" : "bg-white/5 hover:bg-white/10"}"
       @click=${() => this.toggleSlot(slot)}
     >
-      <span
-        class="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-black/40 bg-cover bg-center"
-        style=${url ? `background-image:url("${url}")` : ""}
-      ></span>
+      ${this.singleSwatch(kind, name)}
       <span class="flex min-w-0 flex-1 flex-col">
         <span
           class="text-[11px] font-black uppercase tracking-wider text-white/60"
@@ -266,7 +299,7 @@ export class InventoryCardTab extends LitElement {
           changed
             ? html`<span class="text-[11px] text-white/60"
                 >${translateText("inventory_card.was", {
-                  name: this.itemName(slot, editor.saved.background),
+                  name: this.itemName(slot, editor.saved[kind]),
                 })}</span
               >`
             : nothing
@@ -856,8 +889,9 @@ export class InventoryCardTab extends LitElement {
           class="grid min-w-0 gap-4 @3xl:grid-cols-[17rem_minmax(0,1fr)] @3xl:items-start"
         >
           <div class="order-2 flex min-w-0 flex-col gap-3 @3xl:order-1">
-            ${this.renderBackgroundRow()}
+            ${this.renderSingleRow("background")}
             ${CARD_SLOT_KIND_LIST.map((kind) => this.renderRows(kind))}
+            ${this.titleRowShown() ? this.renderSingleRow("title") : nothing}
           </div>
           <div class="order-1 min-w-0 @3xl:order-2">
             ${this.renderPreview()}
