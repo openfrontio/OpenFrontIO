@@ -43,13 +43,39 @@ export const CARD_SLOT_KIND_LIST = Object.keys(
   CARD_SLOT_KINDS,
 ) as CardSlotKind[];
 
-/** A slot on the card: the background, or row `index` of a kind. */
+/** The slots that hold one item: the background and the title. */
+export type CardSingleSlotKind = "background" | "title";
+
+/** A slot on the card: the background, the title, or row `index` of a
+ * kind. */
 export type CardSlotRef =
-  | { kind: "background" }
+  | { kind: CardSingleSlotKind }
   | { kind: CardSlotKind; index: number };
+
+export function isSingleSlot(
+  slot: CardSlotRef,
+): slot is { kind: CardSingleSlotKind } {
+  return slot.kind === "background" || slot.kind === "title";
+}
+
+/** The item type each single slot holds (its flare is `<type>:<name>`). */
+export const SINGLE_SLOT_TYPE = {
+  background: "cardBackground",
+  title: "cardTitle",
+} as const satisfies Record<CardSingleSlotKind, CardItemType>;
+
+export const SINGLE_SLOT_SECTION = {
+  background: "cardBackgrounds",
+  title: "cardTitles",
+} as const satisfies Record<CardSingleSlotKind, keyof Cosmetics>;
+
+const SINGLE_SLOTS: readonly CardSingleSlotKind[] = ["background", "title"];
 
 export interface CardDraft {
   background: string | null;
+  /** The title's catalogue name. A saved one the catalogue no longer has
+   * stays here (and is sent back) until the player picks another. */
+  title: string | null;
   /** Per kind, one entry per row (left to right on the card); null = empty. */
   rows: Record<CardSlotKind, (string | null)[]>;
 }
@@ -62,7 +88,7 @@ export interface CardChange {
 
 export function sameSlot(a: CardSlotRef, b: CardSlotRef): boolean {
   if (a.kind !== b.kind) return false;
-  if (a.kind === "background") return true;
+  if (isSingleSlot(a)) return true;
   return a.index === (b as { index: number }).index;
 }
 
@@ -76,10 +102,15 @@ function padRows(names: readonly string[], rows: number): (string | null)[] {
  * the catalogue item's name, which is its stat: the API names each tracker
  * by its stat, and the picker offers no tracker where they differ. */
 export function draftFromCard(
-  card: { background?: string | null; trackers?: { stat: string }[] } | null,
+  card: {
+    background?: string | null;
+    title?: string | null;
+    trackers?: { stat: string }[];
+  } | null,
 ): CardDraft {
   return {
     background: card?.background ?? null,
+    title: card?.title ?? null,
     rows: {
       tracker: padRows(
         (card?.trackers ?? []).map((t) => t.stat),
@@ -154,11 +185,10 @@ function showsSave(
   replaced: CardDraft,
   sent: CardDraft,
 ): boolean {
-  if (
-    sent.background !== replaced.background &&
-    card.background !== sent.background
-  ) {
-    return false;
+  for (const kind of SINGLE_SLOTS) {
+    if (sent[kind] !== replaced[kind] && card[kind] !== sent[kind]) {
+      return false;
+    }
   }
   const items = (rows: readonly (string | null)[]) =>
     rows.filter((x): x is string => x !== null);
@@ -179,6 +209,7 @@ function storedCard(
   const stored = Array.isArray(loadout?.trackers) ? loadout : body;
   return draftFromCard({
     background: stored.background ?? null,
+    title: stored.title ?? null,
     trackers: stored.trackers.map((stat) => ({ stat })),
   });
 }
@@ -193,21 +224,20 @@ function sameRows(
 function cloneDraft(draft: CardDraft): CardDraft {
   return {
     background: draft.background,
+    title: draft.title,
     rows: Object.fromEntries(
       CARD_SLOT_KIND_LIST.map((kind) => [kind, [...draft.rows[kind]]]),
     ) as CardDraft["rows"],
   };
 }
 
-/** Every slot whose item differs, background first, then rows in order. */
+/** Every slot whose item differs: background, title, then rows in order. */
 export function cardChanges(saved: CardDraft, draft: CardDraft): CardChange[] {
   const changes: CardChange[] = [];
-  if (saved.background !== draft.background) {
-    changes.push({
-      slot: { kind: "background" },
-      from: saved.background,
-      to: draft.background,
-    });
+  for (const kind of SINGLE_SLOTS) {
+    if (saved[kind] !== draft[kind]) {
+      changes.push({ slot: { kind }, from: saved[kind], to: draft[kind] });
+    }
   }
   for (const kind of CARD_SLOT_KIND_LIST) {
     draft.rows[kind].forEach((to, index) => {
@@ -226,8 +256,8 @@ export function pickInto(
   name: string | null,
 ): CardDraft {
   const next = cloneDraft(draft);
-  if (slot.kind === "background") {
-    next.background = name;
+  if (isSingleSlot(slot)) {
+    next[slot.kind] = name;
     return next;
   }
   const rows = next.rows[slot.kind];
@@ -252,7 +282,7 @@ export function swapPreview(
   displaced: string | null;
   from: number;
 } | null {
-  if (slot.kind === "background") return null;
+  if (isSingleSlot(slot)) return null;
   const rows = draft.rows[slot.kind];
   const from = rows.indexOf(name);
   if (from === -1 || from === slot.index) return null;
@@ -283,8 +313,8 @@ export function replayByItem(
   after: CardDraft,
 ): CardDraft {
   const out = cloneDraft(base);
-  if (before.background !== after.background) {
-    out.background = after.background;
+  for (const kind of SINGLE_SLOTS) {
+    if (before[kind] !== after[kind]) out[kind] = after[kind];
   }
   for (const kind of CARD_SLOT_KIND_LIST) {
     const was = before.rows[kind];
@@ -386,15 +416,15 @@ export function moveRow(
   return next;
 }
 
-/** The loadout to PUT. Held-back fields (title, taunt) go back exactly as
- * stored: a saved one stays saved. Empty rows are left out. */
+/** The loadout to PUT. The held-back taunt goes back exactly as stored: a
+ * saved one stays saved. Empty rows are left out. */
 export function loadoutBody(
   draft: CardDraft,
-  held: Pick<CardLoadoutBody, "title" | "taunt">,
+  held: Pick<CardLoadoutBody, "taunt">,
 ): CardLoadoutBody {
   return {
     background: draft.background,
-    title: held.title,
+    title: draft.title,
     taunt: held.taunt,
     trackers: draft.rows.tracker.filter(
       (s): s is TrackerStat => s !== null,
@@ -404,10 +434,9 @@ export function loadoutBody(
 
 /** The flare that owns an item in a slot. */
 function flareFor(slot: CardSlotRef, name: string): string {
-  const type =
-    slot.kind === "background"
-      ? "cardBackground"
-      : CARD_SLOT_KINDS[slot.kind].type;
+  const type = isSingleSlot(slot)
+    ? SINGLE_SLOT_TYPE[slot.kind]
+    : CARD_SLOT_KINDS[slot.kind].type;
   return `${type}:${name}`;
 }
 
@@ -417,9 +446,12 @@ export function slotItem(
   slot: CardSlotRef,
   name: string,
 ): { type: CardItemType; item: CardItem } | null {
-  if (slot.kind === "background") {
-    const item = cosmetics?.cardBackgrounds?.[name];
-    return item ? { type: "cardBackground", item } : null;
+  if (isSingleSlot(slot)) {
+    const section = cosmetics?.[SINGLE_SLOT_SECTION[slot.kind]] as
+      | Record<string, CardItem>
+      | undefined;
+    const item = section?.[name];
+    return item ? { type: SINGLE_SLOT_TYPE[slot.kind], item } : null;
   }
   const spec = CARD_SLOT_KINDS[slot.kind];
   const section = cosmetics?.[spec.section] as
@@ -482,11 +514,8 @@ export class CardEditor {
   saved: CardDraft = draftFromCard(null);
   draft: CardDraft = draftFromCard(null);
   saveState: CardSaveState = "idle";
-  /** The held-back fields, sent back unchanged. */
-  private held: Pick<CardLoadoutBody, "title" | "taunt"> = {
-    title: null,
-    taunt: null,
-  };
+  /** The held-back taunt, sent back unchanged. */
+  private held: Pick<CardLoadoutBody, "taunt"> = { taunt: null };
   /** Tracker values the server last sent, for the preview. */
   values = new Map<string, number>();
   private flares: readonly string[] = [];
@@ -577,7 +606,7 @@ export class CardEditor {
     const hadChanges = this.changeCount() > 0;
     const before = this.saved;
     this.saved = draftFromCard(card);
-    this.held = { title: card?.title ?? null, taunt: card?.taunt ?? null };
+    this.held = { taunt: card?.taunt ?? null };
     this.values = new Map(
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
@@ -633,7 +662,7 @@ export class CardEditor {
     this.resetAccount();
     this.saved = draftFromCard(null);
     this.draft = draftFromCard(null);
-    this.held = { title: null, taunt: null };
+    this.held = { taunt: null };
     this.values = new Map();
     this.flares = [];
     this.emit();
