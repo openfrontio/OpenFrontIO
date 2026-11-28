@@ -128,6 +128,7 @@ export enum GameMapType {
   TheBox = "The Box", // map-generator/assets/maps/thebox/info.json
   TierraDelFuego = "Tierra Del Fuego", // map-generator/assets/maps/tierradelfuego/info.json
   Titan = "Titan", // map-generator/assets/maps/titan/info.json
+  Tongass = "Tongass", // map-generator/assets/maps/tongass/info.json
   Tourney1 = "Tourney 2 Teams", // map-generator/assets/maps/tourney1/info.json
   Tourney2 = "Tourney 3 Teams", // map-generator/assets/maps/tourney2/info.json
   Tourney3 = "Tourney 4 Teams", // map-generator/assets/maps/tourney3/info.json
@@ -2401,6 +2402,18 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 28,
     author: "Tristar",
     descriptionKey: "map_description.titan",
+  },
+  {
+    id: "Tongass",
+    type: GameMapType.Tongass,
+    translationKey: "map.tongass",
+    categories: ["north_america", "new"],
+    defaultNationCount: 27,
+    themes: ["north_america"],
+    layers: [{ id: "impassable", placement: "land" }],
+    author: "Tristar",
+    descriptionKey: "map_description.tongass",
+    location: { lat: 57, lon: -134 },
   },
   {
     id: "Tourney1",
