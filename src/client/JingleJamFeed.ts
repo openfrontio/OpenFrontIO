@@ -25,7 +25,11 @@ export function acceptJingleJam(
   now: number,
 ): JingleJamFeed {
   if (feed.mode !== "live" && feed.mode !== "static") return feed;
-  const age = now - Date.parse(feed.updatedAt);
+  // Measured on the server's clock when it says what that is: a player whose own
+  // clock is hours out would otherwise lose a healthy total (fast clock) or keep a
+  // stale one (slow clock).
+  const reference = feed.servedAt ? Date.parse(feed.servedAt) : now;
+  const age = reference - Date.parse(feed.updatedAt);
   let out = feed;
   if (age > STREAMS_MAX_AGE_MS) {
     out = { ...out, liveStreams: [], pinned: undefined };

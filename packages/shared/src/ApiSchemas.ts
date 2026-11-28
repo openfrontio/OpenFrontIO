@@ -1607,6 +1607,9 @@ export const JINGLE_JAM_COPY = [
 export const JingleJamFeedSchema = z.object({
   mode: z.enum(["off", "static", "live", "ended"]),
   updatedAt: z.iso.datetime(),
+  // The API's own clock when it built this response. Optional, so an older API
+  // still parses; the client then falls back to its own clock for staleness.
+  servedAt: z.iso.datetime().optional(),
   // An unknown preset (a newer API) falls back to the default line rather than
   // failing the whole feed.
   copy: z.enum(JINGLE_JAM_COPY).catch("default").default("default"),

@@ -136,6 +136,30 @@ describe("acceptJingleJam (stale feeds)", () => {
     expect(f.donateUrl).toBe("https://donate.example/gosh");
   });
 
+  it("goes by the server's clock when the feed carries servedAt", () => {
+    // Healthy feed (read a minute before it was served) on a player clock two hours
+    // ahead: the total and streams must stay.
+    const healthy = feed({
+      updatedAt: at(121),
+      servedAt: at(120),
+      totals,
+      liveStreams: [stream("a", 1)],
+    });
+    const f = acceptJingleJam(healthy, now);
+    expect(f.mode).toBe("live");
+    expect(f.totals?.raisedPence).toBe(2_020_800);
+    expect(f.liveStreams).toHaveLength(1);
+  });
+
+  it("a slow player clock can't keep a feed the server says is stale", () => {
+    const stale = feed({
+      updatedAt: at(0),
+      servedAt: new Date(now + 90 * 60_000).toISOString(),
+      totals,
+    });
+    expect(acceptJingleJam(stale, now).mode).toBe("static");
+  });
+
   it("leaves an ended feed alone, however old", () => {
     const f = feed({ mode: "ended", updatedAt: at(60 * 24 * 3), totals });
     expect(acceptJingleJam(f, now)).toBe(f);
