@@ -101,7 +101,10 @@ export async function collectGraphicsDiagnostics(
       rendering.gpu = {
         vendor,
         renderer,
-        software: /swiftshader|llvmpipe|software/i.test(renderer),
+        // Mirrors SOFTWARE_RENDERER in render/gl/initGL.ts.
+        software: /swiftshader|llvmpipe|software|basic render driver/i.test(
+          renderer,
+        ),
       };
     } else {
       rendering.gpu = { unavailable: true };
