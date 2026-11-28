@@ -995,7 +995,7 @@ export class ControlPanel extends LitElement implements Controller {
         .percentage=${Math.round(this.attackRatio * 100)}
         .x=${this._tipX}
         .y=${this._tipY}
-        .visible=${this._tipVisible}
+        .visible=${this._isVisible && this._tipVisible}
       ></troop-tooltip>
     `;
   }
