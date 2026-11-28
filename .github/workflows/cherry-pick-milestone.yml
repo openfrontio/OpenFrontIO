@@ -52,6 +52,7 @@ jobs:
       PR_TITLE: ${{ github.event.pull_request.title }}
       SHA: ${{ github.event.pull_request.merge_commit_sha }}
       TARGET: ${{ github.event.pull_request.milestone.title }}
+      MILESTONE: ${{ github.event.pull_request.milestone.number }}
       # `secrets` is not available in a step-level `if`, so surface this here.
       HAS_SLACK: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
       # claude-code-action overwrites these with main's copies before Claude
@@ -489,9 +490,15 @@ jobs:
 
           draft=()
           if [ -n "$still_failing" ]; then draft=(--draft); fi
-          # Opened with the app token so CI runs on it. The milestone satisfies
-          # the Has Milestone check.
-          url=$(GH_TOKEN="$APP_TOKEN" gh pr create "${draft[@]}" --base "$TARGET" --head "$branch" --milestone "$TARGET" --title "[$TARGET] $PR_TITLE" --body "$body")
+          # Opened with the app token so CI runs on it.
+          url=$(GH_TOKEN="$APP_TOKEN" gh pr create "${draft[@]}" --base "$TARGET" --head "$branch" --title "[$TARGET] $PR_TITLE" --body "$body")
+          # The milestone satisfies the Has Milestone check, which re-runs on
+          # `milestoned`. Set by number: `gh pr create --milestone` only finds
+          # open milestones, and a release's is often closed by the time a PR
+          # is backported. A failure here must not lose the comment below.
+          if ! GH_TOKEN="$APP_TOKEN" gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/${url##*/}" -F "milestone=$MILESTONE" > /dev/null; then
+            echo "::warning::Could not set milestone $TARGET on $url"
+          fi
           if [ "$FIX_MODE" = conflict ]; then
             why="conflicted"
           else
