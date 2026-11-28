@@ -2,6 +2,7 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./CosmeticBackground";
+import "./JingleJamBanner";
 import "./NavAccountMenu";
 import "./NavUtilityIcons";
 import "./NewsBox";
@@ -87,6 +88,10 @@ export class PlayPage extends LitElement {
           <div
             class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] -mb-4"
           ></div>
+
+          <!-- Jingle Jam (GOSH Charity), 1–14 Dec: full width above news and identity.
+               Hidden unless /jinglejam.json says otherwise. -->
+          <jj-banner class="block lg:col-span-full min-w-0"></jj-banner>
 
           <!-- Left column: news banner + identity row, stacked tight. -->
           <div class="flex flex-col gap-2 min-w-0">

@@ -36,6 +36,7 @@ import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/InputCard";
 import "./components/InsufficientCurrencyDialog";
+import "./components/JingleJamTracker";
 // The type import below is erased at runtime; keep this to register the dialog.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/ListLobbyDialog";
@@ -686,6 +687,7 @@ export class HostLobbyModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          <jj-tracker class="mb-6"></jj-tracker>
           ${
             this.publiclyListed
               ? html`<div
