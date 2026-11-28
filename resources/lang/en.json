@@ -3223,6 +3223,11 @@
     "capacity_note": "Receiver can accept only {amount} right now.",
     "title_with_name": "Send Troops to {name}"
   },
+  "shop_spotlight": {
+    "browse": "Browse store",
+    "title": "In the Store",
+    "view": "View {name} in the store"
+  },
   "single_modal": {
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "medals_earned": "Medals",

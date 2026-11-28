@@ -858,7 +858,7 @@ export class UsernameInput extends LitElement {
         this.clanTagOwnershipError ||
         this.claimGraceVisible()
           ? html`<div
-              class="absolute top-full left-0 z-50 w-full sm:w-auto sm:max-w-[calc((100%-1rem)*2/3)] lg:group-has-[.streaming-live]/strip:max-w-full mt-1 flex flex-col gap-1 items-start"
+              class="absolute top-full left-0 z-50 w-full sm:w-auto sm:max-w-[calc((100%-1rem)*2/3)] lg:group-has-[.streaming-live]/strip:max-w-full lg:group-has-[.shop-spotlight-live]/strip:max-w-full mt-1 flex flex-col gap-1 items-start"
             >
               ${
                 this.validationError

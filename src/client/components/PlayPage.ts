@@ -6,6 +6,7 @@ import "./JingleJamBanner";
 import "./NavAccountMenu";
 import "./NavUtilityIcons";
 import "./NewsBox";
+import "./ShopSpotlight";
 import "./SteamWishlist";
 import "./StreamingNow";
 
@@ -78,11 +79,12 @@ export class PlayPage extends LitElement {
           </div>
         </div>
 
-        <!-- Top strip: news + identity on the left, Streaming Now on the right. The 2fr/1fr
-             split only exists while the panel is live (.streaming-live via has-[]) —
+        <!-- Top strip: news + identity on the left, Streaming Now (or, while fewer
+             than two are live, the store spotlight) on the right. The 2fr/1fr split only exists while
+             one of them is shown (.streaming-live / .shop-spotlight-live via has-[]) —
              otherwise the left column takes the full row. -->
         <div
-          class="group/strip w-full pb-4 lg:pb-0 sm:compact:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-1 lg:has-[.streaming-live]:grid-cols-[2fr_1fr] lg:gap-4 lg:items-stretch"
+          class="group/strip w-full pb-4 lg:pb-0 sm:compact:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-1 lg:has-[.streaming-live]:grid-cols-[2fr_1fr] lg:has-[.shop-spotlight-live]:grid-cols-[2fr_1fr] lg:gap-4 lg:items-stretch"
         >
           <!-- Mobile: spacer for fixed top bar -->
           <div
@@ -121,6 +123,12 @@ export class PlayPage extends LitElement {
           <streaming-now
             class="hidden lg:flex lg:h-full lg:flex-col w-full min-w-0"
           ></streaming-now>
+
+          <!-- Same slot while fewer than two are streaming: three store items. Hidden
+               whenever Streaming Now is shown. -->
+          <shop-spotlight
+            class="hidden lg:flex lg:h-full lg:flex-col lg:group-has-[.streaming-live]/strip:hidden w-full min-w-0"
+          ></shop-spotlight>
         </div>
 
         <game-mode-selector></game-mode-selector>
