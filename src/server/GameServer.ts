@@ -2359,7 +2359,7 @@ export class GameServer {
     if (this.winnerVote.winner() !== null || this.ended) {
       return;
     }
-    const activeIPs = new Set(this.clients.active().map((c) => c.ip));
+    const activeIPs = new Set(this.clients.players().map((c) => c.ip));
     const result = this.winnerVote.tallyAmong(activeIPs);
     if (result === null) {
       return;
