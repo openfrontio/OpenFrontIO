@@ -307,6 +307,40 @@ describe("StoreTracker", () => {
     }
   });
 
+  it("counts the same card in the same slot again on the next view", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+
+    // The next view shows the same item in the same element: observe()
+    // changes nothing, and a real observer reports nothing new on its own.
+    const observe = vi.spyOn(FakeIO.last, "observe");
+    const unobserve = vi.spyOn(FakeIO.last, "unobserve");
+    tracker.beginPageView();
+    tracker.observe(el, "flag:a", placement);
+    expect(unobserve).toHaveBeenCalledWith(el);
+    expect(observe).toHaveBeenCalledWith(el);
+    // The re-observed element's first report starts a fresh second.
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+    tracker.flush();
+    expect(
+      send.mock.calls.flatMap((c) => c[0].events).map((e) => e.type),
+    ).toEqual(["impression", "impression"]);
+  });
+
+  it("drops a pending second when the next view begins", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(500);
+    tracker.beginPageView();
+    vi.advanceTimersByTime(1000);
+    tracker.flush();
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("sends opens in a request of their own, before item events", () => {
     const el = mount();
     tracker.observe(el, "flag:a", placement);

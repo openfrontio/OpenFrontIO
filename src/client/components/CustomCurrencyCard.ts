@@ -79,11 +79,15 @@ export class CustomCurrencyCard extends LitElement {
   };
 
   // On the capture phase: the purchase button stops its click from
-  // bubbling. Analytics must never break the click.
+  // bubbling. Only a press inside the purchase button counts, not a tap on
+  // the padding around it. Analytics must never break the click.
   private readonly activateListener = {
     capture: true,
-    handleEvent: () => {
+    handleEvent: (e: Event) => {
       try {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest("purchase-button") === null) return;
         this.onActivate?.();
       } catch {
         // Ignored.

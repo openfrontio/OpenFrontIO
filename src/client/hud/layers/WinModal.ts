@@ -1230,6 +1230,7 @@ export class WinModal extends LitElement implements Controller {
     );
     this.stats = stats ? this.statsNow() : null;
     this.isVisible = true;
+    this.beginOfferPageView();
     this.requestUpdate();
     try {
       await this.loadPatternContent();
@@ -1262,20 +1263,28 @@ export class WinModal extends LitElement implements Controller {
 
   // Store analytics for the offer: impressions of its cards and presses of
   // their buy buttons, placed as post_game like its purchases. Made on the
-  // first offer and kept; each showing is a page view of its own.
+  // first showing and kept; each showing (show()) is a page view of its own,
+  // begun before the offer loads so a slow load can't carry the last
+  // screen's clicks over.
   private storeTracker: StoreTracker | null = null;
-  private trackedOffer: readonly string[] | null = null;
 
-  protected updated(): void {
-    if (!this.isVisible || this.offerKeys.length === 0) return;
+  private beginOfferPageView(): void {
     if (typeof IntersectionObserver === "undefined") return;
     try {
       this.storeTracker ??= new StoreTracker();
-      // A new offer (a new game's end screen) counts its cards afresh.
-      if (this.trackedOffer !== this.offerKeys) {
-        this.trackedOffer = this.offerKeys;
-        this.storeTracker.beginPageView();
-      }
+      this.storeTracker.beginPageView();
+    } catch {
+      // Analytics must never break the end screen.
+    }
+  }
+
+  protected updated(): void {
+    // Not once removed: disconnectedCallback disposed the tracker, and a late
+    // offer load must not leave a new one behind.
+    if (!this.isConnected || !this.isVisible || this.storeTracker === null) {
+      return;
+    }
+    try {
       this.storeTracker.releaseDetached();
       for (const el of this.querySelectorAll<HTMLElement>(
         "[data-win-cosmetic-promo][data-cosmetic-key]",
@@ -1315,7 +1324,6 @@ export class WinModal extends LitElement implements Controller {
     document.removeEventListener("userMeResponse", this.onUserMe);
     this.storeTracker?.dispose();
     this.storeTracker = null;
-    this.trackedOffer = null;
     super.disconnectedCallback();
   }
 

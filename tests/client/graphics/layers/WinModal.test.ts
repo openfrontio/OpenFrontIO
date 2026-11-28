@@ -340,20 +340,29 @@ describe("WinModal pattern promotion", () => {
     ]);
 
     modal = document.createElement("win-modal") as WinModal;
+    // The pattern offer, not another promo (the choice is random).
+    Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+      rand: 0.75,
+      isWin: true,
+    });
     document.body.appendChild(modal);
     await modal.updateComplete;
+    // What show() does as the end screen opens: the page view begins before
+    // the offer has loaded.
     modal.isVisible = true;
+    (modal as unknown as { beginOfferPageView(): void }).beginOfferPageView();
+    expect(trackerMock.beginPageView).toHaveBeenCalledTimes(1);
     await modal.loadPatternContent();
     modal.requestUpdate();
     await modal.updateComplete;
 
     expect(trackerMock.made).toBe(1);
-    expect(trackerMock.beginPageView).toHaveBeenCalledTimes(1);
-    const promo = modal.querySelector("[data-win-cosmetic-promo]")!;
-    expect(trackerMock.observe).toHaveBeenCalledWith(
-      promo,
-      "pattern:aurora:red",
-      { kind: "post_game" },
+    await vi.waitFor(() =>
+      expect(trackerMock.observe).toHaveBeenCalledWith(
+        modal!.querySelector("[data-win-cosmetic-promo]"),
+        "pattern:aurora:red",
+        { kind: "post_game" },
+      ),
     );
 
     modal.querySelector<HTMLElement>("purchase-button")!.click();
@@ -368,8 +377,14 @@ describe("WinModal pattern promotion", () => {
 
     modal.hide();
     expect(trackerMock.flush).toHaveBeenCalled();
+    modal.isVisible = true;
     modal.remove();
     expect(trackerMock.dispose).toHaveBeenCalled();
+    // An offer load that lands after removal makes no new tracker.
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await Promise.resolve();
+    expect(trackerMock.made).toBe(1);
     modal = undefined;
     vi.unstubAllGlobals();
   });

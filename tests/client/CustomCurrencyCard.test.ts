@@ -141,6 +141,16 @@ describe("CustomCurrencyCard", () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
+  it("doesn't count a tap on the padding around the buy button", async () => {
+    const onActivate = vi.fn();
+    card!.onActivate = onActivate;
+    await card!.updateComplete;
+    card!
+      .querySelector<HTMLElement>("[data-cosmetic-action]")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
   it("still buys when the placement throws", async () => {
     card!.placement = () => {
       throw new Error("analytics");

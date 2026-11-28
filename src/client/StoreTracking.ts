@@ -159,6 +159,16 @@ export class StoreTracker {
   beginPageView(): void {
     this.seenImpressions.clear();
     this.seenClicks.clear();
+    // Lit keeps a card's element when the next view shows the same item in
+    // the same slot, and observe() then changes nothing. Watch each card
+    // afresh, so its next second in view counts for this view: the observer
+    // reports a newly observed element's state straight away.
+    for (const [el, w] of this.watched) {
+      this.stopTimer(w);
+      w.visible = false;
+      this.observer?.unobserve(el);
+      this.observer?.observe(el);
+    }
   }
 
   // Call releaseDetached() once per pass over the cards, not per card.
