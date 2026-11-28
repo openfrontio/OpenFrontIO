@@ -1792,15 +1792,43 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
 ]);
 export type StorePlacement = z.infer<typeof StorePlacementSchema>;
 
+// How the player got into the store. "nav" is the menu's Store button,
+// "link" a store URL with no entry point (a reload, a shared or typed link).
+// Mirrors the API's StoreOpenSourceSchema, which keeps an entry point it
+// doesn't know as "other".
+export const StoreOpenSourceSchema = z.enum([
+  "nav",
+  "news_banner",
+  "insufficient_currency",
+  "purchase_nudge",
+  "resume_purchase",
+  "inventory",
+  "equipped",
+  "subscription",
+  "username",
+  "host_lobby",
+  "matchmaking",
+  "clan",
+  "affiliate_link",
+  "link",
+  "other",
+]);
+export type StoreOpenSource = z.infer<typeof StoreOpenSourceSchema>;
+
 export const StoreEventsBodySchema = z.object({
   platform: z.enum(["web", "steam", "crazygames"]),
   events: z
     .array(
-      z.object({
-        type: z.enum(["impression", "click"]),
-        item: z.string().min(1).max(120),
-        placement: StorePlacementSchema,
-      }),
+      z.union([
+        // One store opening. StoreTracker sends these in requests of their
+        // own, so an API that predates them rejects only those.
+        z.object({ type: z.literal("open"), source: StoreOpenSourceSchema }),
+        z.object({
+          type: z.enum(["impression", "click"]),
+          item: z.string().min(1).max(120),
+          placement: StorePlacementSchema,
+        }),
+      ]),
     )
     .min(1)
     // The API's limit per request; StoreTracker splits its queue to fit.

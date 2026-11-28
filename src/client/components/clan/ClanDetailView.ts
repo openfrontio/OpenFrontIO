@@ -160,7 +160,7 @@ export class ClanDetailView extends LitElement {
     this.dispatchEvent(
       new CustomEvent("close-clan-modal", { bubbles: true, composed: true }),
     );
-    window.location.hash = `modal=store&affiliateCode=${encodeURIComponent(affiliateCode)}`;
+    window.location.hash = `modal=store&affiliateCode=${encodeURIComponent(affiliateCode)}&from=clan`;
   }
 
   disconnectedCallback() {

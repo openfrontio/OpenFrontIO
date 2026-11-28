@@ -179,7 +179,9 @@ describe("NewsBox", () => {
       expect(box.querySelector('[aria-label="news_box.dismiss"]')).toBeNull();
 
       (banner as HTMLButtonElement).click();
-      expect(window.location.hash).toBe("#modal=store&tab=cosmetics&sub=sale");
+      expect(window.location.hash).toBe(
+        "#modal=store&tab=cosmetics&sub=sale&from=news_banner",
+      );
     });
 
     it("drops the banner of a flash deal on an item the player owns", async () => {

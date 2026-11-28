@@ -490,7 +490,9 @@ describe("InventoryModal", () => {
       )!;
       await (action as LitElement).updateComplete;
       action.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      expect(window.location.hash).toBe("#modal=store&tab=cosmetics");
+      expect(window.location.hash).toBe(
+        "#modal=store&tab=cosmetics&from=inventory",
+      );
     } finally {
       window.location.hash = originalHash;
     }

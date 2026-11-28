@@ -234,7 +234,7 @@ export class MatchmakingModal extends BaseModal {
     // The matchmaking modal isn't registered with the modal router, so it
     // won't be closed by the store opening from the hash change.
     this.close();
-    window.location.hash = "modal=store&tab=subscriptions";
+    window.location.hash = "modal=store&tab=subscriptions&from=matchmaking";
   };
 
   // The lobby writes to every queued socket every ~3s (queue-size), so

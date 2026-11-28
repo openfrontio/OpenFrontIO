@@ -60,7 +60,7 @@ export class PurchaseNudgeModal extends LitElement {
   }
 
   private visitStore() {
-    window.location.hash = "modal=store";
+    window.location.hash = "modal=store&from=purchase_nudge";
     this.dismiss();
   }
 

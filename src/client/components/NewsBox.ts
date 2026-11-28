@@ -268,7 +268,8 @@ export class NewsBox extends LitElement {
 
   /** The store's On sale tab, where everything the banner covers is listed. */
   private openSale() {
-    window.location.hash = "modal=store&tab=cosmetics&sub=sale";
+    window.location.hash =
+      "modal=store&tab=cosmetics&sub=sale&from=news_banner";
   }
 
   private async loadNews() {

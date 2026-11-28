@@ -757,7 +757,9 @@ describe("ClanModal — rendering", () => {
       try {
         shopBtn!.click();
         expect(modal.isOpen()).toBe(false);
-        expect(window.location.hash).toBe("#modal=store&affiliateCode=tst");
+        expect(window.location.hash).toBe(
+          "#modal=store&affiliateCode=tst&from=clan",
+        );
 
         await vi.waitFor(() => {
           expect(openSpy).toHaveBeenCalledWith(

@@ -2410,10 +2410,22 @@ describe("store analytics", () => {
   }
 
   let fetchSpy: ReturnType<typeof vi.fn>;
-  function sent() {
+  type SentEvent = { type: string; item: string; source?: string };
+  function requests(): { events: SentEvent[] }[] {
     return fetchSpy.mock.calls
       .filter(([url]) => String(url).endsWith("/store/events"))
-      .flatMap(([, init]) => JSON.parse(init.body).events);
+      .map(([, init]) => JSON.parse(init.body));
+  }
+  // Impressions and clicks; opens travel in requests of their own.
+  function sent() {
+    return requests()
+      .flatMap((r) => r.events)
+      .filter((e) => e.type !== "open");
+  }
+  function opensSent() {
+    return requests()
+      .flatMap((r) => r.events)
+      .filter((e) => e.type === "open");
   }
 
   beforeEach(() => {
@@ -2575,6 +2587,45 @@ describe("store analytics", () => {
     expect(sent()).toEqual([]);
     modal.close();
     expect(sent()).toHaveLength(1);
+  });
+
+  it("counts one open per opening, with its entry point", async () => {
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+
+    // A store link: the router's showPage open() with no args, then
+    // open(args) in the same task. One open, from the link's entry point.
+    store.open();
+    store.open({ tab: "packs", from: "insufficient_currency" });
+    await Promise.resolve();
+    // A later router call on the open store is the same opening.
+    store.open({ tab: "packs", from: "news_banner" });
+    await Promise.resolve();
+    store.close();
+    expect(opensSent()).toEqual([
+      { type: "open", source: "insufficient_currency" },
+    ]);
+    // Opens never share a request with impressions or clicks.
+    for (const r of requests()) {
+      const types = new Set(r.events.map((e) => e.type === "open"));
+      expect(types.size).toBe(1);
+    }
+
+    // The menu's Store button: open() alone.
+    store.open();
+    await Promise.resolve();
+    store.close();
+    // A store URL with no entry point (a reload, a shared link).
+    store.open({ modal: "store", tab: "packs" });
+    await Promise.resolve();
+    store.close();
+    expect(opensSent().map((e) => e.source)).toEqual([
+      "insufficient_currency",
+      "nav",
+      "link",
+    ]);
   });
 
   it("records an impression after a second in view, and again after a reopen", async () => {

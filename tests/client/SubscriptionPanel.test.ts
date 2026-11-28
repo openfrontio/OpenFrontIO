@@ -83,7 +83,9 @@ describe("subscription-panel", () => {
 
     // Without this the popup subscription modal stayed open behind the store.
     expect(closes).toHaveLength(1);
-    expect(window.location.hash).toBe("#modal=store&tab=subscriptions");
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=subscriptions&from=subscription",
+    );
   });
 
   // OPE-314. In the packaged Steam build a Manage click cannot reach Stripe:
