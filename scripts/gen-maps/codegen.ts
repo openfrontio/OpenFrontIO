@@ -40,6 +40,7 @@ export const categoryOrder = [
   "fictional",
   "arcade",
   "tournament",
+  "classic",
 ];
 
 const modifierKeys = [

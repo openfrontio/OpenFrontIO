@@ -34,7 +34,7 @@ function mapsInCategory(category: MapCategory): MapInfo[] {
 
 @customElement("map-picker")
 export class MapPicker extends LitElement {
-  @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
+  @property({ type: String }) selectedMap: GameMapType = GameMapType.World2000;
   @property({ type: Boolean }) useRandomMap = false;
   @property({ type: Boolean }) showMedals = false;
   @property({ type: Boolean }) randomMapDivider = false;

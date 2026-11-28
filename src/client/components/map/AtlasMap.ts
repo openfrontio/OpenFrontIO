@@ -85,7 +85,7 @@ function loadAtlasPaths(): Promise<AtlasPaths> {
 
 @customElement("atlas-map")
 export class AtlasMap extends LitElement {
-  @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
+  @property({ type: String }) selectedMap: GameMapType = GameMapType.World2000;
   @property({ type: Boolean }) useRandomMap = false;
   @property({ attribute: false }) onSelectMap?: (map: GameMapType) => void;
   @state() private paths: AtlasPaths = { sphere: "", land: "" };

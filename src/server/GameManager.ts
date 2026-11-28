@@ -93,7 +93,7 @@ export class GameManager {
         gameConfig: {
           donateGold: false,
           donateTroops: false,
-          gameMap: GameMapType.World,
+          gameMap: GameMapType.World2000,
           gameType: GameType.Private,
           gameMapSize: GameMapSize.Normal,
           difficulty: Difficulty.Easy,

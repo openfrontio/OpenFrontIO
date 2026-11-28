@@ -25,7 +25,7 @@
   "id": "World10000",
   "layers": [
     {
-      "alpha": 0.75,
+      "alpha": 0.6,
       "id": "w10kland",
       "nukeable": true,
       "placement": "land"
