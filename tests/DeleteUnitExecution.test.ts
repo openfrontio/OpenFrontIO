@@ -147,6 +147,26 @@ describe("DeleteUnitExecution Security Tests", () => {
       unit.setOwner(enemyPlayer);
       expect(unit.isMarkedForDeletion()).toBe(false);
       expect(unit.isActive()).toBe(true);
+      game.executeNextTick();
+      expect(execution.isActive()).toBe(false);
+    });
+
+    it("should reject non-structures and already-marked units", () => {
+      const bomb = player.buildUnit(UnitType.AtomBomb, unit.tile(), {
+        trajectory: [unit.tile()],
+      });
+      const nonStruct = new DeleteUnitExecution(player, bomb.id());
+      nonStruct.init(game, 0);
+      expect(nonStruct.isActive()).toBe(false);
+      expect(bomb.isMarkedForDeletion()).toBe(false);
+
+      game.config().deleteUnitCooldown = () => 5;
+      game.addExecution(new DeleteUnitExecution(player, unit.id()));
+      executeTicks(game, 6);
+      expect(unit.isMarkedForDeletion()).toBe(true);
+      const dup = new DeleteUnitExecution(player, unit.id());
+      dup.init(game, game.ticks());
+      expect(dup.isActive()).toBe(false);
     });
   });
 });

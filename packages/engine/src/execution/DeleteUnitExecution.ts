@@ -1,4 +1,4 @@
-import { MessageType } from "@openfront/engine-api/game/GameTypes";
+import { MessageType, Structures } from "@openfront/engine-api/game/GameTypes";
 import {
   zInt,
   zPlayerRef,
@@ -42,8 +42,12 @@ export class DeleteUnitExecution implements Execution {
       return;
     }
 
-    if (!unit.isActive()) {
-      console.warn(`SECURITY: unit ${this.unitId} is not active`);
+    if (
+      !unit.isActive() ||
+      !Structures.has(unit.type()) ||
+      unit.isMarkedForDeletion()
+    ) {
+      console.warn(`SECURITY: unit ${this.unitId} cannot be deleted`);
       this.active = false;
       return;
     }
@@ -84,7 +88,7 @@ export class DeleteUnitExecution implements Execution {
     if (!this.active || !this.unit) {
       return;
     }
-    if (!this.unit.isActive()) {
+    if (!this.unit.isActive() || !this.unit.isMarkedForDeletion()) {
       this.active = false;
       return;
     }
