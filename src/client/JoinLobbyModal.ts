@@ -23,6 +23,7 @@ import {
 } from "../client/Utils";
 import { getApiBase } from "./Api";
 import { BaseModal } from "./components/BaseModal";
+import "./components/JingleJamTracker";
 import { GameStartAlertController } from "./components/GameStartAlertController";
 import { hasMapDetails, renderMapDetails } from "./components/map/MapDetails";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
@@ -224,6 +225,7 @@ export class JoinLobbyModal extends BaseModal {
     return html`
       <div class="flex flex-col h-full">
         <div class="flex-1 custom-scrollbar p-6 space-y-4 mr-1">
+          <jj-tracker></jj-tracker>
           ${
             this.isConnecting
               ? html`
