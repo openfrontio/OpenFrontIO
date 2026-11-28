@@ -9,7 +9,12 @@ import {
   matchPercent,
 } from "../JingleJamFeed";
 import { translateText } from "../Utils";
-import { donateLink, jingleJamBar, jingleJamLogo } from "./JingleJamBanner";
+import {
+  donateLink,
+  hasMatch,
+  jingleJamBar,
+  jingleJamLogo,
+} from "./JingleJamBanner";
 
 // One compact row at the top of the join and host lobby modals: the total, the match
 // bar and Donate. It reads the same poller as the homepage banner, which keeps going
@@ -75,17 +80,24 @@ export class JingleJamTracker extends LitElement {
             >${translateText("jingle_jam.raised_for")}</span
           >
         </div>
-        <div class="mt-1 flex items-center gap-2">
-          <div class="min-w-0 flex-1">
-            ${jingleJamBar(matchPercent(t.matchPence, t.matchCapPence), true)}
-          </div>
-          <span class="shrink-0 text-[11px] tabular-nums text-white/60"
-            >${translateText("jingle_jam.matched_short", {
-              matched: formatGbp(t.matchPence),
-              cap: formatGbp(t.matchCapPence),
-            })}</span
-          >
-        </div>`;
+        ${
+          hasMatch(feed)
+            ? html`<div class="mt-1 flex items-center gap-2">
+                <div class="min-w-0 flex-1">
+                  ${jingleJamBar(
+                    matchPercent(t.matchPence, t.matchCapPence),
+                    true,
+                  )}
+                </div>
+                <span class="shrink-0 text-[11px] tabular-nums text-white/60"
+                  >${translateText("jingle_jam.matched_short", {
+                    matched: formatGbp(t.matchPence),
+                    cap: formatGbp(t.matchCapPence),
+                  })}</span
+                >
+              </div>`
+            : nothing
+        }`;
     } else {
       body = html`<div class="text-[12.5px] text-white">
         ${translateText("jingle_jam.tracker_static")}

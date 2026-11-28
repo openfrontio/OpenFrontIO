@@ -12,12 +12,37 @@ export const JINGLE_JAM_OFF: JingleJamFeed = {
   rewards: [],
 };
 
+const STREAMS_MAX_AGE_MS = 15 * 60_000;
+const TOTALS_MAX_AGE_MS = 60 * 60_000;
+
+// `updatedAt` is when the API last read Tiltify, and the API deliberately keeps the
+// last good total up through a Tiltify outage, so an old feed is downgraded, never
+// turned off: after 15 minutes the live streams are dropped (who was live then may not
+// be now), and after an hour a live total is dropped too, which leaves the static
+// banner and Donate. An ended feed's total is final, so its age doesn't matter.
+export function acceptJingleJam(
+  feed: JingleJamFeed,
+  now: number,
+): JingleJamFeed {
+  if (feed.mode !== "live" && feed.mode !== "static") return feed;
+  const age = now - Date.parse(feed.updatedAt);
+  let out = feed;
+  if (age > STREAMS_MAX_AGE_MS) {
+    out = { ...out, liveStreams: [], pinned: undefined };
+  }
+  if (out.mode === "live" && age > TOTALS_MAX_AGE_MS) {
+    out = { ...out, mode: "static", totals: undefined };
+  }
+  return out;
+}
+
 // Shared by the homepage banner and the lobby tracker, so the lobby wait reuses the
 // homepage's answer instead of fetching again. Stops in-game like the streams feed.
 export const jingleJamFeed = new FeedPoller<JingleJamFeed>({
   name: "jingle-jam-feed",
   fetch: getJingleJam,
   empty: JINGLE_JAM_OFF,
+  accept: acceptJingleJam,
 });
 
 // Off the open web the event isn't shown at all: portals don't allow outside links,

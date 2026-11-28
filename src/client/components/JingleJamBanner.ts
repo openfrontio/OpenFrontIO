@@ -84,9 +84,14 @@ export function donateLink(
   >`;
 }
 
+// A zero cap means there is no match this year: no match bar, no "up to £0".
+export function hasMatch(feed: JingleJamFeed): boolean {
+  return (feed.totals?.matchCapPence ?? 0) > 0;
+}
+
 function copyLine(feed: JingleJamFeed): string {
   if (feed.copy === "default") {
-    return feed.totals
+    return feed.totals && hasMatch(feed)
       ? translateText("jingle_jam.copy_default", {
           cap: formatGbp(feed.totals.matchCapPence),
         })
@@ -248,7 +253,7 @@ export class JingleJamBanner extends LitElement {
                 >
               </div>
               ${
-                live
+                live && hasMatch(feed)
                   ? html`<div class="hidden sm:block shrink-0 text-right">
                       <div class="${label} text-aquarius">
                         ${translateText("jingle_jam.match")}
@@ -266,7 +271,9 @@ export class JingleJamBanner extends LitElement {
           : html`<div
               class="mt-1 text-base lg:text-xl font-black leading-tight tracking-tight"
             >
-              ${translateText("jingle_jam.static_line")}
+              ${translateText(
+                ended ? "jingle_jam.ended_line" : "jingle_jam.static_line",
+              )}
             </div>`
       }
     `;
@@ -276,7 +283,7 @@ export class JingleJamBanner extends LitElement {
   // supporting line; the registered-charity line always ends the row.
   private renderFoot(feed: JingleJamFeed) {
     const t = feed.totals;
-    if (feed.mode === "live" && t) {
+    if (feed.mode === "live" && t && hasMatch(feed)) {
       return html`
         ${jingleJamBar(matchPercent(t.matchPence, t.matchCapPence))}
         <div class="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5">
@@ -285,7 +292,16 @@ export class JingleJamBanner extends LitElement {
               matched: formatGbp(t.matchPence),
               cap: formatGbp(t.matchCapPence),
             })}</span
-          ><span
+          >${
+            // Phones have no room beside the caption, so the day's message gets
+            // its own line under it.
+            feed.copy === "default"
+              ? nothing
+              : html`<span
+                  class="jj-copy-phone basis-full min-w-0 text-xs font-semibold text-white/90 sm:hidden"
+                  >${copyLine(feed)}</span
+                >`
+          }<span
             class="hidden sm:block min-w-0 truncate text-xs ${
               feed.copy === "default"
                 ? "text-white/70"
@@ -304,9 +320,11 @@ export class JingleJamBanner extends LitElement {
     }
     let lead: string | undefined;
     if (feed.mode === "ended" && t) {
-      lead = translateText("jingle_jam.thanks_line", {
-        matched: formatGbp(t.matchPence),
-      });
+      lead = hasMatch(feed)
+        ? translateText("jingle_jam.thanks_line", {
+            matched: formatGbp(t.matchPence),
+          })
+        : translateText("jingle_jam.thanks_line_nomatch");
     } else if (feed.mode !== "ended") {
       lead = copyLine(feed);
     }

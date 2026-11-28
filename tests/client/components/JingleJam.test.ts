@@ -5,6 +5,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import jingleJamFallback from "../../../resources/jinglejam.json";
 import {
+  acceptJingleJam,
   formatGbp,
   jingleJamFeed,
   matchPercent,
@@ -100,6 +101,44 @@ describe("money helpers", () => {
     expect(matchPercent(610_400, 1_000_000)).toBeCloseTo(61.04);
     expect(matchPercent(2_000_000, 1_000_000)).toBe(100);
     expect(matchPercent(5, 0)).toBe(0);
+  });
+});
+
+describe("acceptJingleJam (stale feeds)", () => {
+  const now = Date.parse("2026-12-03T20:00:00Z");
+  const at = (minsAgo: number) =>
+    new Date(now - minsAgo * 60_000).toISOString();
+  const live = (minsAgo: number) =>
+    feed({
+      updatedAt: at(minsAgo),
+      totals,
+      pinned: stream("p", 1),
+      liveStreams: [stream("a", 1)],
+    });
+
+  it("passes a fresh feed through", () => {
+    const f = live(2);
+    expect(acceptJingleJam(f, now)).toBe(f);
+  });
+
+  it("drops the streams after 15 minutes but keeps the total", () => {
+    const f = acceptJingleJam(live(20), now);
+    expect(f.mode).toBe("live");
+    expect(f.totals?.raisedPence).toBe(2_020_800);
+    expect(f.liveStreams).toEqual([]);
+    expect(f.pinned).toBeUndefined();
+  });
+
+  it("drops a live total after an hour, leaving the static banner", () => {
+    const f = acceptJingleJam(live(90), now);
+    expect(f.mode).toBe("static");
+    expect(f.totals).toBeUndefined();
+    expect(f.donateUrl).toBe("https://donate.example/gosh");
+  });
+
+  it("leaves an ended feed alone, however old", () => {
+    const f = feed({ mode: "ended", updatedAt: at(60 * 24 * 3), totals });
+    expect(acceptJingleJam(f, now)).toBe(f);
   });
 });
 
@@ -222,6 +261,40 @@ describe("jj-banner and jj-tracker", () => {
     const el = await mount("jj-tracker", feed({ totals }));
     expect(el.textContent).toContain("£20,208");
     expect(el.querySelector("a[href^='https://donate']")).not.toBe(null);
+  });
+
+  it("shows the day's message on phones too, under the match caption", async () => {
+    const el = await mount("jj-banner", feed({ totals, copy: "punish_today" }));
+    const phone = el.querySelector(".jj-copy-phone");
+    expect(phone?.textContent).toContain("jingle_jam.copy_punish_today");
+    expect(el.textContent).toContain("jingle_jam.match_caption_short");
+  });
+
+  it('with a zero match cap, shows no match bar and never "£0"', async () => {
+    const el = await mount(
+      "jj-banner",
+      feed({ totals: { ...totals, matchPence: 0, matchCapPence: 0 } }),
+    );
+    expect(el.textContent).not.toContain("£0");
+    expect(el.textContent).not.toContain("jingle_jam.match");
+    expect(el.querySelector('[style*="width:"]')).toBe(null);
+    expect(el.textContent).toContain("jingle_jam.copy_default_nocap");
+  });
+
+  it("ended with no total says it has finished, not that it's running", async () => {
+    const el = await mount("jj-banner", feed({ mode: "ended" }));
+    expect(el.textContent).toContain("jingle_jam.ended_line");
+    expect(el.textContent).not.toContain("jingle_jam.static_line");
+    expect(el.textContent).not.toContain("£");
+  });
+
+  it("lobby tracker: no match bar with a zero cap", async () => {
+    const el = await mount(
+      "jj-tracker",
+      feed({ totals: { ...totals, matchPence: 0, matchCapPence: 0 } }),
+    );
+    expect(el.textContent).toContain("£20,208");
+    expect(el.textContent).not.toContain("jingle_jam.matched_short");
   });
 
   it("lobby tracker: no Donate once ended", async () => {
