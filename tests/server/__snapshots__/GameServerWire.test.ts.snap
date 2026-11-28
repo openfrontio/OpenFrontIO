@@ -1617,9 +1617,9 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
         "type": "turn",
       },
       {
-        "clientsWithCorrectHash": 3,
+        "clientsWithCorrectHash": 2,
         "correctHash": 99,
-        "totalActiveClients": 4,
+        "totalActiveClients": 3,
         "turn": 10,
         "type": "desync",
       },
