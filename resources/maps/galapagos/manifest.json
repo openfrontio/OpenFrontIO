@@ -1,0 +1,130 @@
+{
+  "categories": ["new", "south_america"],
+  "display_name": "Galápagos Islands",
+  "id": "Galapagos",
+  "map": {
+    "height": 2600,
+    "num_land_tiles": 1036073,
+    "width": 3100
+  },
+  "map16x": {
+    "height": 650,
+    "num_land_tiles": 62937,
+    "width": 775
+  },
+  "map4x": {
+    "height": 1300,
+    "num_land_tiles": 256337,
+    "width": 1550
+  },
+  "name": "Galapagos",
+  "nations": [
+    {
+      "coordinates": [422, 770],
+      "flag": "galapagos",
+      "name": "Wolf Volcano Giant Tortoise"
+    },
+    {
+      "coordinates": [489, 1065],
+      "flag": "galapagos",
+      "name": "Darwin Volcano Giant Tortoise"
+    },
+    {
+      "coordinates": [708, 1337],
+      "flag": "galapagos",
+      "name": "Alcedo Volcano Giant Tortoise"
+    },
+    {
+      "coordinates": [703, 1818],
+      "flag": "galapagos",
+      "name": "Sierra Negra Giant Tortoise"
+    },
+    {
+      "coordinates": [356, 1975],
+      "flag": "galapagos",
+      "name": "Cerro Azul Giant Tortoise"
+    },
+    {
+      "coordinates": [151, 1265],
+      "flag": "galapagos",
+      "name": "Fernandina Island Tortoise"
+    },
+    {
+      "coordinates": [1208, 1132],
+      "flag": "galapagos",
+      "name": "Santiago Island Tortoise"
+    },
+    {
+      "coordinates": [1517, 1589],
+      "flag": "galapagos",
+      "name": "Western Santa Cruz Tortoise"
+    },
+    {
+      "coordinates": [1779, 1603],
+      "flag": "galapagos",
+      "name": "Eastern Santa Cruz Tortoise"
+    },
+    {
+      "coordinates": [1275, 1580],
+      "flag": "galapagos",
+      "name": "Pinzón Island Giant Tortoise"
+    },
+    {
+      "coordinates": [1156, 70],
+      "flag": "galapagos",
+      "name": "Pinta Island Tortoise"
+    },
+    {
+      "coordinates": [2037, 1832],
+      "flag": "galapagos",
+      "name": "Santa Fe Island Tortoise"
+    },
+    {
+      "coordinates": [2914, 1785],
+      "flag": "galapagos",
+      "name": "San Cristóbal Giant Tortoise"
+    },
+    {
+      "coordinates": [1575, 2437],
+      "flag": "galapagos",
+      "name": "Floreana giant tortoise"
+    },
+    {
+      "coordinates": [2527, 2537],
+      "flag": "galapagos",
+      "name": "Española Giant Tortoise"
+    },
+    {
+      "coordinates": [2658, 1937],
+      "flag": "galapagos",
+      "name": "Puerto Baquerizo Moreno"
+    },
+    {
+      "coordinates": [1719, 1759],
+      "flag": "galapagos",
+      "name": "Puerto Ayora"
+    },
+    {
+      "coordinates": [1772, 1389],
+      "flag": "galapagos",
+      "name": "Seymour Airport"
+    },
+    {
+      "coordinates": [901, 2015],
+      "flag": "galapagos",
+      "name": "Puerto Villamil"
+    },
+    {
+      "coordinates": [1523, 378],
+      "flag": "galapagos",
+      "name": "Marchena Island"
+    },
+    {
+      "coordinates": [2169, 387],
+      "flag": "galapagos",
+      "name": "Genovesa Island"
+    }
+  ],
+  "themes": ["south_america"],
+  "translation_key": "map.galapagos"
+}

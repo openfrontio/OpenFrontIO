@@ -1,0 +1,119 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "Galapagos",
+  "name": "Galapagos",
+  "display_name": "Galápagos Islands",
+  "translation_key": "map.galapagos",
+  "location": { "lat": -0.4, "lon": -90.3 },
+  "categories": ["new", "south_america"],
+  "author": "Tristar",
+  "description": "A volcanic archipelago in the eastern Pacific Ocean, roughly 1000 km (600 miles) west of Ecuador, country they are part of. Famous for their unique wildlife, volcanic landscapes, and role in inspiring Charles Darwin's theory of evolution. The nations of this map include the 15 subspecies of the Galápagos Giant Tortoise, 3 of which are extinct.",
+  "nations": [
+    {
+      "coordinates": [422, 770],
+      "name": "Wolf Volcano Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [489, 1065],
+      "name": "Darwin Volcano Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [708, 1337],
+      "name": "Alcedo Volcano Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [703, 1818],
+      "name": "Sierra Negra Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [356, 1975],
+      "name": "Cerro Azul Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [151, 1265],
+      "name": "Fernandina Island Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1208, 1132],
+      "name": "Santiago Island Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1517, 1589],
+      "name": "Western Santa Cruz Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1779, 1603],
+      "name": "Eastern Santa Cruz Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1275, 1580],
+      "name": "Pinzón Island Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1156, 70],
+      "name": "Pinta Island Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [2037, 1832],
+      "name": "Santa Fe Island Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [2914, 1785],
+      "name": "San Cristóbal Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1575, 2437],
+      "name": "Floreana giant tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [2527, 2537],
+      "name": "Española Giant Tortoise",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [2658, 1937],
+      "name": "Puerto Baquerizo Moreno",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1719, 1759],
+      "name": "Puerto Ayora",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1772, 1389],
+      "name": "Seymour Airport",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [901, 2015],
+      "name": "Puerto Villamil",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [1523, 378],
+      "name": "Marchena Island",
+      "flag": "galapagos"
+    },
+    {
+      "coordinates": [2169, 387],
+      "name": "Genovesa Island",
+      "flag": "galapagos"
+    }
+  ],
+  "themes": ["south_america"]
+}

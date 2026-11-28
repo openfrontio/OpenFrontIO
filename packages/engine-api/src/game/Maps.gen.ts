@@ -58,6 +58,7 @@ export enum GameMapType {
   FingerLakes = "Finger Lakes", // map-generator/assets/maps/fingerlakes/info.json
   FourIslands = "Four Islands", // map-generator/assets/maps/fourislands/info.json
   France = "France", // map-generator/assets/maps/france/info.json
+  Galapagos = "Galapagos", // map-generator/assets/maps/galapagos/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
@@ -1016,6 +1017,17 @@ export const maps: readonly MapInfo[] = [
     author: "Tristar",
     descriptionKey: "map_description.france",
     location: { lat: 46.6, lon: 2.4 },
+  },
+  {
+    id: "Galapagos",
+    type: GameMapType.Galapagos,
+    translationKey: "map.galapagos",
+    categories: ["new", "south_america"],
+    defaultNationCount: 21,
+    themes: ["south_america"],
+    author: "Tristar",
+    descriptionKey: "map_description.galapagos",
+    location: { lat: -0.4, lon: -90.3 },
   },
   {
     id: "GatewayToTheAtlantic",
