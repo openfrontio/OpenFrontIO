@@ -834,7 +834,7 @@ describe("Inventory: unsaved card changes guard", () => {
     await settle(modal);
     await click("[data-card-guard-discard]");
     expect(modal.isOpen()).toBe(false);
-    expect(window.location.hash).toBe("#modal=store&tab=packs");
+    expect(window.location.hash).toBe("#modal=store&tab=packs&from=inventory");
     expect(peekPendingPurchase("guard-test-player")).toBe(
       "cardBackground:bg_storm",
     );
@@ -848,7 +848,9 @@ describe("Inventory: unsaved card changes guard", () => {
       (await plutoniumShort()).dispatchEvent(new CustomEvent("confirm"));
       await settle(modal);
       expect(window.location.pathname).toBe("/store");
-      expect(window.location.hash).toBe("#modal=store&tab=packs");
+      expect(window.location.hash).toBe(
+        "#modal=store&tab=packs&from=inventory",
+      );
       expect(peekPendingPurchase("guard-test-player")).toBe(
         "cardBackground:bg_storm",
       );

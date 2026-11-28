@@ -78,7 +78,11 @@ import {
   sellable,
   storePurchasables,
 } from "./StoreSellable";
-import { StoreTracker } from "./StoreTracking";
+import {
+  CUSTOM_AMOUNT_ITEM_KEY,
+  StoreTracker,
+  storeOpenSource,
+} from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
@@ -795,6 +799,12 @@ export class StoreModal extends BaseModal {
 
   // Store analytics. The tracker is made on the first open and kept.
   private tracker: StoreTracker | null = null;
+  // This opening's entry point, counted once per opening. The router opens a
+  // store URL in two calls in one task (showPage's open() with no args, then
+  // open(args)), so the source waits for the task to end and the call with
+  // args wins. Cleared on close.
+  private openSource: ReturnType<typeof storeOpenSource> | null = null;
+  private openCounted = false;
 
   /**
    * Where a card sits in the store; purchases are placed the same way.
@@ -869,6 +879,19 @@ export class StoreModal extends BaseModal {
     }
     return null;
   }
+
+  /** The custom amount card's placement, read when it is bought. */
+  private readonly customAmountPlacement = (): StorePlacement | undefined =>
+    this.placementFor(this.querySelector("custom-currency-card") ?? this);
+
+  private readonly trackCustomAmountClick = (): void => {
+    try {
+      const placement = this.customAmountPlacement();
+      if (placement) this.tracker?.click(CUSTOM_AMOUNT_ITEM_KEY, placement);
+    } catch {
+      // Analytics must never break the click.
+    }
+  };
 
   private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
     try {
@@ -1600,7 +1623,11 @@ export class StoreModal extends BaseModal {
       emptyTranslationKey: "store.no_packs",
       trailingContent: !playOnly
         ? html`<custom-currency-card
+            data-store-product
+            data-cosmetic-key=${CUSTOM_AMOUNT_ITEM_KEY}
             class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
+            .placement=${this.customAmountPlacement}
+            .onActivate=${this.trackCustomAmountClick}
           ></custom-currency-card>`
         : this.cosmetics !== null && this.playPrices === null
           ? html`<div
@@ -1949,6 +1976,7 @@ export class StoreModal extends BaseModal {
   protected async onOpen(args?: Record<string, unknown>) {
     this.tracker ??= new StoreTracker();
     this.tracker.beginPageView();
+    this.noteOpenSource(args);
     // Drain any Steam overlay approval parked before this UI existed. The
     // main process's "something arrived" nudge is contentless, so one that
     // fired with no window listening is heard by nobody and sits parked until
@@ -2022,7 +2050,29 @@ export class StoreModal extends BaseModal {
     }
   }
 
+  /** Records this opening's entry point once; see openSource. */
+  private noteOpenSource(args?: Record<string, unknown>): void {
+    if (this.openCounted) return;
+    try {
+      const pending = this.openSource !== null;
+      // A later call in the same task that carries args says more.
+      if (!pending || args !== undefined) {
+        this.openSource = storeOpenSource(args);
+      }
+      if (pending) return;
+      queueMicrotask(() => {
+        if (this.openSource === null || this.openCounted) return;
+        this.openCounted = true;
+        this.tracker?.open(this.openSource);
+      });
+    } catch {
+      // Analytics must never break the store.
+    }
+  }
+
   protected onClose(): void {
+    this.openSource = null;
+    this.openCounted = false;
     this.tracker?.flush();
     // The store hides rather than disconnects: stop the flash card's exposure
     // clock now, before the observer reports it hidden. Reopening re-observes.

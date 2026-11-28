@@ -306,7 +306,9 @@ describe("end-screen shortfall box", () => {
     const warn = document.querySelector("[data-shortfall-box]") as HTMLElement;
     action(warn, "leave")!.click();
     expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_storm_front");
-    expect(window.location.hash).toBe("#modal=store&tab=packs");
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=packs&from=insufficient_currency",
+    );
   });
 
   it("staying keeps the player in the game", async () => {
@@ -351,7 +353,9 @@ describe("end-screen shortfall box", () => {
     const confirm = await showPlain({ ...PLUTONIUM, leavesGame: false });
     confirm.dispatchEvent(new CustomEvent("confirm"));
     expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_storm_front");
-    expect(window.location.hash).toBe("#modal=store&tab=packs");
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=packs&from=insufficient_currency",
+    );
   });
 
   it("a parent can hold the top-up (the Inventory's unsaved card guard)", async () => {
@@ -368,7 +372,9 @@ describe("end-screen shortfall box", () => {
     expect(window.location.hash).not.toContain("tab=packs");
     go!();
     expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_storm_front");
-    expect(window.location.hash).toBe("#modal=store&tab=packs");
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=packs&from=insufficient_currency",
+    );
   });
 
   it("the Store's box is as today", async () => {

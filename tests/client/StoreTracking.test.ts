@@ -15,6 +15,7 @@ import { ClientEnv } from "../../src/client/ClientEnv";
 import {
   sendStoreEvents,
   storeItemKey,
+  storeOpenSource,
   StoreTracker,
 } from "../../src/client/StoreTracking";
 
@@ -155,10 +156,9 @@ describe("StoreTracker", () => {
     tracker.click(`flag:${"x".repeat(115)}`, placement);
     tracker.click("flag:a", placement);
     tracker.flush();
-    expect(send.mock.calls[0][0].events.map((e) => e.item)).toEqual([
-      `flag:${"x".repeat(115)}`,
-      "flag:a",
-    ]);
+    expect(
+      send.mock.calls[0][0].events.map((e) => ("item" in e ? e.item : null)),
+    ).toEqual([`flag:${"x".repeat(115)}`, "flag:a"]);
   });
 
   it("no impression when the card leaves before 1s", () => {
@@ -307,10 +307,98 @@ describe("StoreTracker", () => {
     }
   });
 
+  it("counts the same card in the same slot again on the next view", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+
+    // The next view shows the same item in the same element: observe()
+    // changes nothing, and a real observer reports nothing new on its own.
+    const observe = vi.spyOn(FakeIO.last, "observe");
+    const unobserve = vi.spyOn(FakeIO.last, "unobserve");
+    tracker.beginPageView();
+    tracker.observe(el, "flag:a", placement);
+    expect(unobserve).toHaveBeenCalledWith(el);
+    expect(observe).toHaveBeenCalledWith(el);
+    // The re-observed element's first report starts a fresh second.
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+    tracker.flush();
+    expect(
+      send.mock.calls.flatMap((c) => c[0].events).map((e) => e.type),
+    ).toEqual(["impression", "impression"]);
+  });
+
+  it("drops a pending second when the next view begins", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(500);
+    tracker.beginPageView();
+    vi.advanceTimersByTime(1000);
+    tracker.flush();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("sends opens in a request of their own, before item events", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+    tracker.open("insufficient_currency");
+    tracker.flush();
+    expect(send).toHaveBeenCalledTimes(2);
+    const [opens, items] = send.mock.calls.map((c) => c[0]);
+    expect(opens.events).toEqual([
+      { type: "open", source: "insufficient_currency" },
+    ]);
+    expect(items.events).toEqual([
+      { type: "impression", item: "flag:a", placement },
+    ]);
+    // Both are what the API accepts.
+    expect(StoreEventsBodySchema.safeParse(opens).success).toBe(true);
+    expect(StoreEventsBodySchema.safeParse(items).success).toBe(true);
+  });
+
+  it("sends an open alone when nothing else is queued", () => {
+    tracker.open("nav");
+    tracker.flush();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].events).toEqual([
+      { type: "open", source: "nav" },
+    ]);
+  });
+
   it("no send when empty", () => {
     tracker.flush();
     vi.advanceTimersByTime(60_000);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("storeOpenSource", () => {
+  it("is nav for the menu button's open with no args", () => {
+    expect(storeOpenSource(undefined)).toBe("nav");
+  });
+  it("takes a known from", () => {
+    expect(
+      storeOpenSource({ modal: "store", from: "insufficient_currency" }),
+    ).toBe("insufficient_currency");
+  });
+  it("keeps an unknown from as other", () => {
+    expect(storeOpenSource({ from: "somewhere_new" })).toBe("other");
+  });
+  it("is affiliate_link for a creator link's code alone", () => {
+    expect(storeOpenSource({ affiliateCode: "abc" })).toBe("affiliate_link");
+  });
+  it("prefers from over an affiliate code (the clan page)", () => {
+    expect(storeOpenSource({ affiliateCode: "abc", from: "clan" })).toBe(
+      "clan",
+    );
+  });
+  it("is link for a store URL with no entry point", () => {
+    expect(storeOpenSource({ modal: "store", tab: "packs" })).toBe("link");
   });
 });
 

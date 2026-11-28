@@ -70,7 +70,8 @@ export class SubscriptionModal extends ProfileMenuModal {
                     translationKey="subscription_modal.browse"
                     @click=${() => {
                       this.close();
-                      window.location.hash = "modal=store&tab=subscriptions";
+                      window.location.hash =
+                        "modal=store&tab=subscriptions&from=subscription";
                     }}
                   ></o-button>`
             }

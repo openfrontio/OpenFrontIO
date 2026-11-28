@@ -393,7 +393,7 @@ async function resumePendingPurchaseFor(me: UserMeResponse): Promise<boolean> {
     window.removeEventListener("hashchange", onHashChange);
     if (resumeAbort === abort) resumeAbort = null;
   }
-  window.location.hash = `modal=store&tab=cosmetics&item=${encodeURIComponent(key)}`;
+  window.location.hash = `modal=store&tab=cosmetics&item=${encodeURIComponent(key)}&from=resume_purchase`;
   return true;
 }
 

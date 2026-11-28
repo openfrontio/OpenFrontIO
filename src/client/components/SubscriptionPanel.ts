@@ -75,7 +75,7 @@ export class SubscriptionPanel extends LitElement {
     this.dispatchEvent(
       new CustomEvent("request-close", { bubbles: true, composed: true }),
     );
-    window.location.hash = "modal=store&tab=subscriptions";
+    window.location.hash = "modal=store&tab=subscriptions&from=subscription";
   };
 
   private handleCancel = async (): Promise<void> => {

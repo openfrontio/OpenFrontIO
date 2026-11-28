@@ -111,9 +111,9 @@ export function equippedCosmetics(
 export function storeRouteFor(equipped: EquippedCosmetic): string | null {
   if (equipped.relationship !== "purchasable") return null;
   if (equipped.type === "effect") {
-    return "#modal=store&tab=effects";
+    return "#modal=store&tab=effects&from=equipped";
   }
-  return `#modal=store&tab=cosmetics&item=${encodeURIComponent(equipped.key)}`;
+  return `#modal=store&tab=cosmetics&item=${encodeURIComponent(equipped.key)}&from=equipped`;
 }
 
 /**

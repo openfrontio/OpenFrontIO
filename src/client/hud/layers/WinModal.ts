@@ -101,6 +101,7 @@ import {
 } from "../../ProvisionalXpAtDeath";
 import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { StoreTracker } from "../../StoreTracking";
 import { SendWinnerEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
 import { shareGame } from "../../utilities/ShareGame";
@@ -917,12 +918,21 @@ export class WinModal extends LitElement implements Controller {
           const hard = pattern ? currentPrice(pattern, "hard") : undefined;
           const soft = pattern ? currentPrice(pattern, "soft") : undefined;
           return html`
-            <div data-win-cosmetic-promo class="flex w-40 flex-col gap-2">
+            <div
+              data-win-cosmetic-promo
+              data-cosmetic-key=${resolved.key}
+              class="flex w-40 flex-col gap-2"
+            >
               <cosmetic-card
                 .resolved=${resolved}
                 .interactive=${false}
               ></cosmetic-card>
               <purchase-button
+                @click=${{
+                  // Capture: the buttons inside stop their clicks bubbling.
+                  capture: true,
+                  handleEvent: () => this.trackOfferClick(resolved.key),
+                }}
                 .priceHard=${hard ?? null}
                 .priceSoft=${soft ?? null}
                 .rarity=${pattern?.rarity ?? "common"}
@@ -1220,6 +1230,7 @@ export class WinModal extends LitElement implements Controller {
     );
     this.stats = stats ? this.statsNow() : null;
     this.isVisible = true;
+    this.beginOfferPageView();
     this.requestUpdate();
     try {
       await this.loadPatternContent();
@@ -1246,7 +1257,52 @@ export class WinModal extends LitElement implements Controller {
 
   hide() {
     this.isVisible = false;
+    this.storeTracker?.flush();
     this.requestUpdate();
+  }
+
+  // Store analytics for the offer: impressions of its cards and presses of
+  // their buy buttons, placed as post_game like its purchases. Made on the
+  // first showing and kept; each showing (show()) is a page view of its own,
+  // begun before the offer loads so a slow load can't carry the last
+  // screen's clicks over.
+  private storeTracker: StoreTracker | null = null;
+
+  private beginOfferPageView(): void {
+    if (typeof IntersectionObserver === "undefined") return;
+    try {
+      this.storeTracker ??= new StoreTracker();
+      this.storeTracker.beginPageView();
+    } catch {
+      // Analytics must never break the end screen.
+    }
+  }
+
+  protected updated(): void {
+    // Not once removed: disconnectedCallback disposed the tracker, and a late
+    // offer load must not leave a new one behind.
+    if (!this.isConnected || !this.isVisible || this.storeTracker === null) {
+      return;
+    }
+    try {
+      this.storeTracker.releaseDetached();
+      for (const el of this.querySelectorAll<HTMLElement>(
+        "[data-win-cosmetic-promo][data-cosmetic-key]",
+      )) {
+        const key = el.dataset.cosmeticKey;
+        if (key) this.storeTracker.observe(el, key, { kind: "post_game" });
+      }
+    } catch {
+      // Analytics must never break the end screen.
+    }
+  }
+
+  private trackOfferClick(key: string): void {
+    try {
+      this.storeTracker?.click(key, { kind: "post_game" });
+    } catch {
+      // Analytics must never break the purchase.
+    }
   }
 
   connectedCallback(): void {
@@ -1266,6 +1322,8 @@ export class WinModal extends LitElement implements Controller {
     this.unsubscribeLooks?.();
     this.unsubscribeLooks = null;
     document.removeEventListener("userMeResponse", this.onUserMe);
+    this.storeTracker?.dispose();
+    this.storeTracker = null;
     super.disconnectedCallback();
   }
 

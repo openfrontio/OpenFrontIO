@@ -531,7 +531,7 @@ export class UsernameInput extends LitElement {
       },
     );
     if (goStore) {
-      window.location.hash = "modal=store&tab=subscriptions";
+      window.location.hash = "modal=store&tab=subscriptions&from=username";
     }
   }
 

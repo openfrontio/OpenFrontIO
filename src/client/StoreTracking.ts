@@ -1,5 +1,6 @@
 import type {
   StoreEventsBody,
+  StoreOpenSource,
   StorePlacement,
 } from "@openfront/shared/ApiSchemas";
 import { getApiBase } from "./ApiBase";
@@ -27,6 +28,8 @@ const MAX_BATCH = 50;
 const MAX_ITEM_KEY = 120;
 
 type StoreEvent = StoreEventsBody["events"][number];
+type ItemEvent = Exclude<StoreEvent, { type: "open" }>;
+type OpenEvent = Extract<StoreEvent, { type: "open" }>;
 
 // The key a store item is tracked under. The card is the unit shown and
 // scored, so a pattern is always `pattern:<name>`: a palette variant
@@ -36,6 +39,48 @@ export function storeItemKey(key: string): string {
   if (!key.startsWith("pattern:")) return key;
   const [, name] = key.split(":");
   return `pattern:${name}`;
+}
+
+// The custom Plutonium amount card's key. It has no catalog entry; the API
+// lists it under this key (pack:custom_amount, type "pack").
+export const CUSTOM_AMOUNT_ITEM_KEY = "pack:custom_amount";
+
+const OPEN_SOURCES: ReadonlySet<string> = new Set<StoreOpenSource>([
+  "nav",
+  "news_banner",
+  "insufficient_currency",
+  "purchase_nudge",
+  "resume_purchase",
+  "inventory",
+  "equipped",
+  "subscription",
+  "username",
+  "host_lobby",
+  "matchmaking",
+  "clan",
+  "affiliate_link",
+  "link",
+  "other",
+]);
+
+/**
+ * The entry point that opened the store, from the open's args. Entry points
+ * name themselves with `from=<source>` in the store's hash; the menu's Store
+ * button opens it with no args at all; a creator link (`#affiliate=`) passes
+ * only its code; any other store URL (a reload, a shared or typed link) is
+ * "link".
+ */
+export function storeOpenSource(
+  args?: Record<string, unknown>,
+): StoreOpenSource {
+  if (args === undefined) return "nav";
+  if (typeof args.from === "string") {
+    return OPEN_SOURCES.has(args.from)
+      ? (args.from as StoreOpenSource)
+      : "other";
+  }
+  if (typeof args.affiliateCode === "string") return "affiliate_link";
+  return "link";
 }
 
 export function storePlatform(): StoreEventsBody["platform"] {
@@ -84,7 +129,8 @@ export class StoreTracker {
   private readonly interval: ReturnType<typeof setInterval>;
   private observer: IntersectionObserver | null = null;
   private readonly watched = new Map<Element, Watched>();
-  private queue: StoreEvent[] = [];
+  private queue: ItemEvent[] = [];
+  private opens: OpenEvent[] = [];
   private seenImpressions = new Set<string>();
   private seenClicks = new Set<string>();
 
@@ -113,6 +159,16 @@ export class StoreTracker {
   beginPageView(): void {
     this.seenImpressions.clear();
     this.seenClicks.clear();
+    // Lit keeps a card's element when the next view shows the same item in
+    // the same slot, and observe() then changes nothing. Watch each card
+    // afresh, so its next second in view counts for this view: the observer
+    // reports a newly observed element's state straight away.
+    for (const [el, w] of this.watched) {
+      this.stopTimer(w);
+      w.visible = false;
+      this.observer?.unobserve(el);
+      this.observer?.observe(el);
+    }
   }
 
   // Call releaseDetached() once per pass over the cards, not per card.
@@ -194,16 +250,28 @@ export class StoreTracker {
     this.enqueue({ type: "click", item, placement });
   }
 
-  private enqueue(event: StoreEvent): void {
+  /** One store opening, from the entry point that opened it. */
+  open(source: StoreOpenSource): void {
+    this.opens.push({ type: "open", source });
+  }
+
+  private enqueue(event: ItemEvent): void {
     if (event.item.length > MAX_ITEM_KEY) return;
     this.queue.push(event);
   }
 
   flush(): void {
-    if (this.queue.length === 0) return;
+    if (this.queue.length === 0 && this.opens.length === 0) return;
+    const platform = storePlatform();
+    // Opens in a request of their own: an API that predates them rejects
+    // that request, never the impressions and clicks.
+    const opens = this.opens;
+    this.opens = [];
+    for (let i = 0; i < opens.length; i += MAX_BATCH) {
+      this.send({ platform, events: opens.slice(i, i + MAX_BATCH) });
+    }
     const events = this.queue;
     this.queue = [];
-    const platform = storePlatform();
     for (let i = 0; i < events.length; i += MAX_BATCH) {
       this.send({ platform, events: events.slice(i, i + MAX_BATCH) });
     }

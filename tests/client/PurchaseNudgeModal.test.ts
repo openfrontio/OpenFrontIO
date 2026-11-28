@@ -101,7 +101,7 @@ describe("purchase-nudge-modal", () => {
     expect(await shown()).toBe(true);
     (el.querySelector("o-button") as HTMLElement).click();
     await el.updateComplete;
-    expect(window.location.hash).toBe("#modal=store");
+    expect(window.location.hash).toBe("#modal=store&from=purchase_nudge");
     expect(el.querySelector('[role="dialog"]')).toBeNull();
   });
 

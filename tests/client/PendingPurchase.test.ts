@@ -77,7 +77,7 @@ describe("resuming after the top-up", () => {
     rememberPendingPurchase("p1", "cardBackground:bg_x");
     expect(await resumePendingPurchase()).toBe(true);
     expect(window.location.hash).toBe(
-      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x&from=resume_purchase",
     );
   });
 
@@ -102,7 +102,7 @@ describe("resuming after the top-up", () => {
     document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me() }));
     expect(await resumed).toBe(true);
     expect(window.location.hash).toBe(
-      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x&from=resume_purchase",
     );
   });
 
@@ -141,7 +141,8 @@ describe("resuming after the top-up", () => {
     );
     return { actions, closeAlert: () => closeAlert() };
   };
-  const ITEM_HASH = "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x";
+  const ITEM_HASH =
+    "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x&from=resume_purchase";
 
   it("a top-up landing opens the item only after the success message closes", async () => {
     rememberPendingPurchase("p1", "cardBackground:bg_x");
@@ -254,7 +255,7 @@ describe("resuming before the Plutonium lands", () => {
     await vi.advanceTimersByTimeAsync(7_000);
     expect(await resumed).toBe(true);
     expect(window.location.hash).toBe(
-      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x&from=resume_purchase",
     );
   });
 
@@ -267,7 +268,7 @@ describe("resuming before the Plutonium lands", () => {
     await vi.advanceTimersByTimeAsync(15_000);
     expect(await resumed).toBe(true);
     expect(window.location.hash).toBe(
-      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x&from=resume_purchase",
     );
   });
 

@@ -1550,10 +1550,10 @@ export class InventoryModal extends BaseModal {
       this.close();
       window.location.hash =
         target === undefined
-          ? "modal=store&tab=cosmetics"
+          ? "modal=store&tab=cosmetics&from=inventory"
           : target === "card"
-            ? "modal=store&tab=cosmetics&sub=card"
-            : `modal=store&tab=cosmetics&item=${encodeURIComponent(target)}`;
+            ? "modal=store&tab=cosmetics&sub=card&from=inventory"
+            : `modal=store&tab=cosmetics&item=${encodeURIComponent(target)}&from=inventory`;
     });
   }
 
@@ -1567,7 +1567,7 @@ export class InventoryModal extends BaseModal {
     this.leaveThen(() => {
       remember();
       this.close();
-      window.location.hash = "modal=store&tab=packs";
+      window.location.hash = "modal=store&tab=packs&from=inventory";
     });
   }
 

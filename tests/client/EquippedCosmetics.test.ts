@@ -107,7 +107,7 @@ describe("storeRouteFor", () => {
     ]);
 
     expect(storeRouteFor(equipped)).toBe(
-      "#modal=store&tab=cosmetics&item=pattern%3Ahearts%3Ared",
+      "#modal=store&tab=cosmetics&item=pattern%3Ahearts%3Ared&from=equipped",
     );
   });
 
@@ -144,7 +144,9 @@ describe("storeRouteFor", () => {
       [catalogEntry("effect:nukeTrail:embers", "effect", "purchasable")],
     );
 
-    expect(storeRouteFor(equipped)).toBe("#modal=store&tab=effects");
+    expect(storeRouteFor(equipped)).toBe(
+      "#modal=store&tab=effects&from=equipped",
+    );
   });
 });
 

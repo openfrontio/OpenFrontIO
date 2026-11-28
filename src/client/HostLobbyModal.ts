@@ -919,7 +919,8 @@ export class HostLobbyModal extends BaseModal {
                 @cancel=${() => (this.showSubscriptionRequired = false)}
                 @confirm=${() => {
                   this.showSubscriptionRequired = false;
-                  window.location.href = "/#modal=store&tab=subscriptions";
+                  window.location.href =
+                    "/#modal=store&tab=subscriptions&from=host_lobby";
                 }}
               ></confirm-dialog>`
             : ""

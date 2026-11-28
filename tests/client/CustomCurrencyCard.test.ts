@@ -125,6 +125,46 @@ describe("CustomCurrencyCard", () => {
     );
   });
 
+  it("sends the store placement and counts the press as a click", async () => {
+    const onActivate = vi.fn();
+    card!.placement = () => ({ kind: "tab", tab: "packs" });
+    card!.onActivate = onActivate;
+    await buyAmount(240);
+
+    await vi.waitFor(() =>
+      expect(startPurchase).toHaveBeenCalledWith({
+        kind: "custom_currency",
+        hardAmount: 240,
+        placement: { kind: "tab", tab: "packs" },
+      }),
+    );
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't count a tap on the padding around the buy button", async () => {
+    const onActivate = vi.fn();
+    card!.onActivate = onActivate;
+    await card!.updateComplete;
+    card!
+      .querySelector<HTMLElement>("[data-cosmetic-action]")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it("still buys when the placement throws", async () => {
+    card!.placement = () => {
+      throw new Error("analytics");
+    };
+    await buyAmount(240);
+
+    await vi.waitFor(() =>
+      expect(startPurchase).toHaveBeenCalledWith({
+        kind: "custom_currency",
+        hardAmount: 240,
+      }),
+    );
+  });
+
   it("says nothing while a redirect is under way", async () => {
     await buyAmount(240);
     await vi.waitFor(() => expect(startPurchase).toHaveBeenCalled());

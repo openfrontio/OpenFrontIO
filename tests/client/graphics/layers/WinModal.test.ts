@@ -90,6 +90,30 @@ vi.mock("../../../../src/client/GamePortal", () => ({
   gamePortal: gamePortalMock,
 }));
 
+// The offer's store analytics: what it observes and counts, not the sending.
+const trackerMock = vi.hoisted(() => ({
+  made: 0,
+  observe: vi.fn(),
+  click: vi.fn(),
+  beginPageView: vi.fn(),
+  releaseDetached: vi.fn(),
+  flush: vi.fn(),
+  dispose: vi.fn(),
+}));
+vi.mock("../../../../src/client/StoreTracking", () => ({
+  StoreTracker: class {
+    constructor() {
+      trackerMock.made++;
+    }
+    observe = trackerMock.observe;
+    click = trackerMock.click;
+    beginPageView = trackerMock.beginPageView;
+    releaseDetached = trackerMock.releaseDetached;
+    flush = trackerMock.flush;
+    dispose = trackerMock.dispose;
+  },
+}));
+
 import { ClientEnv } from "../../../../src/client/ClientEnv";
 
 // jsdom has no ResizeObserver.
@@ -279,6 +303,90 @@ describe("WinModal pattern promotion", () => {
     const legacyContainerTag = ["cosmetic", "container"].join("-");
     expect(modal.querySelectorAll(legacyButtonTag)).toHaveLength(0);
     expect(modal.querySelectorAll(legacyContainerTag)).toHaveLength(0);
+  });
+
+  it("tracks the offer's cards and button presses as post_game", async () => {
+    const stubObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    vi.stubGlobal("IntersectionObserver", stubObserver);
+    trackerMock.made = 0;
+    for (const fn of [
+      trackerMock.observe,
+      trackerMock.click,
+      trackerMock.beginPageView,
+      trackerMock.flush,
+      trackerMock.dispose,
+    ]) {
+      fn.mockClear();
+    }
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    vi.mocked(resolveCosmetics).mockReturnValue([
+      {
+        type: "pattern",
+        cosmetic: {
+          name: "aurora",
+          pattern: "AAAAAA",
+          product: null,
+          priceHard: 80,
+          rarity: "rare",
+        } as never,
+        colorPalette: { name: "red" } as never,
+        relationship: "purchasable",
+        key: "pattern:aurora:red",
+      },
+    ]);
+
+    modal = document.createElement("win-modal") as WinModal;
+    // The pattern offer, not another promo (the choice is random).
+    Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+      rand: 0.75,
+      isWin: true,
+    });
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    // What show() does as the end screen opens: the page view begins before
+    // the offer has loaded.
+    modal.isVisible = true;
+    (modal as unknown as { beginOfferPageView(): void }).beginOfferPageView();
+    expect(trackerMock.beginPageView).toHaveBeenCalledTimes(1);
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await modal.updateComplete;
+
+    expect(trackerMock.made).toBe(1);
+    await vi.waitFor(() =>
+      expect(trackerMock.observe).toHaveBeenCalledWith(
+        modal!.querySelector("[data-win-cosmetic-promo]"),
+        "pattern:aurora:red",
+        { kind: "post_game" },
+      ),
+    );
+
+    modal.querySelector<HTMLElement>("purchase-button")!.click();
+    expect(trackerMock.click).toHaveBeenCalledWith("pattern:aurora:red", {
+      kind: "post_game",
+    });
+
+    // Redrawing the same offer is the same page view.
+    modal.requestUpdate();
+    await modal.updateComplete;
+    expect(trackerMock.beginPageView).toHaveBeenCalledTimes(1);
+
+    modal.hide();
+    expect(trackerMock.flush).toHaveBeenCalled();
+    modal.isVisible = true;
+    modal.remove();
+    expect(trackerMock.dispose).toHaveBeenCalled();
+    // An offer load that lands after removal makes no new tracker.
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await Promise.resolve();
+    expect(trackerMock.made).toBe(1);
+    modal = undefined;
+    vi.unstubAllGlobals();
   });
 
   it("redraws the same offer at the new price when the catalog changes", async () => {

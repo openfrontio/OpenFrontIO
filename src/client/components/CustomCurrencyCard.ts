@@ -1,5 +1,6 @@
+import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { showInGameAlert } from "../InGameModal";
 import { purchaseOutcomeMessage, startPurchase } from "../Payments";
 import { translateText } from "../Utils";
@@ -19,6 +20,17 @@ const MAX_PLUTONIUM = 2000;
 export class CustomCurrencyCard extends LitElement {
   /** Always a clamped integer in [MIN_PLUTONIUM, MAX_PLUTONIUM]. */
   @state() private amount = 100;
+
+  /**
+   * Where the card sits in the store, read when the player buys (store
+   * analytics). Unset, or a throw, sends no placement.
+   */
+  @property({ attribute: false })
+  placement?: () => StorePlacement | undefined;
+
+  /** Called when the player presses the buy button (a store click). */
+  @property({ attribute: false })
+  onActivate?: () => void;
 
   createRenderRoot() {
     return this;
@@ -41,18 +53,46 @@ export class CustomCurrencyCard extends LitElement {
     this.amount = this.clamp(Number((e.target as HTMLInputElement).value));
   }
 
+  // Analytics must never break a purchase: a throw means no placement.
+  private readonly currentPlacement = (): StorePlacement | undefined => {
+    try {
+      return this.placement?.();
+    } catch {
+      return undefined;
+    }
+  };
+
   private buy = async () => {
     // Rail-agnostic: startPurchase picks Stripe or Steam and performs the
     // handoff itself, so there is no URL to navigate to here.
+    const placement = this.currentPlacement();
     const outcome = await startPurchase({
       kind: "custom_currency",
       hardAmount: this.amount,
+      ...(placement ? { placement } : {}),
     });
     const message = purchaseOutcomeMessage(
       outcome,
       "store.custom_currency_purchase_success",
     );
     if (message !== null) await showInGameAlert(message);
+  };
+
+  // On the capture phase: the purchase button stops its click from
+  // bubbling. Only a press inside the purchase button counts, not a tap on
+  // the padding around it. Analytics must never break the click.
+  private readonly activateListener = {
+    capture: true,
+    handleEvent: (e: Event) => {
+      try {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest("purchase-button") === null) return;
+        this.onActivate?.();
+      } catch {
+        // Ignored.
+      }
+    },
   };
 
   render() {
@@ -120,7 +160,11 @@ export class CustomCurrencyCard extends LitElement {
           />
         </div>
 
-        <div data-cosmetic-action class="mt-auto w-full px-3 pb-3 pt-2">
+        <div
+          data-cosmetic-action
+          class="mt-auto w-full px-3 pb-3 pt-2"
+          @click=${this.activateListener}
+        >
           <purchase-button
             class="block w-full"
             .dollarPrice=${price}
@@ -133,6 +177,7 @@ export class CustomCurrencyCard extends LitElement {
               // Same fixed rate as priceDollars: 5 cents per plutonium.
               amountCents: this.amount * 5,
               successMessageKey: "store.custom_currency_purchase_success",
+              placement: this.currentPlacement,
             }}
           ></purchase-button>
         </div>

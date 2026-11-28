@@ -120,7 +120,8 @@ export class InsufficientCurrencyDialog extends LitElement {
     const go = () => {
       remember();
       // Home path (not just hash) so it also works from in-game (win modal).
-      window.location.href = "/#modal=store&tab=packs";
+      window.location.href =
+        "/#modal=store&tab=packs&from=insufficient_currency";
     };
     const event = new CustomEvent("top-up", {
       detail: { go, remember },
