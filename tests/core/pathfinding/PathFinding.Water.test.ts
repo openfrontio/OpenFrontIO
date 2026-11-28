@@ -7,6 +7,7 @@ import {
 } from "@openfront/engine/pathfinding/types";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { setup } from "../../util/Setup";
+import { setupFromPath } from "../../pathfinding/utils";
 import { createGame, L, W } from "./_fixtures";
 
 describe("PathFinding.Water", () => {
@@ -293,6 +294,34 @@ describe("PathFinding.Water", () => {
       expect(path).not.toBeNull();
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
+    });
+  });
+
+  describe("Milky Way routes (W boat regression)", () => {
+    it("takes the direct path across the bay instead of looping around the northern island", async () => {
+      const milkyGame = await setupFromPath("resources/maps", "milkyway", {
+        disableNavMesh: false,
+      });
+      const pathFinder = createPathFinder(milkyGame);
+      const map = milkyGame.map();
+
+      // Warship at [NEX] SPoS and target crosshair in open water
+      const from = map.ref(1228, 710);
+      const to = map.ref(1104, 736);
+
+      expect(map.isWater(from)).toBe(true);
+      expect(map.isWater(to)).toBe(true);
+
+      const path = pathFinder.findPath(from, to);
+      expect(path).not.toBeNull();
+      expect(path![0]).toBe(from);
+      expect(path![path!.length - 1]).toBe(to);
+
+      // Verify the path does not take the northern detour (which looped to Y < 680)
+      for (const t of path!) {
+        expect(map.y(t)).toBeGreaterThanOrEqual(690);
+      }
+      expect(path!.length).toBeLessThan(220);
     });
   });
 });
