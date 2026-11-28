@@ -44,4 +44,30 @@ describe("TransportShipExecution", () => {
     );
     expect(attacker.units(UnitType.TransportShip)).toHaveLength(1);
   });
+
+  test("floors boat troops and rejects empty or sub-unit launches", async () => {
+    const game = await setup("ocean_and_land", { infiniteGold: true }, [
+      new PlayerInfo("attacker", PlayerType.Human, null, "attacker_id"),
+      new PlayerInfo("target", PlayerType.Human, null, "target_id"),
+    ]);
+    const a = game.player("attacker_id");
+    const b = game.player("target_id");
+    let dst = 0;
+    game.map().forEachTile((t) => {
+      if (!game.map().isLand(t)) return;
+      if (game.x(t) <= 7) a.conquer(t);
+      else if (game.x(t) >= 14) {
+        b.conquer(t);
+        dst ||= t;
+      }
+    });
+    a.setTroops(100);
+    game.addExecution(new TransportShipExecution(a, dst, 0.9));
+    executeTicks(game, 1);
+    expect(a.units(UnitType.TransportShip)).toHaveLength(0);
+    game.addExecution(new TransportShipExecution(a, dst, 10.9));
+    executeTicks(game, 1);
+    const [boat] = a.units(UnitType.TransportShip);
+    expect(boat.troops()).toBe(10);
+  });
 });
