@@ -59,6 +59,11 @@
     "name": "African Union"
   },
   {
+    "code": "Akha",
+    "continent": "Asia",
+    "name": "Akha"
+  },
+  {
     "code": "et-am",
     "continent": "Africa",
     "name": "Amhara"
@@ -286,6 +291,11 @@
     "code": "sh-ac",
     "continent": "Africa",
     "name": "Ascension Island"
+  },
+  {
+    "code": "ASEAN",
+    "continent": "Asia",
+    "name": "ASEAN"
   },
   {
     "code": "Association of Caribbean States",
@@ -605,6 +615,11 @@
     "code": "bn",
     "continent": "Asia",
     "name": "Brunei Darussalam"
+  },
+  {
+    "code": "Buddhism",
+    "continent": "Asia",
+    "name": "Buddhism"
   },
   {
     "code": "buenos_aires",
@@ -1423,6 +1438,11 @@
     "name": "French Guiana"
   },
   {
+    "code": "French Indochina",
+    "continent": "Asia",
+    "name": "French Indochina"
+  },
+  {
     "code": "pf",
     "continent": "Oceania",
     "name": "French Polynesia"
@@ -1678,6 +1698,11 @@
     "name": "Hamburg"
   },
   {
+    "code": "Hanoi",
+    "continent": "Asia",
+    "name": "Hanoi"
+  },
+  {
     "code": "haida_flag",
     "continent": "North America",
     "name": "Haida"
@@ -1720,6 +1745,11 @@
     "code": "Hirshabelle",
     "continent": "Africa",
     "name": "Hirshabelle"
+  },
+  {
+    "code": "Hmong",
+    "continent": "Asia",
+    "name": "Hmong"
   },
   {
     "code": "Holy Roman Empire",
@@ -2002,6 +2032,11 @@
     "name": "Khiva"
   },
   {
+    "code": "Khmer Loeu",
+    "continent": "Asia",
+    "name": "Khmer Loeu"
+  },
+  {
     "code": "Khoisan",
     "continent": "Africa",
     "name": "Khoisan"
@@ -2065,6 +2100,11 @@
     "code": "Kingdom of Judah",
     "continent": "Asia",
     "name": "Kingdom of Judah"
+  },
+  {
+    "code": "Kingdom of Laos",
+    "continent": "Asia",
+    "name": "Kingdom of Laos"
   },
   {
     "code": "kingdom_of_portugal",
@@ -2433,6 +2473,11 @@
     "name": "Majapahit"
   },
   {
+    "code": "Mandalay",
+    "continent": "Asia",
+    "name": "Mandalay"
+  },
+  {
     "code": "Massachusetts (Naval)",
     "continent": "North America",
     "name": "Massachusetts (Naval)"
@@ -2461,6 +2506,11 @@
     "code": "my",
     "continent": "Asia",
     "name": "Malaysia"
+  },
+  {
+    "code": "Malaya",
+    "continent": "Asia",
+    "name": "Malaya"
   },
   {
     "code": "mv",
@@ -2722,6 +2772,11 @@
     "name": "Mpumalanga"
   },
   {
+    "code": "Mughal Empire",
+    "continent": "Asia",
+    "name": "Mughal Empire"
+  },
+  {
     "code": "Mulgimaa",
     "continent": "Europe",
     "name": "Mulgimaa"
@@ -2908,6 +2963,11 @@
     "code": "pa-nb",
     "continent": "North America",
     "name": "Ngäbe-Buglé"
+  },
+  {
+    "code": "Nguyen Dynasty",
+    "continent": "Asia",
+    "name": "Nguyễn Dynasty"
   },
   {
     "code": "ni",
@@ -3218,6 +3278,11 @@
     "code": "Pennsylvania",
     "continent": "North America",
     "name": "Pennsylvania"
+  },
+  {
+    "code": "Perlis",
+    "continent": "Asia",
+    "name": "Perlis"
   },
   {
     "code": "pe",
@@ -3962,6 +4027,11 @@
     "name": "Sabah"
   },
   {
+    "code": "Sagaing",
+    "continent": "Asia",
+    "name": "Sagaing"
+  },
+  {
     "code": "bl",
     "continent": "North America",
     "name": "Saint Barthélemy"
@@ -4160,6 +4230,11 @@
     "name": "Seychelles"
   },
   {
+    "code": "Shan State",
+    "continent": "Asia",
+    "name": "Shan State"
+  },
+  {
     "code": "Sheikdom of Upper Asir",
     "continent": "Asia",
     "name": "Sheikdom of Upper Asir"
@@ -4312,6 +4387,11 @@
     "code": "ss",
     "continent": "Africa",
     "name": "South Sudan"
+  },
+  {
+    "code": "South Vietnam",
+    "continent": "Asia",
+    "name": "South Vietnam"
   },
   {
     "code": "et-sw",
@@ -4542,6 +4622,11 @@
     "code": "tibet",
     "continent": "Asia",
     "name": "Tibet"
+  },
+  {
+    "code": "Tibetan Empire",
+    "continent": "Asia",
+    "name": "Tibetan Empire"
   },
   {
     "code": "Tierra del Fuego",
@@ -4833,6 +4918,11 @@
     "name": "Victoria"
   },
   {
+    "code": "Viet Cong",
+    "continent": "Asia",
+    "name": "Viet Cong"
+  },
+  {
     "code": "vn",
     "continent": "Asia",
     "name": "Vietnam"
@@ -4965,6 +5055,11 @@
     "code": "Wyoming",
     "continent": "North America",
     "name": "Wyoming"
+  },
+  {
+    "code": "Yangon",
+    "continent": "Asia",
+    "name": "Yangon"
   },
   {
     "code": "Yellow_Flag",
