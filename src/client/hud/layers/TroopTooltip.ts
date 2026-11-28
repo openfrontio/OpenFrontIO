@@ -47,7 +47,9 @@ export class TroopTooltip extends LitElement {
     litRender(
       html`
         <div class=${TOOLTIP} role="tooltip">
-          <div class=${TITLE}>${translateText("control_panel.troops_to_send")}</div>
+          <div class=${TITLE}>
+            ${translateText("control_panel.troops_to_send")}
+          </div>
           <div class=${COUNT}>
             <of-icon name="sword" size="16"></of-icon>
             ${renderTroops(this.troops)}
