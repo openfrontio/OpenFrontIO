@@ -104,6 +104,13 @@ const COSMETICS = {
       text: "Warmonger",
       unlockSource: { kind: "elo", label: "FFA Diamond" },
     },
+    veteran: {
+      ...item,
+      rarity: "epic",
+      name: "veteran",
+      text: "Veteran",
+      priceSoft: 500,
+    },
   },
   taunts: {
     salute: {
@@ -124,7 +131,6 @@ const VOLT: PlayerCardView = buildPlayerCardView(
     badge: null,
     card: {
       background: "bg_frontline",
-      title: "warmonger",
       taunt: "salute",
       trackers: [
         { stat: "wins", value: 1204 },
@@ -152,12 +158,58 @@ const onSale = (name: string, endsAt: string) => ({
 });
 
 describe("loadoutItems", () => {
-  it("the killer's title and taunt are never offered (held back)", () => {
+  it("the killer's taunt is never offered (held back)", () => {
     const items = loadoutItems(VOLT, COSMETICS, [
       "playerCard:standard",
       "cardBackground:bg_frontline",
     ]);
     expect(items.map((i) => i.type)).toEqual(["cardTracker", "cardTracker"]);
+  });
+
+  const titled = (title: string) =>
+    buildPlayerCardView(
+      {
+        username: "Volt",
+        clanTag: null,
+        badge: null,
+        card: {
+          background: "bg_frontline",
+          title,
+          trackers: [{ stat: "wins", value: 3 }],
+        },
+      },
+      COSMETICS,
+    );
+
+  it("offers the killer's title, after the background", () => {
+    const items = loadoutItems(titled("veteran"), COSMETICS, []);
+    expect(items.map((i) => `${i.type}:${i.item.name}`)).toEqual([
+      "playerCard:standard",
+      "cardBackground:bg_frontline",
+      "cardTitle:veteran",
+      "cardTracker:wins",
+    ]);
+    expect(items[2]).toMatchObject({ state: "buy" });
+  });
+
+  it("skips a title the viewer owns", () => {
+    const items = loadoutItems(titled("veteran"), COSMETICS, [
+      "cardTitle:veteran",
+    ]);
+    expect(items.map((i) => i.type)).not.toContain("cardTitle");
+  });
+
+  it("shows an earned title as earned", () => {
+    const items = loadoutItems(titled("warmonger"), COSMETICS, []);
+    expect(items.find((i) => i.type === "cardTitle")).toMatchObject({
+      state: "earned",
+      unlockLabel: "FFA Diamond",
+    });
+  });
+
+  it("a title missing from the catalogue offers nothing for it", () => {
+    const items = loadoutItems(titled("gone"), COSMETICS, []);
+    expect(items.map((i) => i.type)).not.toContain("cardTitle");
   });
 
   it("viewer without the card sees the card first", () => {
@@ -312,6 +364,7 @@ describe("promoChoice", () => {
     canWishlist: true,
     rand: 0.9,
     hasLooks: false,
+    canSell: true,
   };
   it("tutorial still wins in first 3 games", () => {
     expect(promoChoice({ ...base, gamesPlayed: 2 })).toBe("tutorial");
@@ -335,6 +388,17 @@ describe("promoChoice", () => {
     const iframe = { ...base, inIframe: true, hasLooks: true };
     expect(promoChoice(iframe)).toBe("steam");
     expect(promoChoice({ ...iframe, canWishlist: false })).toBe("discord");
+  });
+  it("promotions hidden: never a buy box, the other promos as usual", () => {
+    // Steam, so no wishlist either.
+    const hidden = { ...base, canSell: false, canWishlist: false };
+    expect(promoChoice(hidden)).toBe("discord");
+    expect(promoChoice({ ...hidden, hasLooks: true })).toBe("discord");
+    expect(promoChoice({ ...hidden, rand: 0.1 })).toBe("discord");
+    expect(promoChoice({ ...hidden, gamesPlayed: 2 })).toBe("tutorial");
+    expect(promoChoice({ ...hidden, hasLooks: true, gamesPlayed: 2 })).toBe(
+      "tutorial",
+    );
   });
 });
 

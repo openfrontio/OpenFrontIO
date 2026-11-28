@@ -50,6 +50,7 @@ import {
   renewalPushedDueThisLaunch,
   renewalPushedOf,
   renewalPushedStringsReady,
+  promotionsPromptDueThisLaunch,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
   runBootInterrupt,
@@ -187,6 +188,10 @@ import { tabAttention } from "./TabAttention";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
+import {
+  promotionsPromptDue,
+  promotionsPromptStringsReady,
+} from "./Promotions";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
 import "./components/BannedModal";
@@ -1066,6 +1071,11 @@ class Client {
             publicId,
           ),
           reportThanksStringsReady: reportThanksStringsReady(translateText),
+          promotionsPromptDue: promotionsPromptDueThisLaunch(
+            promotionsPromptDue(this.userSettings, isSteamShell()),
+          ),
+          promotionsPromptStringsReady:
+            promotionsPromptStringsReady(translateText),
         });
         // Only the payer's welcome names a daily amount, so only it waits on
         // the catalog.
@@ -1098,13 +1108,14 @@ class Client {
           },
           {
             translate: translateText,
-            confirm: (body, heading, confirmText) =>
+            confirm: (body, heading, confirmText, cancelText) =>
               showInGameConfirm(body, {
                 heading,
                 // The dialog offers "danger" and "warning" only, and neither
                 // of these is a danger.
                 variant: "warning",
                 confirmText,
+                ...(cancelText !== undefined ? { cancelText } : {}),
               }),
             alert: async (body, heading) => {
               await showInGameAlert(body, { heading });
@@ -1143,6 +1154,10 @@ class Client {
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
             markMessageSeen: (kind) => void markMessageSeen(kind),
+            markPromotionsPromptSeen: () =>
+              this.userSettings.markPromotionsPromptSeen(),
+            setHidePromotions: (hide) =>
+              this.userSettings.setHideSaleBanners(hide),
             now: () => Date.now(),
           },
         );

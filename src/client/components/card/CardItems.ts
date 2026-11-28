@@ -1,5 +1,6 @@
 import {
   type CardBackground,
+  type CardTitle,
   type CardTracker,
   cardTrackerNamedByStat,
   type Cosmetics,
@@ -7,14 +8,15 @@ import {
 } from "@openfront/shared/CosmeticSchemas";
 import { translateText } from "../../Translate";
 
-// The player card cosmetics, as the client lists and sells them. Titles and
-// taunts are held back: their schemas and catalogue entries stay, but the
-// client neither lists nor sells them.
+// The player card cosmetics, as the client lists and sells them. Taunts are
+// held back: their schema and catalogue entries stay, but the client neither
+// lists nor sells them.
 
 export const CARD_ITEM_TYPES = [
   "playerCard",
   "cardTracker",
   "cardBackground",
+  "cardTitle",
 ] as const;
 export type CardItemType = (typeof CARD_ITEM_TYPES)[number];
 
@@ -24,17 +26,23 @@ export const CARD_ITEM_GROUP = {
   playerCard: "playerCards",
   cardTracker: "cardTrackers",
   cardBackground: "cardBackgrounds",
+  cardTitle: "cardTitles",
 } as const satisfies Record<CardItemType, keyof Cosmetics>;
 
-export type CardItem = PlayerCardItem | CardTracker | CardBackground;
+export type CardItem =
+  | PlayerCardItem
+  | CardTracker
+  | CardBackground
+  | CardTitle;
 
 export function isCardItemType(type: string): type is CardItemType {
   return (CARD_ITEM_TYPES as readonly string[]).includes(type);
 }
 
-// The name a card item goes by in the UI: a tracker's stat label, otherwise
-// its translated name (falling back to the raw name).
+// The name a card item goes by in the UI: a title's own text, a tracker's
+// stat label, otherwise its translated name (falling back to the raw name).
 export function cardItemName(type: CardItemType, item: CardItem): string {
+  if (type === "cardTitle") return (item as CardTitle).text;
   if (type === "cardTracker") {
     return translateText(`player_card.tracker_${(item as CardTracker).stat}`);
   }
@@ -53,25 +61,6 @@ function readableName(name: string): string {
     .filter((w) => w.length > 0)
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ");
-}
-
-// A card item's rarity as a word, in the player's language. The card has a
-// 1 of 1 tier the other cosmetics don't; anything unknown reads as Common.
-export function cardRarityLabel(rarity: string): string {
-  switch (rarity) {
-    case "uncommon":
-      return translateText("cosmetics.uncommon");
-    case "rare":
-      return translateText("cosmetics.rare");
-    case "epic":
-      return translateText("cosmetics.epic");
-    case "legendary":
-      return translateText("cosmetics.legendary");
-    case "oneofone":
-      return translateText("cosmetics.oneofone");
-    default:
-      return translateText("cosmetics.common");
-  }
 }
 
 // Whether a card item may be offered at all: a tracker only when its name

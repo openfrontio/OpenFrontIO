@@ -102,15 +102,6 @@ function storedId(): string | undefined {
   }
 }
 
-/** Whether a record is waiting (without taking it). */
-export function hasPendingEquip(): boolean {
-  try {
-    return sessionStorage.getItem(PENDING_EQUIP_KEY) !== null;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * An end-screen purchase across a Plutonium top-up. "Get Plutonium" on the
  * end screen leaves the game for the Plutonium packs, so the item being
@@ -121,7 +112,7 @@ export function hasPendingEquip(): boolean {
  * item is bought, owned, or older than PENDING_PURCHASE_TTL_MS, and one from
  * another account is dropped.
  */
-export const PENDING_PURCHASE_KEY = "openfront-pending-purchase";
+const PENDING_PURCHASE_KEY = "openfront-pending-purchase";
 // Longer than an equip: a top-up can mean a card form or a payment app.
 export const PENDING_PURCHASE_TTL_MS = 30 * 60 * 1000;
 

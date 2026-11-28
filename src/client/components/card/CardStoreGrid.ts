@@ -32,7 +32,7 @@ import "./PlayerCard";
 import { buildPlayerCardView, type PlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
-// itself first, then trackers and backgrounds (titles and taunts are held
+// itself first, then trackers, backgrounds and titles (taunts are held
 // back). Without the card, its items still sell (the card comes first, as
 // in "Get {name}'s look") but each says it needs the card. Earned items
 // aren't listed (they're never sold). Prices in Plutonium and/or caps,
@@ -45,7 +45,7 @@ const PLACEMENT: StorePlacement = {
   subTab: "card",
 };
 
-// In CARD_ITEM_TYPES order: card, trackers, backgrounds.
+// In CARD_ITEM_TYPES order: card, trackers, backgrounds, titles.
 const SECTIONS: [keyof Cosmetics, CardItemType][] = CARD_ITEM_TYPES.map(
   (type) => [CARD_ITEM_GROUP[type], type],
 );
@@ -53,7 +53,7 @@ const SECTIONS: [keyof Cosmetics, CardItemType][] = CARD_ITEM_TYPES.map(
 // The value a tracker shows in its large preview.
 const SAMPLE_TRACKER_VALUE = 1904;
 
-export interface CardStoreTracker {
+interface CardStoreTracker {
   observe(el: Element, key: string, placement: StorePlacement): void;
   click(key: string, placement: StorePlacement): void;
   releaseDetached(): void;
@@ -172,7 +172,7 @@ export class CardStoreGrid extends LitElement {
   }
 
   private preview(type: CardItemType, item: CardItem): TemplateResult {
-    if (type === "cardBackground") {
+    if (type === "cardBackground" || type === "cardTitle") {
       return html`<player-card
         size="thumb"
         .view=${buildPlayerCardView(
@@ -180,7 +180,11 @@ export class CardStoreGrid extends LitElement {
             username: "",
             clanTag: null,
             badge: null,
-            card: { background: item.name, trackers: [] },
+            card: {
+              background: type === "cardBackground" ? item.name : undefined,
+              title: type === "cardTitle" ? item.name : undefined,
+              trackers: [],
+            },
           },
           this.cosmetics,
         )}
@@ -203,6 +207,7 @@ export class CardStoreGrid extends LitElement {
         badge: this.badge,
         card: {
           background: type === "cardBackground" ? item.name : undefined,
+          title: type === "cardTitle" ? item.name : undefined,
           trackers:
             type === "cardTracker"
               ? [

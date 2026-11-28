@@ -8,7 +8,7 @@ import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 
 // The equipped background's image path, or null when there is no background
 // or the catalogue doesn't have it (not loaded yet, or the item was removed).
-export function cardBackgroundUrl(
+function cardBackgroundUrl(
   name: string | undefined,
   cosmetics: Cosmetics | null,
 ): string | null {
@@ -67,13 +67,13 @@ export function resetCardBackdropLoadsForTests(): void {
 
 // Dark enough over the brightest art for the white name, troop and gold text
 // to read as well as on today's flat fill.
-export const STILL_BACKDROP_SHADE =
+const STILL_BACKDROP_SHADE =
   "linear-gradient(90deg, rgba(8,15,30,0.82) 0%, rgba(8,15,30,0.62) 60%, rgba(8,15,30,0.48) 100%)";
 
 // The current player's lobby tag is marked by a blue fill
 // (`.player-tag.current-player`); over art, that blue goes on top as a tint
 // so the tag stays clearly theirs.
-export const CURRENT_PLAYER_TINT =
+const CURRENT_PLAYER_TINT =
   "linear-gradient(rgba(14,165,233,0.32), rgba(14,165,233,0.32))";
 
 // The CSS background layers: the shade over the art (and the tint over both).

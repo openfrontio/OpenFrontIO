@@ -22,6 +22,7 @@ import {
 } from "@openfront/shared/ApiSchemas";
 import type { DesktopUpdateState } from "./DesktopShell";
 import { lapseNoticeDue } from "./PlayerName";
+import { PROMOTIONS_PROMPT_KEYS } from "./Promotions";
 import {
   steamGrantEndedShown,
   steamGrantEndingShown,
@@ -48,6 +49,7 @@ export type BootInterrupt =
   | "lapse-notice"
   | "grant-ended"
   | "gift-ending"
+  | "promotions-prompt"
   | "rewards"
   | "report-thanks";
 
@@ -110,6 +112,13 @@ export interface BootInterruptInputs {
   reportThanksDue: boolean;
   /** reportThanksStringsReady(...), as grantStringsReady. */
   reportThanksStringsReady: boolean;
+  /**
+   * promotionsPromptDue(...) (Promotions.ts) — a Steam device that has not
+   * yet been asked whether to turn store promotions off.
+   */
+  promotionsPromptDue: boolean;
+  /** promotionsPromptStringsReady(...), as grantStringsReady. */
+  promotionsPromptStringsReady: boolean;
 }
 
 /**
@@ -322,6 +331,12 @@ export function nextBootInterrupt(
 
   if (inputs.giftEndingDue && inputs.giftEndingStringsReady)
     return "gift-ending";
+
+  // Above rewards, which re-fires every boot while anything is claimable and
+  // so would otherwise starve a once-per-device question. Below everything
+  // else: nothing is at risk, and an unasked prompt keeps for the next launch.
+  if (inputs.promotionsPromptDue && inputs.promotionsPromptStringsReady)
+    return "promotions-prompt";
 
   if (inputs.rewardCount > 0) return "rewards";
 
@@ -579,6 +594,23 @@ export function resetReportThanksForTest(): void {
   reportThanksShownThisLaunch.clear();
 }
 
+// The promotions prompt asks a question nothing rides on, so it waits for a
+// launch with nothing else to say. Without this, a launch whose first boot went
+// to another interrupt would offer it on the next /users/@me re-read (session
+// recovery, a portal sign-in): two dialogs in one launch, which the
+// one-per-boot rule exists to prevent. Per launch, not per account: the
+// setting it asks about is per device.
+let otherInterruptShownThisLaunch = false;
+
+/** promotionsPromptDue(...), held back once another interrupt had this launch. */
+export function promotionsPromptDueThisLaunch(due: boolean): boolean {
+  return due && !otherInterruptShownThisLaunch;
+}
+
+export function resetPromotionsPromptForTest(): void {
+  otherInterruptShownThisLaunch = false;
+}
+
 /**
  * The same precondition for the report thank-you: it is marked seen on the
  * server once shown, so a key echoed back would spend it unread.
@@ -680,7 +712,12 @@ export interface BootInterruptPorts {
   /** translateText. Echoes the key back until the language files land. */
   translate(key: string, params?: Record<string, string | number>): string;
   /** Opens a confirm dialog; resolves true when the player accepts. */
-  confirm(body: string, heading: string, confirmText: string): Promise<boolean>;
+  confirm(
+    body: string,
+    heading: string,
+    confirmText: string,
+    cancelText?: string,
+  ): Promise<boolean>;
   /** Opens a close-only dialog; resolves when dismissed. */
   alert(body: string, heading: string): Promise<void>;
   /** The display name of a subscription tier id (translateCosmetic). */
@@ -703,6 +740,10 @@ export interface BootInterruptPorts {
   markNoticeSeen(notice: string): void;
   /** POST /users/@me/messages/seen. Fire and forget. */
   markMessageSeen(kind: string): void;
+  /** UserSettings.markPromotionsPromptSeen. */
+  markPromotionsPromptSeen(): void;
+  /** UserSettings.setHideSaleBanners: turns store promotions off. */
+  setHidePromotions(hide: boolean): void;
   now(): number;
 }
 
@@ -750,6 +791,9 @@ export async function runBootInterrupt(
   // only while a dialog is actually open: every case reaches its dialog
   // synchronously, so there is no gap between this check and the flag.
   if (dialogOpen) return;
+  if (interrupt !== null && interrupt !== "promotions-prompt") {
+    otherInterruptShownThisLaunch = true;
+  }
   await runInterrupt(interrupt, context, {
     ...ports,
     confirm: (...args) => whileDialogOpen(() => ports.confirm(...args)),
@@ -966,6 +1010,21 @@ async function runInterrupt(
     }
     case "lapse-notice":
       return;
+    case "promotions-prompt": {
+      // Recorded once the player has answered, like the claim prompt: a quit,
+      // crash or update reload under the open dialog must not spend its only
+      // showing. Once per device whichever way they answer; declining (or
+      // closing) keeps promotions as they are.
+      const hide = await ports.confirm(
+        ports.translate(PROMOTIONS_PROMPT_KEYS.body),
+        ports.translate(PROMOTIONS_PROMPT_KEYS.heading),
+        ports.translate(PROMOTIONS_PROMPT_KEYS.confirm),
+        ports.translate(PROMOTIONS_PROMPT_KEYS.cancel),
+      );
+      ports.markPromotionsPromptSeen();
+      if (hide) ports.setHidePromotions(true);
+      return;
+    }
     case "rewards":
       ports.openRewards();
       return;

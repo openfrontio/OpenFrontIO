@@ -7,7 +7,7 @@ import { splitAccountUsername, usernameText } from "../ui/UsernameText";
 // the "PRESTIGE 3 · LEVEL 47" line. Shared by <profile-card> and the player
 // card strip so the two read the same.
 
-export interface LevelLineProgress {
+interface LevelLineProgress {
   prestige: number;
   level: number;
   legend: boolean;

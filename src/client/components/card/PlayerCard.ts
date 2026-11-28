@@ -12,25 +12,43 @@ import {
 } from "./ProfileIdentity";
 
 // The player card: a thin banner strip with the player's level badge, flag,
-// clan tag and name, prestige · level line and up to three tracked stats,
-// over their card background. (Titles and taunts are held back: a saved one
-// is kept on the loadout but never shown.) Shown on the end screens (the
+// clan tag and name, prestige · level line, equipped title and up to three
+// tracked stats, over their card background. (Taunts are held back: a saved
+// one is kept on the loadout but never shown.) Shown on the end screens (the
 // player who eliminated you, the winner), as the Account page's header, and
 // as a small preview in the store.
 //
 //   size "end"      652 × ~92 px on the end screens, 64 px badge
 //   size "account"  the Account header, 96 px badge
-//   size "thumb"    160 × 64 store / customiser preview: the background only
+//   size "thumb"    160 × 64 store / customiser preview: the background and
+//                   the title, if any
 //   size "panel"    the in-game player panel: one strip, 28 px badge, then
 //                   flag, clan tag and name over a small prestige · level
 //                   line, then short trackers (value over label). The level
 //                   line is never cut: when the row is tight the tracker
 //                   labels truncate, then the name. Always still (never
-//                   animated) and never a title or taunt: it sits beside a
-//                   running game.
+//                   animated) and never a taunt: it sits beside a running
+//                   game.
+//
+// The title is one line in its accent (gold by default), truncated, so a
+// long title never changes the card's layout.
 //
 // Below 400 px wide (`narrow`, set from the strip's own width) the trackers
 // move under the name as one line with short numbers.
+
+function titleTemplate(
+  view: PlayerCardView,
+  textClass: string,
+): TemplateResult | typeof nothing {
+  if (view.title === null) return nothing;
+  return html`<div
+    data-card-title
+    class="truncate font-bold leading-tight ${textClass}"
+    style="color: ${view.title.accent ?? "#fbbf24"}"
+  >
+    ${view.title.text}
+  </div>`;
+}
 
 export type PlayerCardSize = "end" | "account" | "thumb" | "panel";
 
@@ -177,6 +195,7 @@ export class PlayerCard extends LitElement {
             ${clanTemplate(view.clanTag, true)}
             ${nameTemplate(view.username, "min-w-0 text-base")}
           </div>
+          ${titleTemplate(view, "w-0 min-w-full text-xs")}
           ${
             badge === null
               ? nothing
@@ -236,6 +255,15 @@ export class PlayerCard extends LitElement {
         class="player-card relative overflow-hidden rounded-lg border-2 ${height}"
       >
         <card-background .background=${view.background}></card-background>
+        ${
+          view.title === null
+            ? nothing
+            : html`<div
+                class="absolute inset-x-0 bottom-0 bg-black/45 px-2 py-0.5 text-center"
+              >
+                ${titleTemplate(view, "text-xs")}
+              </div>`
+        }
       </section>`;
     }
     return html`<section
@@ -272,6 +300,7 @@ export class PlayerCard extends LitElement {
             )}
           </div>
           ${view.badge === null ? nothing : levelLineTemplate(view.badge, true)}
+          ${titleTemplate(view, "text-sm")}
           ${this.narrow ? this.renderTrackers(view) : nothing}
         </div>
         ${this.narrow ? nothing : this.renderTrackers(view)}

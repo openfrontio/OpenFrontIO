@@ -1,7 +1,12 @@
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { translateText } from "../../Utils";
 import { cardItemName } from "../card/CardItems";
-import { type CardChange, type CardSlotRef, slotItem } from "./CardDraft";
+import {
+  type CardChange,
+  type CardSlotRef,
+  isSingleSlot,
+  slotItem,
+} from "./CardDraft";
 
 // How the Player card tab, its Save bar and the unsaved-changes guard name
 // slots, items and changes.
@@ -16,21 +21,26 @@ export function cardSlotItemName(
     return translateText(
       slot.kind === "background"
         ? "inventory_card.background_none"
-        : "inventory_card.empty_slot",
+        : slot.kind === "title"
+          ? "inventory_card.title_none"
+          : "inventory_card.empty_slot",
     );
   }
   const found = slotItem(cosmetics, slot, name);
   if (found !== null) return cardItemName(found.type, found.item);
+  // A saved title the catalogue no longer has shows as none: the card
+  // doesn't show it either.
+  if (slot.kind === "title") return translateText("inventory_card.title_none");
   if (slot.kind === "tracker") {
     return translateText(`player_card.tracker_${name}`);
   }
   return name;
 }
 
-/** "Background", "Tracker 3". */
+/** "Background", "Title", "Tracker 3". */
 export function cardSlotLabel(slot: CardSlotRef): string {
-  return slot.kind === "background"
-    ? translateText("inventory_card.background")
+  return isSingleSlot(slot)
+    ? translateText(`inventory_card.${slot.kind}`)
     : translateText(`inventory_card.slot_${slot.kind}`, {
         slot: slot.index + 1,
       });

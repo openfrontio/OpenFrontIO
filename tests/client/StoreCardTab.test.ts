@@ -98,8 +98,60 @@ describe("<card-store-grid>", () => {
       ),
     ].map((e) => e.getAttribute("data-card-store-item"));
 
-  it("no title items, even a sold one (held back)", async () => {
+  it("sells priced titles", async () => {
     await render();
+    expect(keys()).toContain("cardTitle:veteran");
+    // Last, after the backgrounds.
+    expect(keys()[keys().length - 1]).toBe("cardTitle:veteran");
+  });
+
+  it("doesn't sell an unpriced or earned title", async () => {
+    grid = document.createElement(
+      "card-store-grid",
+    ) as unknown as CardStoreGrid;
+    grid.cosmetics = {
+      ...COSMETICS,
+      cardTitles: {
+        ...COSMETICS.cardTitles,
+        champion: {
+          ...item,
+          name: "champion",
+          text: "Champion",
+          priceSoft: 500,
+          unlockSource: { kind: "seasonFree", label: "Season 1" },
+        },
+      },
+    } as unknown as Cosmetics;
+    document.body.appendChild(grid as unknown as Node);
+    await grid.updateComplete;
+    expect(keys()).not.toContain("cardTitle:warmonger");
+    expect(keys()).not.toContain("cardTitle:champion");
+    expect(keys()).toContain("cardTitle:veteran");
+  });
+
+  it("a title's thumb is the default card with that title", async () => {
+    await render();
+    const tile = (grid as unknown as Element).querySelector(
+      "[data-card-store-item='cardTitle:veteran']",
+    );
+    expect(tile?.querySelector("player-card")?.getAttribute("size")).toBe(
+      "thumb",
+    );
+    expect(tile?.querySelector("[data-card-title]")?.textContent?.trim()).toBe(
+      "Veteran",
+    );
+  });
+
+  it("no cardTitles in the catalogue: the rest still sell", async () => {
+    grid = document.createElement(
+      "card-store-grid",
+    ) as unknown as CardStoreGrid;
+    grid.cosmetics = {
+      ...COSMETICS,
+      cardTitles: undefined,
+    } as unknown as Cosmetics;
+    document.body.appendChild(grid as unknown as Node);
+    await grid.updateComplete;
     expect(keys().filter((k) => k!.startsWith("cardTitle:"))).toEqual([]);
     expect(keys()).toContain("cardTracker:wins");
   });

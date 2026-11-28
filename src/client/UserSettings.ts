@@ -457,7 +457,11 @@ export class UserSettings {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
-  /** Whether the player turned the sale banners off. */
+  /**
+   * Whether the player turned store promotions off: the sale banners and,
+   * since, the end-of-game buy box (Promotions.ts). The key keeps its old name
+   * so existing choices carry over.
+   */
   hideSaleBanners(): boolean {
     return this.getBool(HIDE_SALE_BANNERS_KEY, false);
   }
@@ -518,6 +522,16 @@ export class UserSettings {
 
   markSteamBuildSeen() {
     this.setBool("settings.steamBuildSeen", true);
+  }
+
+  /** The one-time "turn off store promotions?" prompt (Promotions.ts) has
+   * been shown on this device. */
+  promotionsPromptSeen() {
+    return this.getBool("settings.promotionsPromptSeen", false);
+  }
+
+  markPromotionsPromptSeen() {
+    this.setBool("settings.promotionsPromptSeen", true);
   }
 
   steamLobbyLinks(): "ask" | "steam" | "browser" {

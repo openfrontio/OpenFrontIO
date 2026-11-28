@@ -73,6 +73,10 @@ export interface PromoInput {
   rand: number;
   // There is a look to get (the killer's or a saved one).
   hasLooks: boolean;
+  // False when a Steam player has turned store promotions off
+  // (Promotions.ts): neither "Get the look" nor the skins box may take the
+  // slot, since both are buy buttons.
+  canSell: boolean;
 }
 
 export type PromoChoice =
@@ -87,10 +91,10 @@ export type PromoChoice =
 // today's choice: no shopping there.
 export function promoChoice(p: PromoInput): PromoChoice {
   if (p.inIframe) return p.canWishlist ? "steam" : "discord";
-  if (p.hasLooks) return "loadout";
+  if (p.canSell && p.hasLooks) return "loadout";
   if (!p.isWin && p.gamesPlayed < 3) return "tutorial";
   if (p.rand < 0.25 && p.canWishlist) return "steam";
-  if (p.rand < 0.5) return "discord";
+  if (p.rand < 0.5 || !p.canSell) return "discord";
   return "skins";
 }
 
