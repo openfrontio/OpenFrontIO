@@ -26,7 +26,11 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import { findJuiciestTarget, findRunawayLeader } from "./NationUtils";
+import {
+  findJuiciestTarget,
+  findLandLeader,
+  findRunawayLeader,
+} from "./NationUtils";
 
 export class NationAllianceBehavior {
   constructor(
@@ -139,6 +143,10 @@ export class NationAllianceBehavior {
     if (this.isRunawayLeader(otherPlayer)) {
       return false;
     }
+    // Hard & Impossible ally with the land leader only out of friendship, not out of fear or as equals
+    if (this.isGuardedLandLeader(otherPlayer)) {
+      return this.isAlliancePartnerFriendly(otherPlayer);
+    }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation
     // Impossible (smart) nations on the other hand are analyzing the facts
@@ -207,6 +215,15 @@ export class NationAllianceBehavior {
 
   private isRunawayLeader(otherPlayer: Player): boolean {
     return findRunawayLeader(this.game) === otherPlayer;
+  }
+
+  private isGuardedLandLeader(otherPlayer: Player): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    return (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      findLandLeader(this.game) === otherPlayer
+    );
   }
 
   private isConfused(): boolean {

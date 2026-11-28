@@ -23,7 +23,8 @@ type Widths = {
 /**
  * Full-height stripes on the 200x200 all-land map, left to right:
  * leader | near | runnerUp | far | unowned. "near" borders the leader,
- * "far" doesn't. Each column is half a percent of the map.
+ * "far" doesn't. Each column is half a percent of the map. The game clock
+ * reads 8 minutes past the spawn phase, when leads start to count.
  */
 async function setupStripes(difficulty: Difficulty, widths: Widths) {
   const game = await setup("big_plains", { difficulty }, [
@@ -56,6 +57,9 @@ async function setupStripes(difficulty: Difficulty, widths: Widths) {
     }
   }
   expect(x).toBe(game.map().width());
+  vi.spyOn(game, "ticks").mockReturnValue(
+    game.config().numSpawnPhaseTurns() + 8 * 600,
+  );
 
   return { game, leader, near, far };
 }
@@ -98,13 +102,13 @@ function nukeTarget(game: Game, nation: Player): Player | null {
 }
 
 describe("Nations nuking the crown in FFA", () => {
-  // Leader 45%, 4.5x everyone else, 35 points ahead of both nations
+  // Leader 45%, 6x everyone else, 37.5 points ahead of both nations
   const bigLead: Widths = {
     leader: 90,
-    near: 20,
-    runnerUp: 20,
-    far: 20,
-    unowned: 50,
+    near: 15,
+    runnerUp: 15,
+    far: 15,
+    unowned: 65,
   };
 
   it.each([
@@ -125,10 +129,10 @@ describe("Nations nuking the crown in FFA", () => {
   );
 
   it("Impossible: a distant nation holds off while the lead over it is small", async () => {
-    // Leader 45%, 1.7x the runner-up (far, 27%)
+    // Leader 45%, 9x the field's median, but only 15 points ahead of far (30%)
     const { game, leader, near, far } = await setupStripes(
       Difficulty.Impossible,
-      { leader: 90, near: 20, runnerUp: 36, far: 54 },
+      { leader: 90, near: 10, runnerUp: 10, far: 60, unowned: 30 },
     );
     expect(nukeTarget(game, near)).toBe(leader);
     expect(nukeTarget(game, far)).toBeNull();
@@ -137,7 +141,7 @@ describe("Nations nuking the crown in FFA", () => {
   it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
     "%s: leaves a leader in a close race alone",
     async (difficulty) => {
-      // Leader 35%, runner-up 30%: well ahead of the nation, but no runaway
+      // Leader 35%, 1.4x the field's median: well ahead of the nation, but no runaway
       const { game, near } = await setupStripes(difficulty, {
         leader: 70,
         near: 20,

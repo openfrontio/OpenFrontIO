@@ -19,6 +19,12 @@ export function hasHighStartingGold(game: Game, player: Player): boolean {
   return game.config().startingGold(player.info()) >= HIGH_STARTING_GOLD;
 }
 
+/** Whether the player's team starts apart from the other teams, in a spawn area of its own */
+export function startsInTeamSpawnArea(game: Game, player: Player): boolean {
+  const team = player.team();
+  return team !== null && game.teamSpawnArea(team) !== undefined;
+}
+
 /** Most minutes of income a nation saves up for; a target further off isn't worth holding back for, keyed by difficulty */
 const SAVE_UP_HORIZON_MINUTES: Record<Difficulty, number> = {
   [Difficulty.Easy]: Infinity,
@@ -159,47 +165,90 @@ export function findJuiciestTarget(
   return best;
 }
 
-// How many times the runner-up's land the leader must own to count as a
-// runaway leader. Easy nations never notice one.
+// How many times the upper median land of the next ten players the leader must own
+// to count as a runaway leader. Easy nations never notice one.
 function runawayLeadFactor(difficulty: Difficulty): number | null {
   switch (difficulty) {
     case Difficulty.Easy:
       return null;
     case Difficulty.Medium:
-      return 3;
+      return 6;
     case Difficulty.Hard:
-      return 2;
+      return 4;
     case Difficulty.Impossible:
-      return 1.5;
+      return 3;
     default:
       assertNever(difficulty);
   }
 }
 
-// The FFA player (not a bot) owning the most land, if it is far enough ahead
-// of the runner-up that nations should stop helping it and start pressuring it
-export function findRunawayLeader(game: Game): Player | null {
-  const { difficulty, gameMode } = game.config().gameConfig();
-  if (gameMode !== GameMode.FFA) return null;
-  const factor = runawayLeadFactor(difficulty);
-  if (factor === null) return null;
+/** Game time before which nations ignore who leads: early leads are mostly a good spawn */
+const LEADER_MIN_TICKS = 8 * 600;
+const RUNAWAY_LEADER_FIELD = 10;
 
+function leadsCount(game: Game): boolean {
+  return (
+    game.config().gameConfig().gameMode === GameMode.FFA &&
+    game.ticks() - game.config().numSpawnPhaseTurns() >= LEADER_MIN_TICKS
+  );
+}
+
+// The FFA player (not a bot) owning the most land, if it is far enough ahead
+// of the field that nations should stop helping it and start pressuring it
+export function findRunawayLeader(game: Game): Player | null {
+  const factor = runawayLeadFactor(game.config().gameConfig().difficulty);
+  if (factor === null || !leadsCount(game)) return null;
+
+  const ranked = game
+    .players()
+    .filter((p) => p.type() !== PlayerType.Bot)
+    .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+  if (ranked.length < 2) return null;
+  const field = ranked.slice(1, 1 + RUNAWAY_LEADER_FIELD);
+  const median = field[Math.ceil(field.length / 2) - 1].numTilesOwned();
+  return ranked[0].numTilesOwned() >= median * factor ? ranked[0] : null;
+}
+
+/** Lead in share of the land without fallout over a runaway leader's neighbors from which they nuke it; twice that for everyone else, keyed by difficulty */
+const RUNAWAY_NUKE_LEAD: Record<Difficulty, number | null> = {
+  [Difficulty.Easy]: null, // Never notices a runaway leader
+  [Difficulty.Medium]: 0.3,
+  [Difficulty.Hard]: 0.2,
+  [Difficulty.Impossible]: 0.1,
+};
+
+/** The runaway leader, if it isn't us or a friend and is far enough ahead of us to nuke. */
+export function runawayLeaderToNuke(game: Game, player: Player): Player | null {
+  const lead = RUNAWAY_NUKE_LEAD[game.config().gameConfig().difficulty];
+  if (lead === null) return null;
+  const leader = findRunawayLeader(game);
+  if (leader === null || leader === player || player.isFriendly(leader)) {
+    return null;
+  }
+  const land = game.numLandTiles() - game.numTilesWithFallout();
+  if (land <= 0) return null;
+  const threshold = player.sharesBorderWith(leader) ? lead : lead * 2;
+  return leader.numTilesOwned() / land - player.numTilesOwned() / land >
+    threshold
+    ? leader
+    : null;
+}
+
+/** Gold a nation keeps for nukes at the runaway leader. */
+export interface NukeFund {
+  nukeFund(): Gold;
+  spendNukeFund(cost: Gold): void;
+}
+
+/** The FFA player (not a bot) owning the most land, once early leads count */
+export function findLandLeader(game: Game): Player | null {
+  if (!leadsCount(game)) return null;
   let leader: Player | null = null;
-  let runnerUp: Player | null = null;
   for (const p of game.players()) {
     if (p.type() === PlayerType.Bot) continue;
     if (leader === null || p.numTilesOwned() > leader.numTilesOwned()) {
-      runnerUp = leader;
       leader = p;
-    } else if (
-      runnerUp === null ||
-      p.numTilesOwned() > runnerUp.numTilesOwned()
-    ) {
-      runnerUp = p;
     }
   }
-  if (leader === null || runnerUp === null) return null;
-  return leader.numTilesOwned() >= runnerUp.numTilesOwned() * factor
-    ? leader
-    : null;
+  return leader;
 }

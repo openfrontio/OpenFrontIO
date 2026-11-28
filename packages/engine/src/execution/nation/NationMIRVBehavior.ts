@@ -4,6 +4,7 @@ import {
   Difficulty,
   Gold,
   PlayerType,
+  Team,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
@@ -26,7 +27,7 @@ import {
   NationEmojiBehavior,
   respondToMIRV,
 } from "./NationEmojiBehavior";
-import { randTerritoryTileArray } from "./NationUtils";
+import { randTerritoryTileArray, runawayLeaderToNuke } from "./NationUtils";
 
 // 30 seconds at 10 ticks/second
 const MIRV_COOLDOWN_TICKS = 300;
@@ -50,6 +51,17 @@ const MIN_MIRV_TARGET_LAND_SHARE: Record<Difficulty, number> = {
 /** MirvExecution's warhead cap, and the target land per warhead its spacing works out to */
 const MIRV_MAX_WARHEADS = 350;
 const LAND_TILES_PER_MIRV_WARHEAD = 2000;
+
+/**
+ * Whole percent of the land without fallout, as the win check counts it (80% in every mode), from which
+ * nations MIRV a player or team to deny the win; unlike the win bar, it doesn't sink during overtime
+ */
+const VICTORY_DENIAL_THRESHOLD_PERCENT: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 70,
+  [Difficulty.Medium]: 60,
+  [Difficulty.Hard]: 50,
+  [Difficulty.Impossible]: 35,
+};
 
 /** Hard & Impossible MIRV a bordering rival with at least this share of their land, ahead of a land attack */
 const RIVAL_MIN_TILE_RATIO = 0.5;
@@ -121,29 +133,75 @@ export function mirvGetsThrough(
   );
 }
 
-/** Whether a MIRV would get through at the land or city leader, the players nations MIRV. */
+/** Easy saves up for a MIRV whenever anyone could be MIRVed; the others while one would hit the land leader, to have it ready once a player gets close to winning. */
 export function isMirvWorthSavingFor(game: Game, player: Player): boolean {
+  const targets = validMirvTargets(game, player);
+  if (game.config().gameConfig().difficulty === Difficulty.Easy) {
+    return targets.length > 0;
+  }
   let landLeader: Player | null = null;
-  let cityLeader: Player | null = null;
-  for (const p of validMirvTargets(game, player)) {
+  for (const p of targets) {
     if (landLeader === null || p.numTilesOwned() > landLeader.numTilesOwned()) {
       landLeader = p;
     }
-    if (
-      cityLeader === null ||
-      p.unitCount(UnitType.City) > cityLeader.unitCount(UnitType.City)
-    ) {
-      cityLeader = p;
+  }
+  const target = victoryDenialTarget(game, player) ?? landLeader;
+  return (
+    target !== null &&
+    isBigEnoughForMirv(game, player, target) &&
+    mirvGetsThrough(game, player, target)
+  );
+}
+
+/** The player with the most land over the victory denial threshold, or a team's biggest member by the team's land. */
+export function victoryDenialTarget(game: Game, player: Player): Player | null {
+  const land = game.numLandTiles() - game.numTilesWithFallout();
+  if (land <= 0) return null;
+  // Compared against tiles * 100, for exact integer math
+  const scaledThreshold =
+    land *
+    VICTORY_DENIAL_THRESHOLD_PERCENT[game.config().gameConfig().difficulty];
+  const teams = new Map<Team, { tiles: number; biggest: Player }>();
+  for (const p of game.players()) {
+    const team = p.team();
+    if (team === null) continue;
+    const entry = teams.get(team);
+    if (entry === undefined) {
+      teams.set(team, { tiles: p.numTilesOwned(), biggest: p });
+      continue;
+    }
+    entry.tiles += p.numTilesOwned();
+    if (p.numTilesOwned() > entry.biggest.numTilesOwned()) entry.biggest = p;
+  }
+  let best: Player | null = null;
+  let bestTiles = 0;
+  for (const p of validMirvTargets(game, player)) {
+    const team = p.team();
+    const entry = team === null ? undefined : teams.get(team);
+    if (entry !== undefined && entry.biggest !== p) continue;
+    const tiles = entry?.tiles ?? p.numTilesOwned();
+    if (tiles * 100 >= scaledThreshold && tiles > bestTiles) {
+      best = p;
+      bestTiles = tiles;
     }
   }
-  if (landLeader !== null && mirvGetsThrough(game, player, landLeader)) {
-    return true;
-  }
-  return (
-    cityLeader !== null &&
-    cityLeader !== landLeader &&
-    mirvGetsThrough(game, player, cityLeader)
-  );
+  return best;
+}
+
+/** Whether the target owns enough land for what a MIRV costs; Easy doesn't check. */
+function isBigEnoughForMirv(
+  game: Game,
+  player: Player,
+  target: Player,
+): boolean {
+  const config = game.config();
+  const share = MIN_MIRV_TARGET_LAND_SHARE[config.gameConfig().difficulty];
+  const hydroCost = game.unitInfo(UnitType.HydrogenBomb).cost(game, player);
+  if (share === 0 || hydroCost === 0n) return true;
+  const mirvCost = game.unitInfo(UnitType.MIRV).cost(game, player);
+  const hydros = Number(mirvCost) / Number(hydroCost);
+  const { outer } = config.nukeMagnitudes(UnitType.HydrogenBomb);
+  return target.numTilesOwned() >= share * hydros * Math.PI * outer ** 2;
 }
 
 function validMirvTargets(game: Game, player: Player): Player[] {
@@ -206,57 +264,6 @@ export class NationMIRVBehavior {
     }
   }
 
-  // Whole percent of the land, for exact integer comparison. One ladder for
-  // teams and lone players: the win bar is 80% in every game mode. Rough
-  // alignment only: the win check divides by non-fallout land and its bar
-  // sinks during overtime; this divides by all land and stays fixed.
-  private get victoryDenialThresholdPercent(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 75; // Only react right before the game ends (80%)
-      case Difficulty.Medium:
-        return 65;
-      case Difficulty.Hard:
-        return 55;
-      case Difficulty.Impossible:
-        return 40; // Reacts early
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get steamrollCityGapMultiplier(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 2; // Needs larger gap to trigger
-      case Difficulty.Medium:
-        return 1.5;
-      case Difficulty.Hard:
-        return 1.25;
-      case Difficulty.Impossible:
-        return 1.15; // Reacts to smaller gaps
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get steamrollMinLeaderCities(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 20; // Needs more cities to trigger
-      case Difficulty.Medium:
-      case Difficulty.Hard:
-        return 10;
-      case Difficulty.Impossible:
-        return 8; // Reacts early
-      default:
-        assertNever(difficulty);
-    }
-  }
-
   considerMIRV(): boolean {
     if (this.player === null) throw new Error("not initialized");
     if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
@@ -279,15 +286,15 @@ export class NationMIRVBehavior {
       return true;
     }
 
-    const victoryDenialTarget = this.selectVictoryDenialTarget();
-    if (victoryDenialTarget && this.isWorthMirving(victoryDenialTarget)) {
-      this.maybeSendMIRV(victoryDenialTarget);
+    const denialTarget = victoryDenialTarget(this.game, this.player);
+    if (denialTarget && this.isWorthMirving(denialTarget)) {
+      this.maybeSendMIRV(denialTarget);
       return true;
     }
 
-    const steamrollStopTarget = this.selectSteamrollStopTarget();
-    if (steamrollStopTarget && this.isWorthMirving(steamrollStopTarget)) {
-      this.maybeSendMIRV(steamrollStopTarget);
+    const runawayLeader = runawayLeaderToNuke(this.game, this.player);
+    if (runawayLeader && this.isWorthMirving(runawayLeader)) {
+      this.maybeSendMIRV(runawayLeader);
       return true;
     }
 
@@ -303,19 +310,9 @@ export class NationMIRVBehavior {
   private isWorthMirving(target: Player): boolean {
     return (
       !this.wasRecentlyMirved(target) &&
-      this.isBigEnoughForMirv(target) &&
+      isBigEnoughForMirv(this.game, this.player, target) &&
       mirvGetsThrough(this.game, this.player, target)
     );
-  }
-
-  private isBigEnoughForMirv(target: Player): boolean {
-    const config = this.game.config();
-    const share = MIN_MIRV_TARGET_LAND_SHARE[config.gameConfig().difficulty];
-    const hydroCost = this.cost(UnitType.HydrogenBomb);
-    if (share === 0 || hydroCost === 0n) return true;
-    const hydros = Number(this.cost(UnitType.MIRV)) / Number(hydroCost);
-    const { outer } = config.nukeMagnitudes(UnitType.HydrogenBomb);
-    return target.numTilesOwned() >= share * hydros * Math.PI * outer ** 2;
   }
 
   // MIRV Strategy Methods
@@ -327,81 +324,6 @@ export class NationMIRVBehavior {
     if (attackers.length === 0) return null;
     attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
     return attackers[0];
-  }
-
-  private selectVictoryDenialTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const totalLand = this.game.numLandTiles();
-    if (totalLand === 0) return null;
-    // Compared against tiles * 100; severity ranks by tile count, which
-    // orders candidates the same as by share (same denominator).
-    const scaledThreshold = totalLand * this.victoryDenialThresholdPercent;
-    let best: { p: Player; severity: number } | null = null;
-    for (const p of this.getValidMirvTargetPlayers()) {
-      let severity = 0;
-      const team = p.team();
-      if (team !== null) {
-        const teamMembers = this.game
-          .players()
-          .filter((x) => x.team() === team && x.isPlayer());
-        const teamTerritory = teamMembers
-          .map((x) => x.numTilesOwned())
-          .reduce((a, b) => a + b, 0);
-        if (teamTerritory * 100 >= scaledThreshold) {
-          // Only consider the largest team member as the target when team exceeds threshold
-          let largestMember: Player | null = null;
-          let largestTiles = -1;
-          for (const member of teamMembers) {
-            const tiles = member.numTilesOwned();
-            if (tiles > largestTiles) {
-              largestTiles = tiles;
-              largestMember = member;
-            }
-          }
-          if (largestMember === p) {
-            severity = teamTerritory;
-          } else {
-            severity = 0; // Skip non-largest members
-          }
-        }
-      } else {
-        const tiles = p.numTilesOwned();
-        if (tiles * 100 >= scaledThreshold) severity = tiles;
-      }
-      if (severity > 0) {
-        if (best === null || severity > best.severity) best = { p, severity };
-      }
-    }
-    return best ? best.p : null;
-  }
-
-  private selectSteamrollStopTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const validTargets = this.getValidMirvTargetPlayers();
-
-    if (validTargets.length === 0) return null;
-
-    const allPlayers = this.game
-      .players()
-      .filter((p) => p.isPlayer())
-      .map((p) => ({ p, cityCount: this.countCities(p) }))
-      .sort((a, b) => b.cityCount - a.cityCount);
-
-    if (allPlayers.length < 2) return null;
-
-    const topPlayer = allPlayers[0];
-
-    if (topPlayer.cityCount <= this.steamrollMinLeaderCities) return null;
-
-    const secondHighest = allPlayers[1].cityCount;
-
-    const threshold = secondHighest * this.steamrollCityGapMultiplier;
-
-    if (topPlayer.cityCount >= threshold) {
-      return validTargets.some((p) => p === topPlayer.p) ? topPlayer.p : null;
-    }
-
-    return null;
   }
 
   /** Hard & Impossible: the biggest bordering player about our size, wiped out by a MIRV and our attack when it lands. */
@@ -468,10 +390,6 @@ export class NationMIRVBehavior {
       this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
       respondToMIRV(this.game, this.random, enemy);
     }
-  }
-
-  private countCities(p: Player): number {
-    return p.unitCount(UnitType.City);
   }
 
   private calculateTerritoryCenter(target: Player): TileRef | null {

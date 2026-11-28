@@ -236,6 +236,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.followUpLandings();
+    this.attackBehavior.strikeIdleSpawn();
     this.nukeBehavior.followUpStrikes();
 
     if (ticks % this.attackRate !== this.attackTick) {
@@ -277,6 +278,11 @@ export class NationExecution implements Execution {
       this.mg,
       this.player,
     );
+    this.structureBehavior = new NationStructureBehavior(
+      this.random,
+      this.mg,
+      this.player,
+    );
     this.mirvBehavior = new NationMIRVBehavior(
       this.random,
       this.mg,
@@ -294,6 +300,7 @@ export class NationExecution implements Execution {
       this.mg,
       this.player,
       this.emojiBehavior,
+      this.structureBehavior,
     );
     this.attackBehavior = new NationAttackBehavior(
       this.random,
@@ -312,11 +319,7 @@ export class NationExecution implements Execution {
       this.player,
       this.attackBehavior,
       this.emojiBehavior,
-    );
-    this.structureBehavior = new NationStructureBehavior(
-      this.random,
-      this.mg,
-      this.player,
+      this.structureBehavior,
     );
     this.behaviorsInitialized = true;
   }
@@ -504,7 +507,7 @@ export class NationExecution implements Execution {
     emoji.restoreSnapshot(b.emoji, r, random, player);
     mirv.restoreSnapshot(b.mirv, r, random, player, emoji);
     alliance.restoreSnapshot(b.alliance, r, random, player, emoji);
-    warship.restoreSnapshot(b.warship, r, random, player, emoji);
+    warship.restoreSnapshot(b.warship, r, random, player, emoji, structure);
     attack.restoreSnapshot(
       b.attack,
       r,
@@ -514,7 +517,7 @@ export class NationExecution implements Execution {
       emoji,
       warship,
     );
-    nuke.restoreSnapshot(b.nuke, r, random, player, attack, emoji);
+    nuke.restoreSnapshot(b.nuke, r, random, player, attack, emoji, structure);
     structure.restoreSnapshot(b.structure, r, random, player);
     this.emojiBehavior = emoji;
     this.mirvBehavior = mirv;

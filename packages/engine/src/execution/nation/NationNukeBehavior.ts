@@ -33,7 +33,10 @@ import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTwoTiles } from "../Util";
 import { NationAttackBehavior } from "./NationAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
-import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
+import {
+  isMirvWorthSavingFor,
+  victoryDenialTarget,
+} from "./NationMIRVBehavior";
 import {
   blastHitsFriendly,
   circleTiles,
@@ -48,9 +51,10 @@ import {
   siloToUpgradeForSalvo,
 } from "./NationNukePlanning";
 import {
-  findRunawayLeader,
   isSaveUpWithinReach,
+  type NukeFund,
   randTerritoryTileArray,
+  runawayLeaderToNuke,
 } from "./NationUtils";
 
 /**
@@ -77,6 +81,14 @@ const FULL_BLAST_COVERAGE_VALUE = 50_000;
 
 /** A strike target has at least this share of our troops; weaker ones fall to plain attacks. */
 const STRIKE_MIN_TROOP_RATIO = 0.5;
+
+/** In FFA, no nukes on an enemy whose army is under this share of the army of the friend it fights. */
+const MIN_THREAT_RATIO: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 0.2,
+  [Difficulty.Hard]: 0.35,
+  [Difficulty.Impossible]: 0.5,
+};
 
 /** Hard & Impossible strike only if the follow-up attack can send this share of the target's troops. */
 const STRIKE_MIN_STACK_RATIO = 0.5;
@@ -124,6 +136,7 @@ export class NationNukeBehavior {
     private player: Player,
     private attackBehavior: NationAttackBehavior,
     private emojiBehavior: NationEmojiBehavior,
+    private nukeFund: NukeFund | null = null,
   ) {}
 
   snapshot(w: SnapshotWriter): Versioned {
@@ -155,6 +168,7 @@ export class NationNukeBehavior {
     player: Player,
     attackBehavior: NationAttackBehavior,
     emojiBehavior: NationEmojiBehavior,
+    nukeFund: NukeFund | null,
   ): void {
     const s = readVersioned(NationNukeBehaviorSnapshot, raw);
     this.random = random;
@@ -162,6 +176,7 @@ export class NationNukeBehavior {
     this.player = player;
     this.attackBehavior = attackBehavior;
     this.emojiBehavior = emojiBehavior;
+    this.nukeFund = nukeFund;
     this.recentlySentNukes = s.recentlySentNukes.map(([tick, tile, type]) => [
       tick,
       tile,
@@ -196,45 +211,79 @@ export class NationNukeBehavior {
     const saving = this.isSavingForMirv();
     const incoming = incomingNukes(this.game);
     const targets = this.nukeTargetsToTry(incoming);
-    if (targets.length === 0 || !this.mayNuke(targets[0], saving)) {
+    // The runaway leader, and while saving up for a MIRV a player close to winning, come next,
+    // for when our first pick is held back or offers no spot
+    const leader = runawayLeaderToNuke(this.game, this.player);
+    const denial = saving ? victoryDenialTarget(this.game, this.player) : null;
+    const exempt = [leader, denial].filter((p): p is Player => p !== null);
+    for (const p of exempt) {
+      if (!targets.includes(p)) targets.push(p);
+    }
+    if (targets.length === 0) {
       return;
     }
 
-    const nukeTypes = this.nukeTypesToTry(saving);
-    if (nukeTypes.length === 0) {
+    // Only the runaway leader gets the gold set aside for it
+    const gold = this.player.gold();
+    const othersGold = gold - (this.nukeFund?.nukeFund() ?? 0n);
+    const budget = (target: Player) => (target === leader ? gold : othersGold);
+    const nukeTypes = this.nukeTypesToTry(othersGold);
+    const leaderNukeTypes = leader === null ? [] : this.nukeTypesToTry(gold);
+    if (nukeTypes.length === 0 && leaderNukeTypes.length === 0) {
       return;
     }
 
     this.removeOldNukeEvents();
+    let salvoTarget: Player | null = null;
     for (const [i, target] of targets.entries()) {
-      if (i > 0 && !this.mayNuke(target, saving)) continue;
-      if (this.tryNuke(target, nukeTypes, silos, incoming)) return;
+      // Saving up for a MIRV holds nukes back, but not from those two
+      const held = saving && !exempt.includes(target);
+      if (!this.mayNuke(target, held)) {
+        // Without either to fall back on, a first pick we may not nuke ends the round
+        if (i === 0 && exempt.length === 0) return;
+        continue;
+      }
+      const types = target === leader ? leaderNukeTypes : nukeTypes;
+      if (types.length === 0) continue;
+      if (!held) salvoTarget ??= target;
+      const launched = this.tryNuke(target, types, silos, incoming);
+      if (launched !== null) {
+        if (target === leader) {
+          this.nukeFund?.spendNukeFund(this.cost(launched));
+        }
+        return;
+      }
     }
     if (
       this.game.config().gameConfig().difficulty === Difficulty.Impossible &&
-      !saving
+      salvoTarget !== null
     ) {
-      this.maybeDestroyEnemySam(targets[0], incoming);
+      this.maybeDestroyEnemySam(
+        salvoTarget,
+        incoming,
+        budget(salvoTarget),
+        salvoTarget === leader,
+      );
     }
   }
 
-  private mayNuke(target: Player, saving: boolean): boolean {
+  private mayNuke(target: Player, held: boolean): boolean {
     return (
       target.type() !== PlayerType.Bot && // Don't nuke tribes (as opposed to nations and humans)
       !this.player.isOnSameTeam(target) &&
       this.attackBehavior.shouldAttack(target) &&
-      // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them, with atom bombs
-      (!saving || this.isHittingUs(target))
+      // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them
+      (!held || this.isHittingUs(target))
     );
   }
 
-  /** Launches our best nuke at the best spot on target; false if no spot is worth any of nukeTypes. */
+  /** Launches our best nuke at the best spot on target and returns its type; null if no spot is worth any of nukeTypes. */
   private tryNuke(
     target: Player,
     nukeTypes: NukeType[],
     silos: Unit[],
     incoming: IncomingNuke[],
-  ): boolean {
+  ): NukeType | null {
     const strike = this.isStrike(target);
     const structures = target.units(Structures.types);
     const difficulty = this.game.config().gameConfig().difficulty;
@@ -270,20 +319,19 @@ export class NationNukeBehavior {
           nuke: null,
         });
       }
-      return true;
+      return nukeType;
     }
-    return false;
+    return null;
   }
 
   /** Hydrogen bomb first; on Hard & Impossible, an atom bomb if no spot is worth a hydrogen bomb. */
-  private nukeTypesToTry(atomOnly: boolean): NukeType[] {
+  private nukeTypesToTry(budget: Gold): NukeType[] {
     const config = this.game.config();
     const difficulty = config.gameConfig().difficulty;
     const types: NukeType[] = [];
     if (
-      !atomOnly &&
       !config.isUnitDisabled(UnitType.HydrogenBomb) &&
-      this.player.gold() >= this.getPerceivedNukeCost(UnitType.HydrogenBomb)
+      budget >= this.getPerceivedNukeCost(UnitType.HydrogenBomb)
     ) {
       types.push(UnitType.HydrogenBomb);
     }
@@ -292,7 +340,7 @@ export class NationNukeBehavior {
         difficulty === Difficulty.Hard ||
         difficulty === Difficulty.Impossible) &&
       !config.isUnitDisabled(UnitType.AtomBomb) &&
-      this.player.gold() >= this.getPerceivedNukeCost(UnitType.AtomBomb)
+      budget >= this.getPerceivedNukeCost(UnitType.AtomBomb)
     ) {
       types.push(UnitType.AtomBomb);
     }
@@ -437,7 +485,10 @@ export class NationNukeBehavior {
 
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.attackBehavior.findIncomingAttackPlayer();
-    if (incomingAttackPlayer) {
+    if (
+      incomingAttackPlayer &&
+      !this.isHarmlessTo(incomingAttackPlayer, this.player)
+    ) {
       yield incomingAttackPlayer;
     }
 
@@ -494,6 +545,7 @@ export class NationNukeBehavior {
       for (const target of ally.targets()) {
         if (target === this.player) continue;
         if (this.player.isFriendly(target)) continue;
+        if (this.isHarmlessTo(target, ally)) continue;
         // Found a valid ally target to nuke
         yield target;
       }
@@ -509,6 +561,7 @@ export class NationNukeBehavior {
 
       const otherMaxTroops = this.game.config().maxTroops(other);
       if (myMaxTroops >= otherMaxTroops * 2) continue;
+      if (this.isHarmlessTo(other, this.player)) continue;
 
       yield other;
     }
@@ -557,11 +610,12 @@ export class NationNukeBehavior {
     }
   }
 
-  /** Whether the attack right after our nuke could send enough troops into target by land. */
+  /** Whether target isn't much weaker than us and the attack right after our nuke could send enough troops into it by land. */
   private canStrike(target: Player): boolean {
     return (
       target.type() !== PlayerType.Bot &&
       !this.player.isFriendly(target) &&
+      target.troops() >= this.player.troops() * STRIKE_MIN_TROOP_RATIO &&
       this.attackBehavior.strikeTroops(target) >=
         target.troops() * STRIKE_MIN_STACK_RATIO &&
       this.player.sharesBorderWith(target)
@@ -654,6 +708,7 @@ export class NationNukeBehavior {
     for (const nuke of nukes) {
       const sender = nuke.owner();
       if (this.player.isFriendly(sender)) continue;
+      if (this.isHarmlessTo(sender, this.player)) continue;
       const targetTile = nuke.targetTile();
       if (
         targetTile !== undefined &&
@@ -696,8 +751,7 @@ export class NationNukeBehavior {
   }
 
   private findFFACrownTarget(): Player | null {
-    const { difficulty, gameMode } = this.game.config().gameConfig();
-    if (gameMode !== GameMode.FFA) {
+    if (this.game.config().gameConfig().gameMode !== GameMode.FFA) {
       return null;
     }
 
@@ -727,38 +781,10 @@ export class NationNukeBehavior {
       return firstPlace;
     }
 
-    // Below that, only a runaway leader that is far enough ahead of us.
-    // Its neighbors react first, everyone else once the gap is twice as big.
-    if (findRunawayLeader(this.game) !== firstPlace) {
-      return null;
-    }
-
-    let threshold: number;
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return null; // Never notices a runaway leader
-      case Difficulty.Medium:
-        threshold = 0.3; // 30%
-        break;
-      case Difficulty.Hard:
-        threshold = 0.2; // 20%
-        break;
-      case Difficulty.Impossible:
-        threshold = 0.1; // 10%
-        break;
-      default:
-        assertNever(difficulty);
-    }
-    if (!this.player.sharesBorderWith(firstPlace)) {
-      threshold *= 2;
-    }
-
-    const myShare = this.player.numTilesOwned() / numTilesWithoutFallout;
-    if (firstPlaceShare - myShare > threshold) {
-      return firstPlace;
-    }
-
-    return null;
+    // Below that, only a runaway leader that is far enough ahead of us
+    return runawayLeaderToNuke(this.game, this.player) === firstPlace
+      ? firstPlace
+      : null;
   }
 
   /** Medium and up: enemies attacking our team, biggest attack first, then the ones our teammates attack. */
@@ -785,6 +811,15 @@ export class NationNukeBehavior {
       teammates.flatMap((p) => p.outgoingAttacks()),
     ).map((a) => a.target());
     return [...attackers, ...targets].filter(isEnemy);
+  }
+
+  /** FFA: whether enemy's army is too small to be worth a nuke in its fight with friend. */
+  private isHarmlessTo(enemy: Player, friend: Player): boolean {
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    return (
+      gameMode !== GameMode.Team &&
+      army(enemy) < army(friend) * MIN_THREAT_RATIO[difficulty]
+    );
   }
 
   /** In Teams, players of the strongest other team: our pick, then the rest, the most built-up first. */
@@ -1157,6 +1192,8 @@ export class NationNukeBehavior {
   private maybeDestroyEnemySam(
     nukeTarget: Player,
     incoming: IncomingNuke[],
+    budget: Gold,
+    fromFund: boolean,
   ): void {
     if (this.game.config().isUnitDisabled(UnitType.AtomBomb)) {
       return;
@@ -1173,6 +1210,7 @@ export class NationNukeBehavior {
       this.player,
       nukeTarget,
       incoming,
+      budget,
     );
     if (salvo !== null) {
       for (const waitTicks of salvo.waitTicks) {
@@ -1181,6 +1219,11 @@ export class NationNukeBehavior {
           UnitType.AtomBomb,
           nukeTarget,
           waitTicks,
+        );
+      }
+      if (fromFund) {
+        this.nukeFund?.spendNukeFund(
+          this.cost(UnitType.AtomBomb) * BigInt(salvo.waitTicks.length),
         );
       }
       return;
@@ -1192,10 +1235,12 @@ export class NationNukeBehavior {
       failed === null
         ? null
         : siloToUpgradeForSalvo(this.game, this.player, failed);
-    if (silo !== null) {
+    const upgradeCost = this.cost(UnitType.MissileSilo);
+    if (silo !== null && budget >= upgradeCost) {
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, silo.id()),
       );
+      if (fromFund) this.nukeFund?.spendNukeFund(upgradeCost);
     }
   }
 
@@ -1228,6 +1273,13 @@ function nukeLoad(type: UnitType): number {
     default:
       return 1;
   }
+}
+
+/** Troops at home plus those in the player's attacks, which a nuke on its land kills too. */
+function army(player: Player): number {
+  let troops = player.troops();
+  for (const attack of player.outgoingAttacks()) troops += attack.troops();
+  return troops;
 }
 
 function structureLevels(player: Player): number {

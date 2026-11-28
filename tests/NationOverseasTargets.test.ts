@@ -117,6 +117,41 @@ describe("Nation targets across the water", () => {
     },
   );
 
+  // `nation` and `neighbor` share the north coast, `islander` holds a small island to the south.
+  // The neighbor is the weaker, juicier target unless the islander's gold makes it worth the trip.
+  const islandSea = (difficulty: Difficulty) => {
+    const sea = setupSea(difficulty, 40, 24, (x, y) => {
+      if (y <= 7) return x < 20 ? "nation" : "neighbor";
+      return y >= 16 && x < 8 ? "islander" : null;
+    });
+    sea.player("neighbor").setTroops(sea.player("nation").troops() * 0.5);
+    sea.halfStrength(sea.player("islander"));
+    return sea;
+  };
+
+  it.each([
+    [Difficulty.Hard, 12_000_000n, true],
+    [Difficulty.Hard, 8_000_000n, false],
+    [Difficulty.Impossible, 8_000_000n, true],
+    [Difficulty.Impossible, 3_000_000n, false],
+  ])(
+    "%s with a weaker land neighbor boats a small enemy holding %d gold: %s",
+    (difficulty, gold, boats) => {
+      const { player, behavior, boatTargets } = islandSea(difficulty);
+      player("islander").addGold(gold);
+      behavior.maybeAttack();
+      expect(boatTargets().includes(player("islander"))).toBe(boats);
+    },
+  );
+
+  it("doesn't boat a small enemy holding less gold than us", () => {
+    const { player, behavior, boatTargets } = islandSea(Difficulty.Impossible);
+    player("islander").addGold(8_000_000n);
+    player("nation").addGold(20_000_000n);
+    behavior.maybeAttack();
+    expect(boatTargets()).not.toContain(player("islander"));
+  });
+
   // Six small enemies straight across the strait, `rich` further along the same coast
   it.each([Difficulty.Hard, Difficulty.Impossible])(
     "%s weighs a juicy enemy beyond six smaller, nearer ones",

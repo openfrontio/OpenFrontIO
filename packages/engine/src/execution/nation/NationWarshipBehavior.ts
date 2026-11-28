@@ -25,6 +25,7 @@ import {
   EMOJI_WARSHIP_RETALIATION,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
+import type { NukeFund } from "./NationUtils";
 
 export class NationWarshipBehavior {
   // Track our transport ships we currently own
@@ -41,6 +42,7 @@ export class NationWarshipBehavior {
     private game: Game,
     private player: Player,
     private emojiBehavior: NationEmojiBehavior,
+    private nukeFund: NukeFund | null = null,
   ) {}
 
   snapshot(w: SnapshotWriter): Versioned {
@@ -61,6 +63,7 @@ export class NationWarshipBehavior {
     random: PseudoRandom,
     player: Player,
     emojiBehavior: NationEmojiBehavior,
+    nukeFund: NukeFund | null,
   ): void {
     const s = readVersioned(NationWarshipBehaviorSnapshot, raw);
     const units = (refs: number[]) => new Set(refs.map((i) => r.unit(i)));
@@ -68,6 +71,7 @@ export class NationWarshipBehavior {
     this.game = r.game;
     this.player = player;
     this.emojiBehavior = emojiBehavior;
+    this.nukeFund = nukeFund;
     this.trackedTransportShips = units(s.trackedTransportShips);
     this.trackedTradeShips = units(s.trackedTradeShips);
     this.trackedIncomingTransportShips = units(s.trackedIncomingTransportShips);
@@ -601,17 +605,19 @@ export class NationWarshipBehavior {
     this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_WARSHIP_RETALIATION);
   }
 
-  /** Gold for warships that don't stop an invasion: with atom bombs disabled, silo owners keep a hydrogen bomb's price for nukes. */
+  /** Gold for warships that don't stop an invasion: not what's set aside for nukes at the runaway leader, and with atom bombs disabled, silo owners keep a hydrogen bomb's price. */
   private spareGold(): Gold {
     const config = this.game.config();
+    let kept = this.nukeFund?.nukeFund() ?? 0n;
     if (
-      !config.isUnitDisabled(UnitType.AtomBomb) ||
-      config.isUnitDisabled(UnitType.HydrogenBomb) ||
-      this.player.unitCount(UnitType.MissileSilo) === 0
+      config.isUnitDisabled(UnitType.AtomBomb) &&
+      !config.isUnitDisabled(UnitType.HydrogenBomb) &&
+      this.player.unitCount(UnitType.MissileSilo) > 0
     ) {
-      return this.player.gold();
+      const hydro = this.cost(UnitType.HydrogenBomb);
+      if (hydro > kept) kept = hydro;
     }
-    return this.player.gold() - this.cost(UnitType.HydrogenBomb);
+    return this.player.gold() - kept;
   }
 
   private cost(type: UnitType, extraUnits: number = 0): Gold {
