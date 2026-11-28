@@ -30,6 +30,7 @@ import { boostLobby, getApiBase, getUserMe } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import "./components/ConfirmDialog";
 import "./components/InsufficientCurrencyDialog";
+import "./components/JingleJamTracker";
 import "./components/PlutoniumIcon";
 import { GameStartAlertController } from "./components/GameStartAlertController";
 import { hasMapDetails, renderMapDetails } from "./components/map/MapDetails";
@@ -342,6 +343,7 @@ export class JoinLobbyModal extends BaseModal {
     return html`
       <div class="flex flex-col h-full">
         <div class="flex-1 custom-scrollbar p-6 space-y-4 mr-1">
+          <jj-tracker></jj-tracker>
           ${
             this.isConnecting
               ? html`

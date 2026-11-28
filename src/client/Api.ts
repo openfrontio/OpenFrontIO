@@ -48,6 +48,8 @@ import {
   SteamFinalizeResponseSchema,
   SteamOrderResolution,
   StreamsFeedSchema,
+  JingleJamFeed,
+  JingleJamFeedSchema,
   TribeLeaderboardResponse,
   TribeLeaderboardResponseSchema,
   TribeStatsResponse,
@@ -61,6 +63,7 @@ import {
   ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "@openfront/shared/WireSchemas";
+import jingleJamFallback from "resources/jinglejam.json";
 import newsItemsFallback from "resources/news.json";
 import streamsFallback from "resources/streams.json";
 import { z } from "zod";
@@ -2810,4 +2813,14 @@ async function getServedConfig<T>(
 // Fails closed: any error, non-200, or legacy payload lands on the bundled empty feed.
 export async function getStreams(): Promise<StreamsFeed> {
   return getServedConfig("streams.json", StreamsFeedSchema, streamsFallback);
+}
+
+// The Jingle Jam banner and lobby tracker feed. Fails closed to the bundled "off", so a
+// broken or old API shows nothing rather than a wrong total.
+export async function getJingleJam(): Promise<JingleJamFeed> {
+  return getServedConfig(
+    "jinglejam.json",
+    JingleJamFeedSchema,
+    jingleJamFallback,
+  );
 }

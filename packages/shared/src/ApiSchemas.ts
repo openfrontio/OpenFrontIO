@@ -1586,6 +1586,54 @@ export const StreamsFeedSchema = z.object({
 });
 export type StreamsFeed = z.infer<typeof StreamsFeedSchema>;
 
+// GET /jinglejam.json: the Jingle Jam (GOSH Charity) homepage banner and lobby tracker.
+// The API works out `mode` from its config and start/end times, so nothing on the
+// client decides when the event starts or ends:
+//   off    — render nothing (disabled, or before the start)
+//   static — banner and Donate, but no total (kill switch, or no total it trusts yet)
+//   live   — total, match bar, live charity streams
+//   ended  — the final total and a thank-you; no Donate, no streams
+// Money is whole pence. `totals` is absent whenever the API can't vouch for a number,
+// so the client never has to show £0 or guess.
+const PenceSchema = z.number().int().nonnegative();
+export const JINGLE_JAM_COPY = [
+  "default",
+  "punish_saturday",
+  "punish_today",
+  "next_milestone",
+  "last_weekend",
+  "last_day",
+] as const;
+export const JingleJamFeedSchema = z.object({
+  mode: z.enum(["off", "static", "live", "ended"]),
+  updatedAt: z.iso.datetime(),
+  // An unknown preset (a newer API) falls back to the default line rather than
+  // failing the whole feed.
+  copy: z.enum(JINGLE_JAM_COPY).catch("default").default("default"),
+  donateUrl: HttpsUrlSchema.optional(),
+  totals: z
+    .object({
+      raisedPence: PenceSchema,
+      tiltifyPence: PenceSchema,
+      packPence: PenceSchema,
+      matchPence: PenceSchema,
+      matchCapPence: PenceSchema,
+      approx: z.boolean().default(false),
+    })
+    .optional(),
+  nextMilestone: z
+    .object({ name: z.string().min(1).max(120), amountPence: PenceSchema })
+    .optional(),
+  pinned: LiveStreamSchema.optional(),
+  liveStreams: z.array(LiveStreamSchema).default([]),
+  rewards: z
+    .array(
+      z.object({ name: z.string().min(1).max(120), amountPence: PenceSchema }),
+    )
+    .default([]),
+});
+export type JingleJamFeed = z.infer<typeof JingleJamFeedSchema>;
+
 // ---------------------------------------------------------------------------
 // POST /payments/checkout — the single, rail-agnostic checkout endpoint that
 // replaced the two legacy Stripe-only ones. It serves both the Stripe (web)
