@@ -17,6 +17,7 @@ import { NationAllianceBehavior } from "@openfront/engine/execution/nation/Natio
 import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
+import { NukeFund } from "@openfront/engine/execution/nation/NationUtils";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
@@ -47,14 +48,22 @@ function conquerRect(
   }
 }
 
-function sendNukes(game: Game, nation: Player) {
-  nukeBehavior(game, nation).maybeSendNuke();
+function sendNukes(
+  game: Game,
+  nation: Player,
+  nukeFund: NukeFund | null = null,
+) {
+  nukeBehavior(game, nation, nukeFund).maybeSendNuke();
   // First tick initializes the NukeExecutions, the second launches the bombs
   game.executeNextTick();
   game.executeNextTick();
 }
 
-function nukeBehavior(game: Game, nation: Player): NationNukeBehavior {
+function nukeBehavior(
+  game: Game,
+  nation: Player,
+  nukeFund: NukeFund | null = null,
+): NationNukeBehavior {
   const emojiBehavior = new NationEmojiBehavior(
     new PseudoRandom(1),
     game,
@@ -82,6 +91,7 @@ function nukeBehavior(game: Game, nation: Player): NationNukeBehavior {
     nation,
     attackBehavior,
     emojiBehavior,
+    nukeFund,
   );
 }
 
@@ -300,12 +310,14 @@ describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
   // Two level-1 silos fire 2 bombs at once; a level-N SAM needs N+1. Only the
   // west silo is under the nation's own SAM.
   it.each([
-    [2, true],
+    [2, false, true],
     // Even five levels on both silos can't fire 11 bombs at once
-    [10, false],
+    [10, false, false],
+    // What's left besides the gold set aside for a runaway leader doesn't cover it
+    [2, true, false],
   ])(
-    "against a level %i SAM its silos can't overwhelm, upgrades its protected silo: %s",
-    async (samLevel, expectUpgrade) => {
+    "against a level %i SAM its silos can't overwhelm (gold set aside: %s), upgrades its protected silo: %s",
+    async (samLevel, setAside, expectUpgrade) => {
       const game = await setup(
         "big_plains",
         {
@@ -334,9 +346,16 @@ describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
       conquerRect(game, human, 130, 130, 170, 170);
       const sam = human.buildUnit(UnitType.SAMLauncher, game.ref(150, 150), {});
       for (let l = 1; l < samLevel; l++) sam.increaseLevel();
+      const upgradeCost = game
+        .unitInfo(UnitType.MissileSilo)
+        .cost(game, nation);
+      const fund = setAside ? nation.gold() - upgradeCost + 1n : 0n;
       const spy = vi.spyOn(game, "addExecution");
 
-      sendNukes(game, nation);
+      sendNukes(game, nation, {
+        nukeFund: () => fund,
+        spendNukeFund: () => {},
+      });
 
       expect(nation.units(UnitType.AtomBomb)).toHaveLength(0);
       const upgraded = spy.mock.calls

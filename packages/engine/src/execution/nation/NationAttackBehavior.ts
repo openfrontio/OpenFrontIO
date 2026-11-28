@@ -750,16 +750,12 @@ export class NationAttackBehavior extends AiAttackBehavior {
     return target.incomingAttacks().reduce((sum, a) => sum + a.troops(), 0);
   }
 
-  // Whether enough others already press target; those fighting back at its attacks don't count
+  // Whether enough others already press target, counter-attacks included
   private isPiledOn(target: Player): boolean {
     const attackers = new Set<Player>();
     for (const attack of target.incomingAttacks()) {
       const attacker = attack.attacker();
-      if (
-        attacker === this.player ||
-        attacker.type() === PlayerType.Bot ||
-        target.outgoingAttacks().some((a) => a.target() === attacker)
-      ) {
+      if (attacker === this.player || attacker.type() === PlayerType.Bot) {
         continue;
       }
       attackers.add(attacker);

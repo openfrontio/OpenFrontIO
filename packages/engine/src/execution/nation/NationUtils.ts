@@ -165,7 +165,7 @@ export function findJuiciestTarget(
   return best;
 }
 
-// How many times the median land of the next ten players the leader must own
+// How many times the upper median land of the next ten players the leader must own
 // to count as a runaway leader. Easy nations never notice one.
 function runawayLeadFactor(difficulty: Difficulty): number | null {
   switch (difficulty) {

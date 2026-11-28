@@ -243,9 +243,9 @@ export class NationNukeBehavior {
         if (i === 0 && exempt.length === 0) return;
         continue;
       }
-      if (!held) salvoTarget ??= target;
       const types = target === leader ? leaderNukeTypes : nukeTypes;
       if (types.length === 0) continue;
+      if (!held) salvoTarget ??= target;
       const launched = this.tryNuke(target, types, silos, incoming);
       if (launched !== null) {
         if (target === leader) {
@@ -1235,10 +1235,12 @@ export class NationNukeBehavior {
       failed === null
         ? null
         : siloToUpgradeForSalvo(this.game, this.player, failed);
-    if (silo !== null) {
+    const upgradeCost = this.cost(UnitType.MissileSilo);
+    if (silo !== null && budget >= upgradeCost) {
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, silo.id()),
       );
+      if (fromFund) this.nukeFund?.spendNukeFund(upgradeCost);
     }
   }
 

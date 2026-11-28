@@ -210,4 +210,35 @@ describe("Nations nuking a runaway leader", () => {
       expect(spend).not.toHaveBeenCalled();
     }
   });
+
+  it("Impossible aims its SAM salvo at the leader when only the leader is funded", async () => {
+    const { game, leader, nation, far, setGold } = await setupRunaway(
+      Difficulty.Impossible,
+    );
+    leader.buildUnit(UnitType.City, game.ref(50, 100), {});
+    for (let i = 0; i < 5; i++) {
+      far.buildUnit(UnitType.City, game.ref(127, 20 + 30 * i), {});
+    }
+    far.addTroops(100_000);
+    nation.updateRelation(far, -100);
+    setGold(HYDRO_PRICE);
+    const behavior = nukeBehavior(game, nation, {
+      nukeFund: () => HYDRO_PRICE,
+      spendNukeFund: vi.fn(),
+    });
+    // SAMs block every direct launch
+    vi.spyOn(behavior as any, "tryNuke").mockReturnValue(null);
+    const salvo = vi
+      .spyOn(behavior as any, "maybeDestroyEnemySam")
+      .mockImplementation(() => {});
+
+    behavior.maybeSendNuke();
+
+    expect(salvo).toHaveBeenCalledWith(
+      leader,
+      expect.anything(),
+      HYDRO_PRICE,
+      true,
+    );
+  });
 });
