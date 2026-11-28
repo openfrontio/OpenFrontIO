@@ -1008,7 +1008,8 @@
     "attack_ratio_button": "Attack ratio: {percent}%",
     "low_troops_warning": "You are very low on troops - You should always keep some troops for defense.",
     "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
-    "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
+    "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself.",
+    "troops_to_send": "Troops to send"
   },
   "cosmetics": {
     "adfree": "ad-free for life!",
