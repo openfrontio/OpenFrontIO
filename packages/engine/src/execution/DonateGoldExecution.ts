@@ -9,7 +9,7 @@ import {
   zPlayerRef,
   zRandom,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
-import { assertNever, toInt } from "@openfront/engine-lib/Util";
+import { assertNever, minInt, toInt } from "@openfront/engine-lib/Util";
 import { z } from "zod";
 import { Execution, Game, Player } from "../game/Game";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
@@ -60,6 +60,7 @@ export class DonateGoldExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.gold === null) throw new Error("not initialized");
+    this.gold = minInt(this.gold, this.sender.gold());
     if (
       this.sender.canDonateGold(this.recipient) &&
       this.sender.donateGold(this.recipient, this.gold)
