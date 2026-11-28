@@ -151,6 +151,23 @@ describe("acceptJingleJam (stale feeds)", () => {
     expect(f.liveStreams).toHaveLength(1);
   });
 
+  it("a held feed keeps ageing when it is checked again later", () => {
+    const received = {
+      ...feed({
+        updatedAt: at(1),
+        servedAt: at(0),
+        totals,
+        liveStreams: [stream("a", 1)],
+      }),
+      receivedAt: now,
+    };
+    expect(acceptJingleJam(received, now).mode).toBe("live");
+    const later = acceptJingleJam(received, now + 2 * 60 * 60_000);
+    expect(later.mode).toBe("static");
+    expect(later.totals).toBeUndefined();
+    expect(later.liveStreams).toEqual([]);
+  });
+
   it("a slow player clock can't keep a feed the server says is stale", () => {
     const stale = feed({
       updatedAt: at(0),

@@ -20,15 +20,21 @@ const TOTALS_MAX_AGE_MS = 60 * 60_000;
 // turned off: after 15 minutes the live streams are dropped (who was live then may not
 // be now), and after an hour a live total is dropped too, which leaves the static
 // banner and Donate. An ended feed's total is final, so its age doesn't matter.
+// A fetched feed plus when this client received it (client-only, not in the schema).
+export type ReceivedJingleJamFeed = JingleJamFeed & { receivedAt?: number };
+
 export function acceptJingleJam(
-  feed: JingleJamFeed,
+  feed: ReceivedJingleJamFeed,
   now: number,
-): JingleJamFeed {
+): ReceivedJingleJamFeed {
   if (feed.mode !== "live" && feed.mode !== "static") return feed;
   // Measured on the server's clock when it says what that is: a player whose own
   // clock is hours out would otherwise lose a healthy total (fast clock) or keep a
-  // stale one (slow clock).
-  const reference = feed.servedAt ? Date.parse(feed.servedAt) : now;
+  // stale one (slow clock). The time since it arrived is added on, so a feed held
+  // while polling is paused (a long game) keeps ageing when it is re-checked.
+  const reference = feed.servedAt
+    ? Date.parse(feed.servedAt) + Math.max(0, now - (feed.receivedAt ?? now))
+    : now;
   const age = reference - Date.parse(feed.updatedAt);
   let out = feed;
   if (age > STREAMS_MAX_AGE_MS) {
@@ -42,9 +48,9 @@ export function acceptJingleJam(
 
 // Shared by the homepage banner and the lobby tracker, so the lobby wait reuses the
 // homepage's answer instead of fetching again. Stops in-game like the streams feed.
-export const jingleJamFeed = new FeedPoller<JingleJamFeed>({
+export const jingleJamFeed = new FeedPoller<ReceivedJingleJamFeed>({
   name: "jingle-jam-feed",
-  fetch: getJingleJam,
+  fetch: async () => ({ ...(await getJingleJam()), receivedAt: Date.now() }),
   empty: JINGLE_JAM_OFF,
   accept: acceptJingleJam,
 });
