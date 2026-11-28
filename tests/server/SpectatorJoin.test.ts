@@ -4,7 +4,7 @@ import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { ClientMessage } from "@openfront/shared/WireSchemas";
 import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { Client } from "../../src/server/Client";
-import { GameServer } from "../../src/server/GameServer";
+import { GamePhase, GameServer } from "../../src/server/GameServer";
 import {
   cid,
   makeClient as harnessClient,
@@ -356,6 +356,29 @@ describe("GameServer - spectators", () => {
       startGame(game);
       await setSpectator(game, c, false);
       expect(c.spectator).toBe(true);
+    });
+
+    it("cannot switch to spectating once the game has started", async () => {
+      const game = makeGame();
+      const p = makeClient("p1");
+      game.joinClient(p);
+      startGame(game);
+      await setSpectator(game, p, true);
+      expect(p.spectator).toBe(false);
+    });
+
+    it("starts an auto-starting lobby when a spectator takes the last seat", async () => {
+      const game = harnessGame({
+        log: logger,
+        startsAt: Date.now() + 60_000,
+        config: { maxPlayers: 2 },
+      });
+      game.joinClient(makeClient("p1"));
+      const c = makeClient("cast", true);
+      game.joinClient(c);
+      expect(game.phase()).toBe(GamePhase.Lobby);
+      await setSpectator(game, c, false);
+      expect(game.phase()).toBe(GamePhase.Active);
     });
 
     it("shows a spectator the same lobby a player sees", () => {
